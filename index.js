@@ -20530,12 +20530,17 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 setupPosition: function() {
-                    if (window.innerWidth > 400) {
-                        thisRemoteAC.$.mainContainer.style.width = '400px';
-                        thisRemoteAC.$.mainContainer.style.marginLeft = (window.innerWidth - 400)/2 + 'px';
+                    thisRemoteAC.$.remoteContainer.style.marginTop = (window.innerHeight - 550) - 20 + 'px';
+
+                    if (window.innerWidth > 330) {
+                        thisRemoteAC.$.mainContainer.style.width = '330px';
+                        thisRemoteAC.$.mainContainer.style.marginLeft = (window.innerWidth - 330)/2 + 'px';
                         if (window.innerWidth > 640) {
-                            thisRemoteAC.$.mainContainer.style.marginLeft = ((window.innerWidth - 400)/2 - 128) + 'px';
+                            thisRemoteAC.$.mainContainer.style.marginLeft = ((window.innerWidth - 330)/2 - 128) + 'px';
                         }
+                    } else {
+                        thisRemoteAC.$.mainContainer.style.width = '250px';
+                        thisRemoteAC.$.mainContainer.style.marginLeft = (window.innerWidth - 250)/2 + 'px';
                     }
                 },
 
@@ -20663,13 +20668,22 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 setupPosition: function() {
+                    thisRemoteTV.$.menubuttons.style.marginTop = (window.innerHeight - 550) - 20 + 'px';
+
                     if (window.innerWidth > 375) {
                         thisRemoteTV.$.remoteContainer.style.width = '350px';
                         thisRemoteTV.$.remoteContainer.style.marginLeft = (window.innerWidth - 350)/2 + 'px';
                         if (window.innerWidth > 640) {
                             thisRemoteTV.$.remoteContainer.style.marginLeft = ((window.innerWidth - 350)/2 - 128) + 'px';
                         }
-                    }
+                    } else {
+                        thisRemoteTV.$.remoteContainer.style.width = '300px';
+                        thisRemoteTV.$.remoteContainer.style.marginLeft = (window.innerWidth - 300)/2 + 'px';
+                        if (window.innerWidth < 325) {
+                            thisRemoteTV.$.remoteContainer.style.width = '250px';
+                            thisRemoteTV.$.remoteContainer.style.marginLeft = (window.innerWidth - 250)/2 + 'px';
+                        }
+                    }   
                 },
 
 
@@ -20741,7 +20755,7 @@ Polymer({
             properties: {
                 roomView: {
                     type: String,
-                    value: 'Add room'
+                    value: 'Loading...'
                 },
 
                 roomsData: Array,

@@ -3473,7 +3473,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajax" url="https://core.replus.co/edit/new-room" method="POST" body="uid={{uid}}&amp;name={{roomName}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
-        <app-header>
+        <app-header shadow="">
             <app-toolbar>
                 <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
                 <div id="toolbarTitle" main-title="">Add room</div>
@@ -3521,7 +3521,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
             
-            <app-header>
+            <app-header shadow="">
                 <app-toolbar>
                     <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
                     <paper-icon-button id="btnBack" on-tap="_tapBack" icon="arrow-back"></paper-icon-button>
@@ -3583,8 +3583,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
 
             #displayContainer {
-                margin-left: 35px;
-                margin-right: 35px;
+                margin-left: 0px;       /*35*/
+                margin-right: 0px;      /*35*/
                 /*max-width: 400px;*/
             }
 
@@ -3609,8 +3609,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
 
             #remoteContainer {
-                margin-left: 35px;
-                margin-right: 35px;
+                margin-left: 0px;   /*35*/
+                margin-right: 0px;  /*35*/
             }
 
             #textTemp {
@@ -3669,9 +3669,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 };
             }
 
-            paper-button {
-                background: #2B5788;
-                color: white;
+            paper-dialog paper-button {
+                background: #f7f7f7;
+                color: #2B5788;
+                font-weight: 500;
                 margin-bottom: 0px;
                 width: 100px;
             }
@@ -3688,6 +3689,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 color: #c0392b;
             }
 
+            #menubuttons {
+                padding: 5px;
+            }
+
+            #menubuttons paper-button {
+                color: #2B5788;
+                font-weight: 500;
+                margin: 0;
+                padding: 0;
+            }
+
             #remoteContainer {
                 margin-left: 35px;
                 margin-right: 35px;
@@ -3701,38 +3713,35 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             <div class="horizontal layout justified">
                 <paper-fab on-tap="_tapBtn" data-command="15" icon="power-settings-new" id="btnPower"></paper-fab>
                 <paper-fab on-tap="_tapBtn" data-command="17" icon="input"></paper-fab>
-                <paper-fab on-tap="_tapBtn" data-command="18" icon="menu"></paper-fab>
-            </div>
-
-            <div class="horizontal layout justified">
                 <paper-fab on-tap="_tapBtn" data-command="10" icon="av:volume-off"></paper-fab>
-                <paper-fab on-tap="_showDialog" icon="communication:dialpad" id="btnNumpad"></paper-fab>
-                <paper-fab on-tap="_tapBtn" data-command="19" icon="hardware:keyboard-return"></paper-fab>
             </div>
 
             <div class="horizontal layout justified">
-                <paper-fab on-tap="_tapBtn" data-command="11" icon="hardware:keyboard-arrow-up"></paper-fab>
                 <paper-fab on-tap="_tapBtn" data-command="13" icon="av:volume-up"></paper-fab>
+                <paper-fab on-tap="_showDialog" icon="communication:dialpad" id="btnNumpad" style="top: 45px;"></paper-fab>
+                <paper-fab on-tap="_tapBtn" data-command="11" icon="hardware:keyboard-arrow-up"></paper-fab>
             </div>
 
             <div class="horizontal layout justified">
-                <paper-fab on-tap="_tapBtn" data-command="12" icon="hardware:keyboard-arrow-down"></paper-fab>
                 <paper-fab on-tap="_tapBtn" data-command="14" icon="av:volume-down"></paper-fab>
+                <paper-fab on-tap="_tapBtn" data-command="12" icon="hardware:keyboard-arrow-down"></paper-fab>
             </div>
 
-            <div class="horizontal layout center-justified" style="margin-top: -60px;">
-                <paper-icon-button on-tap="_tapBtn" data-command="21" icon="hardware:keyboard-arrow-up"></paper-icon-button>
-            </div>
-
-            <div class="horizontal layout center-justified">
-                <paper-icon-button on-tap="_tapBtn" data-command="23" icon="hardware:keyboard-arrow-left"></paper-icon-button>
-                <paper-icon-button on-tap="_tapBtn" data-command="20" icon="check"></paper-icon-button>
-                <paper-icon-button on-tap="_tapBtn" data-command="24" icon="hardware:keyboard-arrow-right"></paper-icon-button>
-            </div>
-
-            <div class="horizontal layout center-justified">
-                <paper-icon-button on-tap="_tapBtn" data-command="22" icon="hardware:keyboard-arrow-down"></paper-icon-button>
-            </div>
+            <paper-material id="menubuttons">
+                <div class="horizontal layout around-justified">
+                    <paper-button on-tap="_tapBtn" title="18">Menu</paper-button>
+                    <paper-icon-button on-tap="_tapBtn" data-command="21" icon="hardware:keyboard-arrow-up"></paper-icon-button>
+                    <paper-button on-tap="_tapBtn" title="19">Return</paper-button>
+                </div>
+                <div class="horizontal layout center-justified">
+                    <paper-icon-button on-tap="_tapBtn" data-command="23" icon="hardware:keyboard-arrow-left"></paper-icon-button>
+                    <paper-button on-tap="_tapBtn" title="20">OK</paper-button>
+                    <paper-icon-button on-tap="_tapBtn" data-command="24" icon="hardware:keyboard-arrow-right"></paper-icon-button>
+                </div>
+                <div class="horizontal layout center-justified">
+                    <paper-icon-button on-tap="_tapBtn" data-command="22" icon="hardware:keyboard-arrow-down"></paper-icon-button>
+                </div>
+            </paper-material>
         </div>
 
         <paper-dialog id="dialog" entry-animation="slide-from-bottom-animation" exit-animation="fade-out-animation" on-iron-overlay-closed="_closedDialog">

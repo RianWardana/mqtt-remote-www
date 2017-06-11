@@ -20218,6 +20218,21 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         notify: true
                     },
 
+                    displayName: {
+                        type: String,
+                        notify: true
+                    },
+
+                    email: {
+                        type: String,
+                        notify: true
+                    },
+
+                    photoUrl: {
+                        type: String,
+                        notify: true
+                    },
+
                     trigger: {
                         type: Number,
                         observer: '_triggerLogout'
@@ -20227,6 +20242,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisMainAuth = this;
                     thisMainAuth.setupPosition();
+                    thisMainAuth.setupTitle();
 
                     var config = {
                         apiKey: "AIzaSyAunkgswJoWW_cN8iF5SWDXKfEm07scMuo",
@@ -20243,8 +20259,13 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                             thisMainAuth.uid = firebaseUser.uid;
                             thisMainAuth.displayName = firebaseUser.displayName;
                             thisMainAuth.email = firebaseUser.email;
+                            thisMainAuth.photoUrl = firebaseUser.photoURL;
                             thisMainAuth.mainView = 1;
                             thisMainAuth.$.ajax.generateRequest();
+
+                            console.log(thisMainAuth.displayName);
+                            console.log(thisMainAuth.email);
+                            console.log(thisMainAuth.photoUrl);
                         }
                         else {
                             thisMainAuth.mainView = 0;
@@ -20265,7 +20286,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     firebaseUIConfig = {
                         signInOptions: [
                             firebase.auth.GoogleAuthProvider.PROVIDER_ID,
-                            firebase.auth.FacebookAuthProvider.PROVIDER_ID
+                            {provider: firebase.auth.FacebookAuthProvider.PROVIDER_ID, scopes: ['public_profile', 'email']}
                         ], 
                         callbacks: {
                             signInSuccess: function(currentUser, credential, redirectUrl) {
@@ -20282,8 +20303,22 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 setupPosition: function() {
-                    thisMainAuth.$.container.style.marginTop = (window.innerHeight - 224)/2 - 100 + 'px';
+                    thisMainAuth.$.container.style.marginTop = (window.innerHeight - 294)/2 - 100 + 'px';
                     thisMainAuth.$.container.style.marginLeft = (window.innerWidth - 300)/2 + 'px';
+
+                    if (window.innerWidth < 640) {
+                        thisMainAuth.$.container.style.marginTop = (window.innerHeight - 294)/2 + 'px';
+                    }
+                },
+
+
+
+                setupTitle: function() {
+                    var host = window.location.hostname;
+                    if (host == "pociremote.com") thisMainAuth.host = "POCI Remote";
+                    else if (host == "app.replus.co") thisMainAuth.host = "Replus";
+                    else thisMainAuth.host = "MQTT Remote";
+                    document.title = thisMainAuth.host;
                 },
 
 
@@ -20410,7 +20445,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         value: 'list'
                     },
 
-                    // devices: Array,
                     remotes: Array
                 },
 
@@ -20460,6 +20494,22 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     // } else {
                     //     thisRemoteList.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
                     // }
+                },
+
+
+
+                _sort: function(a, b) {
+                    var aLength = a.length;
+                    var bLength = b.length;
+                    var length = (aLength <= bLength ? aLength : bLength);
+                    
+                    var aLower = a.toLowerCase();
+                    var bLower = b.toLowerCase();
+
+                    for(var i = 0; i < length; i++) {
+                        let sort = aLower.charCodeAt(i) - bLower.charCodeAt(i);
+                        if (sort != 0) return sort;
+                    }
                 },
 
 
@@ -20755,7 +20805,7 @@ Polymer({
             properties: {
                 roomView: {
                     type: String,
-                    value: 'Loading...'
+                    value: 'Add room'
                 },
 
                 roomsData: Array,
@@ -20766,6 +20816,19 @@ Polymer({
                 thisMainApp = this;
             },
 
+            _sort: function(a, b) {
+                var aLength = a.name.length;
+                var bLength = b.name.length;
+                var length = (aLength <= bLength ? aLength : bLength);
+                
+                var aLower = a.name.toLowerCase();
+                var bLower = b.name.toLowerCase();
+
+                for(var i = 0; i < length; i++) {
+                    let sort = aLower.charCodeAt(i) - bLower.charCodeAt(i);
+                    if (sort != 0) return sort;
+                }
+            },
 
             _swInstalled: function() {
                 console.log("SW Installed")

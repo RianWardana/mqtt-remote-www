@@ -23,7 +23,7 @@ The complete set of contributors may be found at http://polymer.github.io/CONTRI
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
-	<title>POCI Remote</title>
+	<title>Loading remotes...</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -3396,7 +3396,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
 
             p {
-                margin-left: 30px;
+                margin: 0 24px 0 30px;
+                color: #252525;
+            }
+
+            p#header {
+                margin-top: 20px;
+                font-size: 32px;
+            }
+
+            p#subheader {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+
+            p#subheader span {
+                color: #2B5788; 
             }
 
             paper-material {
@@ -3409,8 +3424,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 background: linear-gradient(#fbfbfb, #f8f8f8);
             }
 
-            .horizontal.layout.center-justified {
-                margin-bottom: 10px;
+            #background {
+                position: absolute;
+                top: 0;
+                height: 100vh;
+                width: 100vw;
+                background: #2B5788;
+                background: -webkit-linear-gradient(#2B5788, #3498db);
+                background: -o-linear-gradient(#2B5788, #3498db);
+                background: -moz-linear-gradient(#2B5788, #3498db);
+                background: linear-gradient(#2B5788, #3498db);
             }
 
             #container {
@@ -3421,11 +3444,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajax" url="https://core.replus.co/edit/user" method="POST" body="uid={{uid}}&amp;name={{displayName}}&amp;email={{email}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
-        <div id="container" class="vertical layout">            
-            <paper-material elevation="2">
-                <p>Sign in</p>
-                <div id="firebaseui-auth-container"></div>
-            </paper-material>
+        <div id="background">
+            <div id="container" class="vertical layout">            
+                <paper-material elevation="4">
+                    <p id="header">Sign in</p>
+                    <p id="subheader">to continue using <span>{{host}}</span></p>
+                    <div id="firebaseui-auth-container"></div>
+                </paper-material>
+            </div>
         </div>
     </template>
 
@@ -3521,25 +3547,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
             
-            <app-header shadow="">
-                <app-toolbar>
-                    <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
-                    <paper-icon-button id="btnBack" on-tap="_tapBack" icon="arrow-back"></paper-icon-button>
-                    <div id="toolbarTitle" main-title="">{{toolbarTitle}}</div>
-                </app-toolbar>
-            </app-header>
+        <app-header shadow="">
+            <app-toolbar>
+                <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
+                <paper-icon-button id="btnBack" on-tap="_tapBack" icon="arrow-back"></paper-icon-button>
+                <div id="toolbarTitle" main-title="">{{toolbarTitle}}</div>
+            </app-toolbar>
+        </app-header>
 
-            <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
-                <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
-                <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
+        <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
+            <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
+            <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
 
-                <iron-selector id="selectorRemote" remote-view="list" attr-for-selected="remote-view" selected="{{remoteView}}">
-                    <template is="dom-repeat" items="{{remotes}}" as="remote">
-                        <paper-button remote-view="{{getType(remote)}}" on-tap="_tapRemote" title="{{remote}}">{{remote}}</paper-button>
-                    </template>
-                </iron-selector>
-            </iron-pages>
-        
+            <iron-selector id="selectorRemote" remote-view="list" attr-for-selected="remote-view" selected="{{remoteView}}">
+                <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
+                    <paper-button remote-view="{{getType(remote)}}" on-tap="_tapRemote" title="{{remote}}">{{remote}}</paper-button>
+                </template>
+            </iron-selector>
+        </iron-pages>
 
         <paper-toast id="toast"></paper-toast>
     </template>
@@ -3771,7 +3796,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <style include="iron-flex iron-flex-alignment">
             :host {
                 display: block;
-                --app-primary-color: #2B5788; /*500 065A9F*/
+                --app-primary-color: #2B5788;
                 --app-secondary-color: black;
 
                 --paper-fab-background: #f7f7f7;
@@ -3784,7 +3809,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 };
             }
 
-            
+            center#userInfoContainer {
+                background: #2B5788;
+                background: -webkit-linear-gradient(#2B5788, #346aa6);
+                background: -o-linear-gradient(#2B5788, #346aa6);
+                background: -moz-linear-gradient(#2B5788, #346aa6);
+                background: linear-gradient(#2B5788, #346aa6);
+                padding: 16px 0 16px;
+            }
+
+            @media (min-width: 640px) {
+               center#userInfoContainer {
+                    padding: 48px 0 48px;
+                } 
+            }
 
             iron-icon {
                 margin-right: 12px;
@@ -3794,26 +3832,27 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 color: var(--app-primary-color);
             }
 
-            .remote-item {
-                padding-left: 50px;
+            p.userInfoText {
+                color: #fff;
+                margin: 0;
             }
-
-            
-
-            
         </style>
         
         <neon-animated-pages selected="{{mainView}}" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
-            <main-auth main-view="{{mainView}}" trigger="{{triggerLogout}}"></main-auth>
+            <main-auth main-view="{{mainView}}" trigger="{{triggerLogout}}" display-name="{{displayName}}" email="{{email}}" photo-url="{{photoUrl}}"></main-auth>
 
             <app-drawer-layout fullbleed="">
                 <main-data rooms-data="{{roomsData}}"></main-data>
 
                 <app-drawer id="appDrawer">
                     <div style="height: 100%; overflow: auto;">
-                        <iron-image style="width:256px; height:225px;" sizing="cover" src="img/drawer.png"></iron-image>
+                        <center id="userInfoContainer">
+                            <iron-image style="width: 80px; height: 80px; border-radius: 50%;" sizing="cover" src="{{photoUrl}}"></iron-image>
+                            <p class="userInfoText">{{displayName}}</p>
+                            <p class="userInfoText">{{email}}</p>
+                        </center>
                         <iron-selector attr-for-selected="name" selected="{{roomView}}" on-iron-select="onMenuSelect">
-                            <template is="dom-repeat" items="{{roomsData}}" as="room">
+                            <template is="dom-repeat" items="{{roomsData}}" as="room" sort="_sort">
                                 <paper-item on-tap="_tapRoom" name="{{room.name}}" title="{{room.name}}">
                                     <iron-icon icon="apps"></iron-icon>
                                     {{room.name}}

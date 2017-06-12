@@ -23,7 +23,7 @@ The complete set of contributors may be found at http://polymer.github.io/CONTRI
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
-	<title>Loading remotes...</title>
+	<title>Please wait...</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -32,10 +32,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <link rel="manifest" href="manifest.json">
     </head>
 
-<body><div hidden="" by-vulcanize="">
-
-
-<style>
+<body><div hidden="" by-vulcanize=""><style>
   /* IE 10 support for HTML5 hidden attr */
   [hidden] {
     display: none !important;
@@ -3307,6 +3304,367 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <content></content>
   </template>
 </dom-module>
+<dom-module id="paper-spinner-styles" assetpath="bower_components/paper-spinner/">
+  <template>
+    <style>
+      /*
+      /**************************/
+      /* STYLES FOR THE SPINNER */
+      /**************************/
+
+      /*
+       * Constants:
+       *      ARCSIZE     = 270 degrees (amount of circle the arc takes up)
+       *      ARCTIME     = 1333ms (time it takes to expand and contract arc)
+       *      ARCSTARTROT = 216 degrees (how much the start location of the arc
+       *                                should rotate each time, 216 gives us a
+       *                                5 pointed star shape (it's 360/5 * 3).
+       *                                For a 7 pointed star, we might do
+       *                                360/7 * 3 = 154.286)
+       *      SHRINK_TIME = 400ms
+       */
+
+      :host {
+        display: inline-block;
+        position: relative;
+        width: 28px;
+        height: 28px;
+
+        /* 360 * ARCTIME / (ARCSTARTROT + (360-ARCSIZE)) */
+        --paper-spinner-container-rotation-duration: 1568ms;
+
+        /* ARCTIME */
+        --paper-spinner-expand-contract-duration: 1333ms;
+
+        /* 4 * ARCTIME */
+        --paper-spinner-full-cycle-duration: 5332ms;
+
+        /* SHRINK_TIME */
+        --paper-spinner-cooldown-duration: 400ms;
+      }
+
+      #spinnerContainer {
+        width: 100%;
+        height: 100%;
+
+        /* The spinner does not have any contents that would have to be
+         * flipped if the direction changes. Always use ltr so that the
+         * style works out correctly in both cases. */
+        direction: ltr;
+      }
+
+      #spinnerContainer.active {
+        -webkit-animation: container-rotate var(--paper-spinner-container-rotation-duration) linear infinite;
+        animation: container-rotate var(--paper-spinner-container-rotation-duration) linear infinite;
+      }
+
+      @-webkit-keyframes container-rotate {
+        to { -webkit-transform: rotate(360deg) }
+      }
+
+      @keyframes container-rotate {
+        to { transform: rotate(360deg) }
+      }
+
+      .spinner-layer {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        white-space: nowrap;
+        border-color: var(--paper-spinner-color, --google-blue-500);
+      }
+
+      .layer-1 {
+        border-color: var(--paper-spinner-layer-1-color, --google-blue-500);
+      }
+
+      .layer-2 {
+        border-color: var(--paper-spinner-layer-2-color, --google-red-500);
+      }
+
+      .layer-3 {
+        border-color: var(--paper-spinner-layer-3-color, --google-yellow-500);
+      }
+
+      .layer-4 {
+        border-color: var(--paper-spinner-layer-4-color, --google-green-500);
+      }
+
+      /**
+       * IMPORTANT NOTE ABOUT CSS ANIMATION PROPERTIES (keanulee):
+       *
+       * iOS Safari (tested on iOS 8.1) does not handle animation-delay very well - it doesn't
+       * guarantee that the animation will start _exactly_ after that value. So we avoid using
+       * animation-delay and instead set custom keyframes for each color (as layer-2undant as it
+       * seems).
+       */
+      .active .spinner-layer {
+        -webkit-animation-name: fill-unfill-rotate;
+        -webkit-animation-duration: var(--paper-spinner-full-cycle-duration);
+        -webkit-animation-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+        -webkit-animation-iteration-count: infinite;
+        animation-name: fill-unfill-rotate;
+        animation-duration: var(--paper-spinner-full-cycle-duration);
+        animation-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+        animation-iteration-count: infinite;
+        opacity: 1;
+      }
+
+      .active .spinner-layer.layer-1 {
+        -webkit-animation-name: fill-unfill-rotate, layer-1-fade-in-out;
+        animation-name: fill-unfill-rotate, layer-1-fade-in-out;
+      }
+
+      .active .spinner-layer.layer-2 {
+        -webkit-animation-name: fill-unfill-rotate, layer-2-fade-in-out;
+        animation-name: fill-unfill-rotate, layer-2-fade-in-out;
+      }
+
+      .active .spinner-layer.layer-3 {
+        -webkit-animation-name: fill-unfill-rotate, layer-3-fade-in-out;
+        animation-name: fill-unfill-rotate, layer-3-fade-in-out;
+      }
+
+      .active .spinner-layer.layer-4 {
+        -webkit-animation-name: fill-unfill-rotate, layer-4-fade-in-out;
+        animation-name: fill-unfill-rotate, layer-4-fade-in-out;
+      }
+
+      @-webkit-keyframes fill-unfill-rotate {
+        12.5% { -webkit-transform: rotate(135deg) } /* 0.5 * ARCSIZE */
+        25%   { -webkit-transform: rotate(270deg) } /* 1   * ARCSIZE */
+        37.5% { -webkit-transform: rotate(405deg) } /* 1.5 * ARCSIZE */
+        50%   { -webkit-transform: rotate(540deg) } /* 2   * ARCSIZE */
+        62.5% { -webkit-transform: rotate(675deg) } /* 2.5 * ARCSIZE */
+        75%   { -webkit-transform: rotate(810deg) } /* 3   * ARCSIZE */
+        87.5% { -webkit-transform: rotate(945deg) } /* 3.5 * ARCSIZE */
+        to    { -webkit-transform: rotate(1080deg) } /* 4   * ARCSIZE */
+      }
+
+      @keyframes fill-unfill-rotate {
+        12.5% { transform: rotate(135deg) } /* 0.5 * ARCSIZE */
+        25%   { transform: rotate(270deg) } /* 1   * ARCSIZE */
+        37.5% { transform: rotate(405deg) } /* 1.5 * ARCSIZE */
+        50%   { transform: rotate(540deg) } /* 2   * ARCSIZE */
+        62.5% { transform: rotate(675deg) } /* 2.5 * ARCSIZE */
+        75%   { transform: rotate(810deg) } /* 3   * ARCSIZE */
+        87.5% { transform: rotate(945deg) } /* 3.5 * ARCSIZE */
+        to    { transform: rotate(1080deg) } /* 4   * ARCSIZE */
+      }
+
+      @-webkit-keyframes layer-1-fade-in-out {
+        0% { opacity: 1 }
+        25% { opacity: 1 }
+        26% { opacity: 0 }
+        89% { opacity: 0 }
+        90% { opacity: 1 }
+        to { opacity: 1 }
+      }
+
+      @keyframes layer-1-fade-in-out {
+        0% { opacity: 1 }
+        25% { opacity: 1 }
+        26% { opacity: 0 }
+        89% { opacity: 0 }
+        90% { opacity: 1 }
+        to { opacity: 1 }
+      }
+
+      @-webkit-keyframes layer-2-fade-in-out {
+        0% { opacity: 0 }
+        15% { opacity: 0 }
+        25% { opacity: 1 }
+        50% { opacity: 1 }
+        51% { opacity: 0 }
+        to { opacity: 0 }
+      }
+
+      @keyframes layer-2-fade-in-out {
+        0% { opacity: 0 }
+        15% { opacity: 0 }
+        25% { opacity: 1 }
+        50% { opacity: 1 }
+        51% { opacity: 0 }
+        to { opacity: 0 }
+      }
+
+      @-webkit-keyframes layer-3-fade-in-out {
+        0% { opacity: 0 }
+        40% { opacity: 0 }
+        50% { opacity: 1 }
+        75% { opacity: 1 }
+        76% { opacity: 0 }
+        to { opacity: 0 }
+      }
+
+      @keyframes layer-3-fade-in-out {
+        0% { opacity: 0 }
+        40% { opacity: 0 }
+        50% { opacity: 1 }
+        75% { opacity: 1 }
+        76% { opacity: 0 }
+        to { opacity: 0 }
+      }
+
+      @-webkit-keyframes layer-4-fade-in-out {
+        0% { opacity: 0 }
+        65% { opacity: 0 }
+        75% { opacity: 1 }
+        90% { opacity: 1 }
+        to { opacity: 0 }
+      }
+
+      @keyframes layer-4-fade-in-out {
+        0% { opacity: 0 }
+        65% { opacity: 0 }
+        75% { opacity: 1 }
+        90% { opacity: 1 }
+        to { opacity: 0 }
+      }
+
+      .circle-clipper {
+        display: inline-block;
+        position: relative;
+        width: 50%;
+        height: 100%;
+        overflow: hidden;
+        border-color: inherit;
+      }
+
+      /**
+       * Patch the gap that appear between the two adjacent div.circle-clipper while the
+       * spinner is rotating (appears on Chrome 50, Safari 9.1.1, and Edge).
+       */
+      .spinner-layer::after {
+        left: 45%;
+        width: 10%;
+        border-top-style: solid;
+      }
+
+      .spinner-layer::after,
+      .circle-clipper::after {
+        content: '';
+        box-sizing: border-box;
+        position: absolute;
+        top: 0;
+        border-width: var(--paper-spinner-stroke-width, 3px);
+        border-color: inherit;
+        border-radius: 50%;
+      }
+
+      .circle-clipper::after {
+        bottom: 0;
+        width: 200%;
+        border-style: solid;
+        border-bottom-color: transparent !important;
+      }
+
+      .circle-clipper.left::after {
+        left: 0;
+        border-right-color: transparent !important;
+        -webkit-transform: rotate(129deg);
+        transform: rotate(129deg);
+      }
+
+      .circle-clipper.right::after {
+        left: -100%;
+        border-left-color: transparent !important;
+        -webkit-transform: rotate(-129deg);
+        transform: rotate(-129deg);
+      }
+
+      .active .gap-patch::after,
+      .active .circle-clipper::after {
+        -webkit-animation-duration: var(--paper-spinner-expand-contract-duration);
+        -webkit-animation-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+        -webkit-animation-iteration-count: infinite;
+        animation-duration: var(--paper-spinner-expand-contract-duration);
+        animation-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+        animation-iteration-count: infinite;
+      }
+
+      .active .circle-clipper.left::after {
+        -webkit-animation-name: left-spin;
+        animation-name: left-spin;
+      }
+
+      .active .circle-clipper.right::after {
+        -webkit-animation-name: right-spin;
+        animation-name: right-spin;
+      }
+
+      @-webkit-keyframes left-spin {
+        0% { -webkit-transform: rotate(130deg) }
+        50% { -webkit-transform: rotate(-5deg) }
+        to { -webkit-transform: rotate(130deg) }
+      }
+
+      @keyframes left-spin {
+        0% { transform: rotate(130deg) }
+        50% { transform: rotate(-5deg) }
+        to { transform: rotate(130deg) }
+      }
+
+      @-webkit-keyframes right-spin {
+        0% { -webkit-transform: rotate(-130deg) }
+        50% { -webkit-transform: rotate(5deg) }
+        to { -webkit-transform: rotate(-130deg) }
+      }
+
+      @keyframes right-spin {
+        0% { transform: rotate(-130deg) }
+        50% { transform: rotate(5deg) }
+        to { transform: rotate(-130deg) }
+      }
+
+      #spinnerContainer.cooldown {
+        -webkit-animation: container-rotate var(--paper-spinner-container-rotation-duration) linear infinite, fade-out var(--paper-spinner-cooldown-duration) cubic-bezier(0.4, 0.0, 0.2, 1);
+        animation: container-rotate var(--paper-spinner-container-rotation-duration) linear infinite, fade-out var(--paper-spinner-cooldown-duration) cubic-bezier(0.4, 0.0, 0.2, 1);
+      }
+
+      @-webkit-keyframes fade-out {
+        0% { opacity: 1 }
+        to { opacity: 0 }
+      }
+
+      @keyframes fade-out {
+        0% { opacity: 1 }
+        to { opacity: 0 }
+      }
+    </style>
+  </template>
+</dom-module>
+<dom-module id="paper-spinner" assetpath="bower_components/paper-spinner/">
+  <template strip-whitespace="">
+    <style include="paper-spinner-styles"></style>
+
+    <div id="spinnerContainer" class-name="[[__computeContainerClasses(active, __coolingDown)]]">
+      <div class="spinner-layer layer-1">
+        <div class="circle-clipper left"></div>
+        <div class="circle-clipper right"></div>
+      </div>
+
+      <div class="spinner-layer layer-2">
+        <div class="circle-clipper left"></div>
+        <div class="circle-clipper right"></div>
+      </div>
+
+      <div class="spinner-layer layer-3">
+        <div class="circle-clipper left"></div>
+        <div class="circle-clipper right"></div>
+      </div>
+
+      <div class="spinner-layer layer-4">
+        <div class="circle-clipper left"></div>
+        <div class="circle-clipper right"></div>
+      </div>
+    </div>
+  </template>
+
+  </dom-module>
+
+
 <dom-module id="paper-toast" assetpath="bower_components/paper-toast/">
   <template>
     <style>
@@ -3395,6 +3753,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 display: block;
             }
 
+            div#spinner {
+                padding: 20px;
+            }
+
             p {
                 margin: 0 24px 0 30px;
                 color: #252525;
@@ -3424,6 +3786,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 background: linear-gradient(#fbfbfb, #f8f8f8);
             }
 
+            paper-spinner {
+                --paper-spinner-layer-1-color: var(--app-primary-color);
+                --paper-spinner-layer-3-color: var(--app-primary-color);
+                --paper-spinner-layer-2-color: #3498db;
+                --paper-spinner-layer-4-color: #3498db;
+            }
+
             #background {
                 position: absolute;
                 top: 0;
@@ -3449,7 +3818,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 <paper-material elevation="4">
                     <p id="header">Sign in</p>
                     <p id="subheader">to continue using <span>{{host}}</span></p>
-                    <div id="firebaseui-auth-container"></div>
+                    <div id="spinner" class="horizontal layout center-justified">
+                        <paper-spinner active=""></paper-spinner>
+                    </div>
+                    <div id="firebaseuiauthcontainer"></div>
                 </paper-material>
             </div>
         </div>
@@ -3540,10 +3912,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             paper-fab {
                 --paper-fab-background: var(--app-primary-color);
                 --paper-fab-keyboard-focus-background: var(--app-primary-color);
+
+                --paper-fab: {
+                    color: #2B5788;
+                    height: 56dp;
+                    width: 56dp;
+                };
+
                 color: #fff;
                 position: fixed;
-                bottom: 5%;
-                right: 5%;
+                bottom: 20px;
+                right: 20px;
             }
 
             paper-item {
@@ -3581,20 +3960,33 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
             <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
+            <remote-add remote-view="add"></remote-add>
 
             <iron-selector id="selectorRemote" class="vertical layout" remote-view="list" attr-for-selected="remote-view" selected="{{remoteView}}">
                     <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
-                        
                         <paper-item remote-view="{{getType(remote)}}" on-tap="_tapRemote" title="{{remote}}">
                             <iron-icon icon="{{getIcon(remote)}}"></iron-icon>
                             {{remote}}
                         </paper-item>
                     </template>
+                    <paper-fab remote-view="add" id="fab" icon="add" on-tap="_tapAdd"></paper-fab>
             </iron-selector>
         </iron-pages>
-
-        <paper-fab id="fab" icon="add"></paper-fab>
+        
         <paper-toast id="toast"></paper-toast>
+    </template>
+
+
+
+    </dom-module><dom-module id="remote-add" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            :host {
+                display: block;
+            }
+        </style>
+            
+        
     </template>
 
 

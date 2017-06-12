@@ -18844,6 +18844,85 @@ Polymer({
       }
     }
   });
+/** @polymerBehavior */
+  Polymer.PaperSpinnerBehavior = {
+
+    listeners: {
+      'animationend': '__reset',
+      'webkitAnimationEnd': '__reset'
+    },
+
+    properties: {
+      /**
+       * Displays the spinner.
+       */
+      active: {
+        type: Boolean,
+        value: false,
+        reflectToAttribute: true,
+        observer: '__activeChanged'
+      },
+
+      /**
+       * Alternative text content for accessibility support.
+       * If alt is present, it will add an aria-label whose content matches alt when active.
+       * If alt is not present, it will default to 'loading' as the alt value.
+       */
+      alt: {
+        type: String,
+        value: 'loading',
+        observer: '__altChanged'
+      },
+
+      __coolingDown: {
+        type: Boolean,
+        value: false
+      }
+    },
+
+    __computeContainerClasses: function(active, coolingDown) {
+      return [
+        active || coolingDown ? 'active' : '',
+        coolingDown ? 'cooldown' : ''
+      ].join(' ');
+    },
+
+    __activeChanged: function(active, old) {
+      this.__setAriaHidden(!active);
+      this.__coolingDown = !active && old;
+    },
+
+    __altChanged: function(alt) {
+      // user-provided `aria-label` takes precedence over prototype default
+      if (alt === this.getPropertyInfo('alt').value) {
+        this.alt = this.getAttribute('aria-label') || alt;
+      } else {
+        this.__setAriaHidden(alt==='');
+        this.setAttribute('aria-label', alt);
+      }
+    },
+
+    __setAriaHidden: function(hidden) {
+      var attr = 'aria-hidden';
+      if (hidden) {
+        this.setAttribute(attr, 'true');
+      } else {
+        this.removeAttribute(attr);
+      }
+    },
+
+    __reset: function() {
+      this.active = false;
+      this.__coolingDown = false;
+    }
+  };
+Polymer({
+      is: 'paper-spinner',
+
+      behaviors: [
+        Polymer.PaperSpinnerBehavior
+      ]
+    });
 (function() {
       // Keeps track of the toast currently opened.
       var currentToast = null;
@@ -20243,6 +20322,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisMainAuth = this;
                     thisMainAuth.setupPosition();
                     thisMainAuth.setupTitle();
+                    thisMainAuth.$.firebaseuiauthcontainer.style.display = 'none';
 
                     var config = {
                         apiKey: "AIzaSyAunkgswJoWW_cN8iF5SWDXKfEm07scMuo",
@@ -20287,13 +20367,18 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         callbacks: {
                             signInSuccess: function(currentUser, credential, redirectUrl) {
                                 return false;
+                            },
+                            uiShown: function() {
+                                console.log("main-auth: FirebaseUI ready");
+                                thisMainAuth.$.firebaseuiauthcontainer.style.display = 'block';
+                                thisMainAuth.$.spinner.style.display = 'none';
                             }
                         },
                         tosUrl: '/'
                     };
    
                     firebaseUI = new firebaseui.auth.AuthUI(auth); 
-                    firebaseUI.start('#firebaseui-auth-container', firebaseUIConfig);
+                    firebaseUI.start('#firebaseuiauthcontainer', firebaseUIConfig);
                 },
 
 
@@ -20316,6 +20401,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     else if (host == "app.replus.co") {
                         thisMainAuth.host = "Replus";
                         document.querySelector("link[rel*='icon']").href = "replus.ico";
+                        document.querySelector("link[rel*='manifest']").href = "replus.json";
                     }
                     else thisMainAuth.host = "MQTT Remote";
                     
@@ -20521,6 +20607,13 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
 
+                _tapAdd: function() {
+                    thisRemoteList.$.btnMenu.style.visibility = 'hidden';
+                    thisRemoteList.$.btnBack.style.display = 'block';
+                },
+
+
+
                 _tapBack: function() {
                     thisRemoteList.remoteView = 'list';
                     thisRemoteList.$.btnBack.style.display = 'none';
@@ -20542,6 +20635,19 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteList.$.btnBack.style.display = 'block';
                     thisRemoteList.toolbarTitle = thisMainApp.choosenRoom + ' ' + thisRemoteList.pilihanRemote;
                 }
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'remote-add',
+                properties: {
+
+                },
+
+                ready: function() {
+                    thisRemoteAdd = this;
+                }
+
             });
         })();
 (function() {

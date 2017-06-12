@@ -15584,6 +15584,492 @@ Polymer({
     ]
 
   });
+(function() {
+      Polymer({
+        is: 'iron-swipeable-pages',
+
+        behaviors: [
+          Polymer.IronResizableBehavior,
+          Polymer.IronSelectableBehavior
+        ],
+
+        properties: {
+          // as the selected page is the only one visible, activateEvent
+          // is both non-sensical and problematic; e.g. in cases where a user
+          // handler attempts to change the page and the activateEvent
+          // handler immediately changes it back
+          activateEvent: {
+            type: String,
+            readOnly: true,
+            value: null
+          },
+
+          /**
+           * Add extra padding to the offsetWidth while swiping
+           * Useful if the element is nested within other elements that enforce a padding
+           */
+          padding: {
+            type: Number,
+            value: 0
+          },
+
+          /**
+           * The value used to decide if a transition is effective and therefore
+           * if the page get swiped.
+           */
+          threshold: {
+            type: Number,
+            value: 0.3
+          },
+
+          /**
+           * Prevent cycling between first and last pages by swiping.
+           */
+          noCycle: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * animate wrap-around between first and last as a direct transition
+           * like a carousel. this animation is only used when iron-select is
+           * fired from something OTHER a swipe. e.g. a call to selectNext()
+           * like you might make from a button or an a11y arrow-key binding.
+           * if false the wrap around flips backwards across all the pages.
+           */
+          carousel: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * The CSS transition duration applied swiping to next/previous page
+           */
+          transitionDuration: {
+            type: Number,
+            value: 250
+          },
+
+          /**
+           * The maximum global CSS transition duration applied if swiping involves more than one
+           * page transition using selection instead of manual swiping.
+           */
+          maximumTransitionDuration: {
+            type: Number,
+            value: 0
+          },
+
+          /**
+           * The CSS transition timing function applied.
+           */
+          transitionTimingFunction: {
+            type: String,
+            value: 'cubic-bezier(0.4, 0.0, 0.2, 1)'
+          },
+
+          /**
+           * This option could be used for example to check in `on-selected-changed` that
+           * the selection was initiated by gesture or via data-binding or programmatically
+           */
+          isGesture: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * How many pixels on the side of the screen are not sensitive to edge swipes.
+           */
+          edgeSwipeSensitivity: {
+            type: Number,
+            value: 0
+          },
+
+          /**
+           * This option could be used to disable swiping.
+           */
+          disabled: {
+            type: Boolean,
+            value: false
+          },
+
+        },
+
+        observers: [
+          '_onFallbackSelectionChange(fallbackSelection)'
+        ],
+
+        listeners: {
+          'iron-items-changed': '_onItemsChanged',
+          'iron-deselect': '_onIronDeselectItem',
+          'iron-select': '_onIronSelectItem',
+          'track': '_onTrack',
+          'iron-resize': '_onResize'
+        },
+
+        // Element Lifecycle
+
+        ready: function() {
+          this.setScrollDirection('y');
+          this._animatedPages = [];
+        },
+
+        // Element page set up
+
+        _onItemsChanged: function(event) {
+          var mutations = event.detail;
+          for (var i = 0; i < mutations.addedNodes.length; i++) {
+            this._addPage(mutations.addedNodes[i]);
+          }
+          for (var j = 0; j < mutations.removedNodes.length; j++) {
+            this._removePage(mutations.removedNodes[j]);
+          }
+        },
+
+        _addPage: function(page) {
+            if (!page || page.nodeType !== Node.ELEMENT_NODE)
+              return;
+            page.setAttribute('aria-hidden', !page.classList.contains('iron-selected'));
+            this.listen(page, 'webkitTransitionEnd', '_onTransitionEnd');
+            this.listen(page, 'transitionend', '_onTransitionEnd');
+        },
+
+        _removePage: function(page) {
+            if (!page || page.nodeType !== Node.ELEMENT_NODE)
+              return;
+            this.unlisten(page, 'webkitTransitionEnd', '_onTransitionEnd');
+            this.unlisten(page, 'transitionend', '_onTransitionEnd');
+        },
+
+        _onFallbackSelectionChange: function(event) {
+          if (!this.fallbackSelection) {
+            this.unlisten(this, 'dom-change', '_onDomChange');
+          }
+          else {
+            this.listen(this, 'dom-change', '_onDomChange');
+          }
+        },
+
+        _onDomChange: function(event) {
+          if ( this.selectedItem && this.selectedItem.offsetWidth == 0 ) {
+            this.selected = this.fallbackSelection;
+          }
+        },
+
+        // Element tracking
+        _onTrack: function(event) {
+          var track = event.detail;
+
+          if (this.disabled || (this.noCycle && !this._canCycle(track))) {
+            return;
+          }
+
+          if ((track.x - track.dx) < this.edgeSwipeSensitivity || (track.x - track.dx) > this.offsetWidth - this.edgeSwipeSensitivity) {
+            return;
+          }
+
+          if (track.state === 'start' && Math.abs(track.dy) < Math.abs(track.dx)) {
+            // if we don't have at least 2 items, no need to swipe...
+            if (this.items.length < 2) {
+              return;
+            }
+            this._trackStart(track);
+
+            this._swipeStarted = true;
+          } else if (track.state === 'track' && this._swipeStarted) {
+            this._trackMove(track);
+          } else if (track.state === 'end' && this._swipeStarted) {
+            this._trackEnd(track);
+          }
+        },
+
+        _trackStart: function(trackData) {
+          if (this._transitionRunning) {
+            // reset pages state
+            this._resetPages();
+          }
+          this._setUpSwipePages();
+          this._animatePages(trackData.dx);
+          this._switchPageIfNecessary(trackData.dx);
+          // Prevent regular touchmove event (disables vertical scroll)
+          window.addEventListener('touchmove', this._preventTouchMove);
+        },
+
+        _trackMove: function(trackData) {
+          this._animatePages(trackData.dx);
+          this._switchPageIfNecessary(trackData.dx);
+        },
+
+        _trackEnd: function(trackData) {
+          if (!this._swipeStarted) {
+            return;
+          }
+          // Activate transition
+          for (var i = 0; i < this._animatedPages.length; i++) {
+            this._animatedPages[i].style.webkitTransition = this._computeTransition(1);
+            this._animatedPages[i].style.transition = this._computeTransition(1);
+          }
+          this._transitionRunning = true;
+
+          // The element is swiped away if the swiping get passed the treshold.
+          this._completeSwipe = Math.abs(trackData.dx) > this._getOffsetWidth() * this.threshold;
+          if (this._completeSwipe) {
+            this.isGesture = true;
+            var direction = trackData.dx > 0;
+            // we are swipping, therefore update selected
+            direction ? this._selectPage(this._leftCandidate) : this._selectPage(this._rightCandidate);
+            // trigger the animation in the proper direction
+            this._animatePages(direction ? this._getOffsetWidth() : -this._getOffsetWidth());
+          } else {
+            this._animatePages(0);
+          }
+          // Enable regular touchmove event (enables vertical scroll again)
+          window.removeEventListener('touchmove', this._preventTouchMove);
+        },
+
+        _preventTouchMove: function (e) {
+          return e && e.preventDefault();
+        },
+
+        _onIronDeselectItem: function(event) {
+          // Prevent bubbling of same event on child elements
+          if (event.target !== this) {
+            return;
+          }
+
+          this._lastIndex = this.indexOf(event.detail.item);
+        },
+
+        _onIronSelectItem: function(event) {
+          // Prevent bubbling of same event on child elements
+          if (event.target !== this) {
+            return;
+          }
+
+          // might happen at init of the component when first selected value is set and ready not called....
+          // or when a "selected" page disappear from the dom because of a "dom-if" with restamp option active
+          if (this._lastIndex === undefined || this._lastIndex === -1) {
+            return;
+          }
+          var index = this.indexOf(event.detail.item);
+
+          if (this._completeSwipe) {
+            // we just need to reset the flag, the transformation happened already by swiping
+            this._completeSwipe = false;
+          } else {
+            // check if a transition is currently running
+            if (this._transitionRunning) {
+              // reset pages state and we don't trigger any new animation because lastIndex is not valid anymore
+              this._resetPages();
+            } else {
+              // reset the animated page list
+              this._animatedPages = [];
+              // skipped is used to filter the hidden element since they have a width == 0
+              // we use a negative value if we translate to the right
+              var skipped = 0;
+              // in this case, selected has been modify w/o swiping, we need to apply the transformation
+
+              // This stuff supports carousel style wrap-around animation
+              var translateRight;
+              var virtualLastIndex = this._lastIndex;
+              var virtualIndex = index;
+              var len = this.items.length;
+
+              if (index == 0 && this._lastIndex == len - 1) {
+                // wrap-around
+                translateRight = true;
+                if (this.carousel) {
+                  translateRight = false;
+                  virtualIndex = len;
+                }
+              }
+              else if (index == len - 1 && this._lastIndex == 0) {
+                // wrap-around
+                translateRight = false;
+                if (this.carousel) {
+                  translateRight = true;
+                  virtualLastIndex = len;
+                }
+              }
+              else if (index > this._lastIndex) {
+                translateRight = false;
+              }
+              else {
+                translateRight = true;
+              }
+
+              if (translateRight) {
+                // we translate to the right
+                for (var i = virtualLastIndex; i >= virtualIndex; i--) {
+                  var item = this.items[i % len];
+                  this._initPage(
+                    item,
+                    this._computeTransition(virtualLastIndex - virtualIndex),
+                    this._getOffsetWidth()*(i - skipped - virtualLastIndex));
+                  // Need for dom.flush()?
+                  if (item.offsetWidth == 0) {
+                    this._resetPage(item);
+                    skipped--;
+                  }
+                }
+              } else {
+                skipped = 0;
+                // we translate to the left
+                for (var j = virtualLastIndex; j <= virtualIndex; j++) {
+                  var item = this.items[j % len];
+                  this._initPage(
+                    item,
+                    this._computeTransition(virtualIndex - virtualLastIndex),
+                    this._getOffsetWidth()*(j - skipped - virtualLastIndex));
+                  // Need for dom.flush()?
+                  if (item.offsetWidth == 0) {
+                    this._resetPage(item);
+                    skipped++;
+                  }
+                }
+              }
+              this._transitionRunning = true;
+
+              // before animating, we need to be sure style are updated correctly
+              this.async( function() {
+                this._animatePages((virtualLastIndex - virtualIndex + skipped) * this._getOffsetWidth());
+              });
+            }
+          }
+        },
+
+        // Element page management
+        _setUpSwipePages: function() {
+          // reset the animated page list
+          this._animatedPages = [];
+          // selected page
+          this._initPage(this.selectedItem, 'none', 0);
+          // left candidate
+          var skipped = 0;
+          var found = false;
+          while (!found) {
+            var leftIndex = (Number(this.indexOf(this.selectedItem)) - 1 - skipped + this.items.length) % this.items.length;
+            this._leftCandidate = this.items[leftIndex];
+            this._initPage(this._leftCandidate, 'none', -this._getOffsetWidth());
+            // Need for dom.flush()?
+            if (this._leftCandidate.offsetWidth > 0) {
+              found = true;
+            } else {
+              this._resetPage(this._leftCandidate);
+              skipped++;
+            }
+          }
+          // right candidate
+          skipped = 0;
+          found = false;
+          while (!found) {
+            var rightIndex = (Number(this.indexOf(this.selectedItem)) + 1 + skipped) % this.items.length;
+            this._rightCandidate = this.items[rightIndex];
+            this._initPage(this._rightCandidate, 'none', this._getOffsetWidth());
+            // Need for dom.flush()?
+            if (this._rightCandidate.offsetWidth > 0) {
+              found = true;
+            } else {
+              this._resetPage(this._rightCandidate);
+              skipped++;
+            }
+          }
+        },
+
+        // prepare the page for animation and add it to the list of pages to be animated
+        _initPage: function(page, transition, left) {
+          if (!page) {
+            return;
+          }
+          page.style.left = left + "px";
+          page.style.webkitTransition = transition;
+          page.style.transition = transition;
+          this.toggleClass('iron-swiping', true, page);
+
+          this._animatedPages.push(page);
+        },
+
+        _animatePages: function(x) {
+          for (var i = 0; i < this._animatedPages.length; i++) {
+            this.translate3d(x+'px', '0px', '0px', this._animatedPages[i]);
+          }
+        },
+
+        // this function is useful if only 2 pages are available and we need to switch the next/previous page
+        // on the left/right side depending on the direction of the swipe given with `dx`
+        _switchPageIfNecessary: function(dx) {
+          if (this._leftCandidate && this._rightCandidate && this._leftCandidate === this._rightCandidate) {
+            var direction = dx > 0 ? -1 : 1;
+            this._rightCandidate.style.left = (direction * this._getOffsetWidth()) + "px";
+          }
+        },
+
+        _selectPage: function(page) {
+          var index = this.indexOf(page);
+          // TODO: should be replaced with this.selectIndex when merged in master:
+          // https://github.com/PolymerElements/iron-selector/issues/87
+          this.selected = this._indexToValue(index);
+        },
+
+        _resetPage: function(page) {
+          page.style.left = "0px";
+          page.style.webkitTransition = 'none';
+          page.style.transition = 'none';
+          this.toggleClass('iron-swiping', false, page);
+
+          this._animatedPages.pop();
+        },
+
+        // remove the iron-swiping class and transition
+        _resetPages: function() {
+          for (var i = 0; i < this._animatedPages.length; i++) {
+            this._animatedPages[i].style.left = '0px';
+            this._animatedPages[i].style.webkitTransition = 'none';
+            this._animatedPages[i].style.transition = 'none';
+            this._animatedPages[i].setAttribute('aria-hidden', !this._animatedPages[i].classList.contains('iron-selected'));
+            this.toggleClass('iron-swiping', false, this._animatedPages[i]);
+            this.transform('none', this._animatedPages[i]);
+          }
+          this._transitionRunning = false;
+          this._swipeStarted = false;
+          this.isGesture = false;
+        },
+
+        _onTransitionEnd: function(event) {
+          // reset pages state
+          this._resetPages();
+        },
+
+        // Element utility functions
+        _canCycle: function(trackData) {
+          var index = this._valueToIndex(this.selected);
+
+          if (index === 0 && trackData.dx > 0) {
+            return false;
+          }
+          if (index === this.items.length - 1 && trackData.dx < 0) {
+            return false;
+          }
+          return true;
+        },
+
+        _getOffsetWidth: function () {
+          this._offsetWidth || this.offsetWidth + (2 * this.padding);
+          return this._offsetWidth;
+        },
+
+        _onResize: function() {
+          this._offsetWidth = this.offsetWidth + (2 * this.padding);
+        },
+
+        _computeTransition: function(factor) {
+          var duration = factor * this.transitionDuration;
+          if (this.maximumTransitionDuration) {
+            duration = Math.min(this.maximumTransitionDuration, duration);
+          }
+          return 'transform ' + duration + 'ms ' + this.transitionTimingFunction;
+        }
+      });
+    }());
 /**
    * @demo demo/index.html
    * @polymerBehavior
@@ -17196,89 +17682,6 @@ It will also ensure that focus remains in the dialog.
 
 })();
 /**
-   * `Polymer.PaperInkyFocusBehavior` implements a ripple when the element has keyboard focus.
-   *
-   * @polymerBehavior Polymer.PaperInkyFocusBehavior
-   */
-  Polymer.PaperInkyFocusBehaviorImpl = {
-    observers: [
-      '_focusedChanged(receivedFocusFromKeyboard)'
-    ],
-
-    _focusedChanged: function(receivedFocusFromKeyboard) {
-      if (receivedFocusFromKeyboard) {
-        this.ensureRipple();
-      }
-      if (this.hasRipple()) {
-        this._ripple.holdDown = receivedFocusFromKeyboard;
-      }
-    },
-
-    _createRipple: function() {
-      var ripple = Polymer.PaperRippleBehavior._createRipple();
-      ripple.id = 'ink';
-      ripple.setAttribute('center', '');
-      ripple.classList.add('circle');
-      return ripple;
-    }
-  };
-
-  /** @polymerBehavior Polymer.PaperInkyFocusBehavior */
-  Polymer.PaperInkyFocusBehavior = [
-    Polymer.IronButtonState,
-    Polymer.IronControlState,
-    Polymer.PaperRippleBehavior,
-    Polymer.PaperInkyFocusBehaviorImpl
-  ];
-Polymer({
-      is: 'paper-icon-button',
-
-      hostAttributes: {
-        role: 'button',
-        tabindex: '0'
-      },
-
-      behaviors: [
-        Polymer.PaperInkyFocusBehavior
-      ],
-
-      properties: {
-        /**
-         * The URL of an image for the icon. If the src property is specified,
-         * the icon property should not be.
-         */
-        src: {
-          type: String
-        },
-
-        /**
-         * Specifies the icon name or index in the set of icons available in
-         * the icon's icon set. If the icon property is specified,
-         * the src property should not be.
-         */
-        icon: {
-          type: String
-        },
-
-        /**
-         * Specifies the alternate text for the button, for accessibility.
-         */
-        alt: {
-          type: String,
-          observer: "_altChanged"
-        }
-      },
-
-      _altChanged: function(newValue, oldValue) {
-        var label = this.getAttribute('aria-label');
-
-        // Don't stomp over a user-set aria-label.
-        if (!label || oldValue == label) {
-          this.setAttribute('aria-label', newValue);
-        }
-      }
-    });
-/**
   Polymer.IronFormElementBehavior enables a custom element to be included
   in an `iron-form`.
 
@@ -17349,67 +17752,6 @@ Polymer({
     }
 
   };
-(function() {
-      'use strict';
-
-      Polymer.IronA11yAnnouncer = Polymer({
-        is: 'iron-a11y-announcer',
-
-        properties: {
-
-          /**
-           * The value of mode is used to set the `aria-live` attribute
-           * for the element that will be announced. Valid values are: `off`,
-           * `polite` and `assertive`.
-           */
-          mode: {
-            type: String,
-            value: 'polite'
-          },
-
-          _text: {
-            type: String,
-            value: ''
-          }
-        },
-
-        created: function() {
-          if (!Polymer.IronA11yAnnouncer.instance) {
-            Polymer.IronA11yAnnouncer.instance = this;
-          }
-
-          document.body.addEventListener('iron-announce', this._onIronAnnounce.bind(this));
-        },
-
-        /**
-         * Cause a text string to be announced by screen readers.
-         *
-         * @param {string} text The text that should be announced.
-         */
-        announce: function(text) {
-          this._text = '';
-          this.async(function() {
-            this._text = text;
-          }, 100);
-        },
-
-        _onIronAnnounce: function(event) {
-          if (event.detail && event.detail.text) {
-            this.announce(event.detail.text);
-          }
-        }
-      });
-
-      Polymer.IronA11yAnnouncer.instance = null;
-
-      Polymer.IronA11yAnnouncer.requestAvailability = function() {
-        if (!Polymer.IronA11yAnnouncer.instance) {
-          Polymer.IronA11yAnnouncer.instance = document.createElement('iron-a11y-announcer');
-        }
-
-        document.body.appendChild(Polymer.IronA11yAnnouncer.instance);
-      };
-    })();
 /**
    * Singleton IronMeta instance.
    */
@@ -17543,6 +17885,67 @@ Polymer({
           Polymer.IronValidatableBehaviorMeta.byKey(this.validator);
     }
   };
+(function() {
+      'use strict';
+
+      Polymer.IronA11yAnnouncer = Polymer({
+        is: 'iron-a11y-announcer',
+
+        properties: {
+
+          /**
+           * The value of mode is used to set the `aria-live` attribute
+           * for the element that will be announced. Valid values are: `off`,
+           * `polite` and `assertive`.
+           */
+          mode: {
+            type: String,
+            value: 'polite'
+          },
+
+          _text: {
+            type: String,
+            value: ''
+          }
+        },
+
+        created: function() {
+          if (!Polymer.IronA11yAnnouncer.instance) {
+            Polymer.IronA11yAnnouncer.instance = this;
+          }
+
+          document.body.addEventListener('iron-announce', this._onIronAnnounce.bind(this));
+        },
+
+        /**
+         * Cause a text string to be announced by screen readers.
+         *
+         * @param {string} text The text that should be announced.
+         */
+        announce: function(text) {
+          this._text = '';
+          this.async(function() {
+            this._text = text;
+          }, 100);
+        },
+
+        _onIronAnnounce: function(event) {
+          if (event.detail && event.detail.text) {
+            this.announce(event.detail.text);
+          }
+        }
+      });
+
+      Polymer.IronA11yAnnouncer.instance = null;
+
+      Polymer.IronA11yAnnouncer.requestAvailability = function() {
+        if (!Polymer.IronA11yAnnouncer.instance) {
+          Polymer.IronA11yAnnouncer.instance = document.createElement('iron-a11y-announcer');
+        }
+
+        document.body.appendChild(Polymer.IronA11yAnnouncer.instance);
+      };
+    })();
 /*
 `<iron-input>` adds two-way binding and custom validators using `Polymer.IronValidatorBehavior`
 to `<input>`.
@@ -18789,6 +19192,1594 @@ Polymer({
       Polymer.PaperInputBehavior
     ]
   });
+/**
+   * Use `Polymer.NeonAnimationBehavior` to implement an animation.
+   * @polymerBehavior
+   */
+  Polymer.NeonAnimationBehavior = {
+
+    properties: {
+
+      /**
+       * Defines the animation timing.
+       */
+      animationTiming: {
+        type: Object,
+        value: function() {
+          return {
+            duration: 500,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            fill: 'both'
+          }
+        }
+      }
+
+    },
+
+    /**
+     * Can be used to determine that elements implement this behavior.
+     */
+    isNeonAnimation: true,
+
+    /**
+     * Do any animation configuration here.
+     */
+    // configure: function(config) {
+    // },
+
+    /**
+     * Returns the animation timing by mixing in properties from `config` to the defaults defined
+     * by the animation.
+     */
+    timingFromConfig: function(config) {
+      if (config.timing) {
+        for (var property in config.timing) {
+          this.animationTiming[property] = config.timing[property];
+        }
+      }
+      return this.animationTiming;
+    },
+
+    /**
+     * Sets `transform` and `transformOrigin` properties along with the prefixed versions.
+     */
+    setPrefixedProperty: function(node, property, value) {
+      var map = {
+        'transform': ['webkitTransform'],
+        'transformOrigin': ['mozTransformOrigin', 'webkitTransformOrigin']
+      };
+      var prefixes = map[property];
+      for (var prefix, index = 0; prefix = prefixes[index]; index++) {
+        node.style[prefix] = value;
+      }
+      node.style[property] = value;
+    },
+
+    /**
+     * Called when the animation finishes.
+     */
+    complete: function() {}
+
+  };
+// Copyright 2014 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+//     You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//     See the License for the specific language governing permissions and
+// limitations under the License.
+
+!function(a,b){var c={},d={},e={},f=null;!function(a,b){function c(a){if("number"==typeof a)return a;var b={};for(var c in a)b[c]=a[c];return b}function d(){this._delay=0,this._endDelay=0,this._fill="none",this._iterationStart=0,this._iterations=1,this._duration=0,this._playbackRate=1,this._direction="normal",this._easing="linear",this._easingFunction=x}function e(){return a.isDeprecated("Invalid timing inputs","2016-03-02","TypeError exceptions will be thrown instead.",!0)}function f(b,c,e){var f=new d;return c&&(f.fill="both",f.duration="auto"),"number"!=typeof b||isNaN(b)?void 0!==b&&Object.getOwnPropertyNames(b).forEach(function(c){if("auto"!=b[c]){if(("number"==typeof f[c]||"duration"==c)&&("number"!=typeof b[c]||isNaN(b[c])))return;if("fill"==c&&-1==v.indexOf(b[c]))return;if("direction"==c&&-1==w.indexOf(b[c]))return;if("playbackRate"==c&&1!==b[c]&&a.isDeprecated("AnimationEffectTiming.playbackRate","2014-11-28","Use Animation.playbackRate instead."))return;f[c]=b[c]}}):f.duration=b,f}function g(a){return"number"==typeof a&&(a=isNaN(a)?{duration:0}:{duration:a}),a}function h(b,c){return b=a.numericTimingToObject(b),f(b,c)}function i(a,b,c,d){return a<0||a>1||c<0||c>1?x:function(e){function f(a,b,c){return 3*a*(1-c)*(1-c)*c+3*b*(1-c)*c*c+c*c*c}if(e<=0){var g=0;return a>0?g=b/a:!b&&c>0&&(g=d/c),g*e}if(e>=1){var h=0;return c<1?h=(d-1)/(c-1):1==c&&a<1&&(h=(b-1)/(a-1)),1+h*(e-1)}for(var i=0,j=1;i<j;){var k=(i+j)/2,l=f(a,c,k);if(Math.abs(e-l)<1e-5)return f(b,d,k);l<e?i=k:j=k}return f(b,d,k)}}function j(a,b){return function(c){if(c>=1)return 1;var d=1/a;return(c+=b*d)-c%d}}function k(a){C||(C=document.createElement("div").style),C.animationTimingFunction="",C.animationTimingFunction=a;var b=C.animationTimingFunction;if(""==b&&e())throw new TypeError(a+" is not a valid value for easing");return b}function l(a){if("linear"==a)return x;var b=E.exec(a);if(b)return i.apply(this,b.slice(1).map(Number));var c=F.exec(a);return c?j(Number(c[1]),{start:y,middle:z,end:A}[c[2]]):B[a]||x}function m(a){return Math.abs(n(a)/a.playbackRate)}function n(a){return 0===a.duration||0===a.iterations?0:a.duration*a.iterations}function o(a,b,c){if(null==b)return G;var d=c.delay+a+c.endDelay;return b<Math.min(c.delay,d)?H:b>=Math.min(c.delay+a,d)?I:J}function p(a,b,c,d,e){switch(d){case H:return"backwards"==b||"both"==b?0:null;case J:return c-e;case I:return"forwards"==b||"both"==b?a:null;case G:return null}}function q(a,b,c,d,e){var f=e;return 0===a?b!==H&&(f+=c):f+=d/a,f}function r(a,b,c,d,e,f){var g=a===1/0?b%1:a%1;return 0!==g||c!==I||0===d||0===e&&0!==f||(g=1),g}function s(a,b,c,d){return a===I&&b===1/0?1/0:1===c?Math.floor(d)-1:Math.floor(d)}function t(a,b,c){var d=a;if("normal"!==a&&"reverse"!==a){var e=b;"alternate-reverse"===a&&(e+=1),d="normal",e!==1/0&&e%2!=0&&(d="reverse")}return"normal"===d?c:1-c}function u(a,b,c){var d=o(a,b,c),e=p(a,c.fill,b,d,c.delay);if(null===e)return null;var f=q(c.duration,d,c.iterations,e,c.iterationStart),g=r(f,c.iterationStart,d,c.iterations,e,c.duration),h=s(d,c.iterations,g,f),i=t(c.direction,h,g);return c._easingFunction(i)}var v="backwards|forwards|both|none".split("|"),w="reverse|alternate|alternate-reverse".split("|"),x=function(a){return a};d.prototype={_setMember:function(b,c){this["_"+b]=c,this._effect&&(this._effect._timingInput[b]=c,this._effect._timing=a.normalizeTimingInput(this._effect._timingInput),this._effect.activeDuration=a.calculateActiveDuration(this._effect._timing),this._effect._animation&&this._effect._animation._rebuildUnderlyingAnimation())},get playbackRate(){return this._playbackRate},set delay(a){this._setMember("delay",a)},get delay(){return this._delay},set endDelay(a){this._setMember("endDelay",a)},get endDelay(){return this._endDelay},set fill(a){this._setMember("fill",a)},get fill(){return this._fill},set iterationStart(a){if((isNaN(a)||a<0)&&e())throw new TypeError("iterationStart must be a non-negative number, received: "+timing.iterationStart);this._setMember("iterationStart",a)},get iterationStart(){return this._iterationStart},set duration(a){if("auto"!=a&&(isNaN(a)||a<0)&&e())throw new TypeError("duration must be non-negative or auto, received: "+a);this._setMember("duration",a)},get duration(){return this._duration},set direction(a){this._setMember("direction",a)},get direction(){return this._direction},set easing(a){this._easingFunction=l(k(a)),this._setMember("easing",a)},get easing(){return this._easing},set iterations(a){if((isNaN(a)||a<0)&&e())throw new TypeError("iterations must be non-negative, received: "+a);this._setMember("iterations",a)},get iterations(){return this._iterations}};var y=1,z=.5,A=0,B={ease:i(.25,.1,.25,1),"ease-in":i(.42,0,1,1),"ease-out":i(0,0,.58,1),"ease-in-out":i(.42,0,.58,1),"step-start":j(1,y),"step-middle":j(1,z),"step-end":j(1,A)},C=null,D="\\s*(-?\\d+\\.?\\d*|-?\\.\\d+)\\s*",E=new RegExp("cubic-bezier\\("+D+","+D+","+D+","+D+"\\)"),F=/steps\(\s*(\d+)\s*,\s*(start|middle|end)\s*\)/,G=0,H=1,I=2,J=3;a.cloneTimingInput=c,a.makeTiming=f,a.numericTimingToObject=g,a.normalizeTimingInput=h,a.calculateActiveDuration=m,a.calculateIterationProgress=u,a.calculatePhase=o,a.normalizeEasing=k,a.parseEasingFunction=l}(c),function(a,b){function c(a,b){return a in k?k[a][b]||b:b}function d(a){return"display"===a||0===a.lastIndexOf("animation",0)||0===a.lastIndexOf("transition",0)}function e(a,b,e){if(!d(a)){var f=h[a];if(f){i.style[a]=b;for(var g in f){var j=f[g],k=i.style[j];e[j]=c(j,k)}}else e[a]=c(a,b)}}function f(a){var b=[];for(var c in a)if(!(c in["easing","offset","composite"])){var d=a[c];Array.isArray(d)||(d=[d]);for(var e,f=d.length,g=0;g<f;g++)e={},e.offset="offset"in a?a.offset:1==f?1:g/(f-1),"easing"in a&&(e.easing=a.easing),"composite"in a&&(e.composite=a.composite),e[c]=d[g],b.push(e)}return b.sort(function(a,b){return a.offset-b.offset}),b}function g(b){function c(){var a=d.length;null==d[a-1].offset&&(d[a-1].offset=1),a>1&&null==d[0].offset&&(d[0].offset=0);for(var b=0,c=d[0].offset,e=1;e<a;e++){var f=d[e].offset;if(null!=f){for(var g=1;g<e-b;g++)d[b+g].offset=c+(f-c)*g/(e-b);b=e,c=f}}}if(null==b)return[];window.Symbol&&Symbol.iterator&&Array.prototype.from&&b[Symbol.iterator]&&(b=Array.from(b)),Array.isArray(b)||(b=f(b));for(var d=b.map(function(b){var c={};for(var d in b){var f=b[d];if("offset"==d){if(null!=f){if(f=Number(f),!isFinite(f))throw new TypeError("Keyframe offsets must be numbers.");if(f<0||f>1)throw new TypeError("Keyframe offsets must be between 0 and 1.")}}else if("composite"==d){if("add"==f||"accumulate"==f)throw{type:DOMException.NOT_SUPPORTED_ERR,name:"NotSupportedError",message:"add compositing is not supported"};if("replace"!=f)throw new TypeError("Invalid composite mode "+f+".")}else f="easing"==d?a.normalizeEasing(f):""+f;e(d,f,c)}return void 0==c.offset&&(c.offset=null),void 0==c.easing&&(c.easing="linear"),c}),g=!0,h=-1/0,i=0;i<d.length;i++){var j=d[i].offset;if(null!=j){if(j<h)throw new TypeError("Keyframes are not loosely sorted by offset. Sort or specify offsets.");h=j}else g=!1}return d=d.filter(function(a){return a.offset>=0&&a.offset<=1}),g||c(),d}var h={background:["backgroundImage","backgroundPosition","backgroundSize","backgroundRepeat","backgroundAttachment","backgroundOrigin","backgroundClip","backgroundColor"],border:["borderTopColor","borderTopStyle","borderTopWidth","borderRightColor","borderRightStyle","borderRightWidth","borderBottomColor","borderBottomStyle","borderBottomWidth","borderLeftColor","borderLeftStyle","borderLeftWidth"],borderBottom:["borderBottomWidth","borderBottomStyle","borderBottomColor"],borderColor:["borderTopColor","borderRightColor","borderBottomColor","borderLeftColor"],borderLeft:["borderLeftWidth","borderLeftStyle","borderLeftColor"],borderRadius:["borderTopLeftRadius","borderTopRightRadius","borderBottomRightRadius","borderBottomLeftRadius"],borderRight:["borderRightWidth","borderRightStyle","borderRightColor"],borderTop:["borderTopWidth","borderTopStyle","borderTopColor"],borderWidth:["borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth"],flex:["flexGrow","flexShrink","flexBasis"],font:["fontFamily","fontSize","fontStyle","fontVariant","fontWeight","lineHeight"],margin:["marginTop","marginRight","marginBottom","marginLeft"],outline:["outlineColor","outlineStyle","outlineWidth"],padding:["paddingTop","paddingRight","paddingBottom","paddingLeft"]},i=document.createElementNS("http://www.w3.org/1999/xhtml","div"),j={thin:"1px",medium:"3px",thick:"5px"},k={borderBottomWidth:j,borderLeftWidth:j,borderRightWidth:j,borderTopWidth:j,fontSize:{"xx-small":"60%","x-small":"75%",small:"89%",medium:"100%",large:"120%","x-large":"150%","xx-large":"200%"},fontWeight:{normal:"400",bold:"700"},outlineWidth:j,textShadow:{none:"0px 0px 0px transparent"},boxShadow:{none:"0px 0px 0px 0px transparent"}};a.convertToArrayForm=f,a.normalizeKeyframes=g}(c),function(a){var b={};a.isDeprecated=function(a,c,d,e){var f=e?"are":"is",g=new Date,h=new Date(c);return h.setMonth(h.getMonth()+3),!(g<h&&(a in b||console.warn("Web Animations: "+a+" "+f+" deprecated and will stop working on "+h.toDateString()+". "+d),b[a]=!0,1))},a.deprecated=function(b,c,d,e){var f=e?"are":"is";if(a.isDeprecated(b,c,d,e))throw new Error(b+" "+f+" no longer supported. "+d)}}(c),function(){if(document.documentElement.animate){var a=document.documentElement.animate([],0),b=!0;if(a&&(b=!1,"play|currentTime|pause|reverse|playbackRate|cancel|finish|startTime|playState".split("|").forEach(function(c){void 0===a[c]&&(b=!0)})),!b)return}!function(a,b,c){function d(a){for(var b={},c=0;c<a.length;c++)for(var d in a[c])if("offset"!=d&&"easing"!=d&&"composite"!=d){var e={offset:a[c].offset,easing:a[c].easing,value:a[c][d]};b[d]=b[d]||[],b[d].push(e)}for(var f in b){var g=b[f];if(0!=g[0].offset||1!=g[g.length-1].offset)throw{type:DOMException.NOT_SUPPORTED_ERR,name:"NotSupportedError",message:"Partial keyframes are not supported"}}return b}function e(c){var d=[];for(var e in c)for(var f=c[e],g=0;g<f.length-1;g++){var h=g,i=g+1,j=f[h].offset,k=f[i].offset,l=j,m=k;0==g&&(l=-1/0,0==k&&(i=h)),g==f.length-2&&(m=1/0,1==j&&(h=i)),d.push({applyFrom:l,applyTo:m,startOffset:f[h].offset,endOffset:f[i].offset,easingFunction:a.parseEasingFunction(f[h].easing),property:e,interpolation:b.propertyInterpolation(e,f[h].value,f[i].value)})}return d.sort(function(a,b){return a.startOffset-b.startOffset}),d}b.convertEffectInput=function(c){var f=a.normalizeKeyframes(c),g=d(f),h=e(g);return function(a,c){if(null!=c)h.filter(function(a){return c>=a.applyFrom&&c<a.applyTo}).forEach(function(d){var e=c-d.startOffset,f=d.endOffset-d.startOffset,g=0==f?0:d.easingFunction(e/f);b.apply(a,d.property,d.interpolation(g))});else for(var d in g)"offset"!=d&&"easing"!=d&&"composite"!=d&&b.clear(a,d)}}}(c,d),function(a,b,c){function d(a){return a.replace(/-(.)/g,function(a,b){return b.toUpperCase()})}function e(a,b,c){h[c]=h[c]||[],h[c].push([a,b])}function f(a,b,c){for(var f=0;f<c.length;f++){e(a,b,d(c[f]))}}function g(c,e,f){var g=c;/-/.test(c)&&!a.isDeprecated("Hyphenated property names","2016-03-22","Use camelCase instead.",!0)&&(g=d(c)),"initial"!=e&&"initial"!=f||("initial"==e&&(e=i[g]),"initial"==f&&(f=i[g]));for(var j=e==f?[]:h[g],k=0;j&&k<j.length;k++){var l=j[k][0](e),m=j[k][0](f);if(void 0!==l&&void 0!==m){var n=j[k][1](l,m);if(n){var o=b.Interpolation.apply(null,n);return function(a){return 0==a?e:1==a?f:o(a)}}}}return b.Interpolation(!1,!0,function(a){return a?f:e})}var h={};b.addPropertiesHandler=f;var i={backgroundColor:"transparent",backgroundPosition:"0% 0%",borderBottomColor:"currentColor",borderBottomLeftRadius:"0px",borderBottomRightRadius:"0px",borderBottomWidth:"3px",borderLeftColor:"currentColor",borderLeftWidth:"3px",borderRightColor:"currentColor",borderRightWidth:"3px",borderSpacing:"2px",borderTopColor:"currentColor",borderTopLeftRadius:"0px",borderTopRightRadius:"0px",borderTopWidth:"3px",bottom:"auto",clip:"rect(0px, 0px, 0px, 0px)",color:"black",fontSize:"100%",fontWeight:"400",height:"auto",left:"auto",letterSpacing:"normal",lineHeight:"120%",marginBottom:"0px",marginLeft:"0px",marginRight:"0px",marginTop:"0px",maxHeight:"none",maxWidth:"none",minHeight:"0px",minWidth:"0px",opacity:"1.0",outlineColor:"invert",outlineOffset:"0px",outlineWidth:"3px",paddingBottom:"0px",paddingLeft:"0px",paddingRight:"0px",paddingTop:"0px",right:"auto",strokeDasharray:"none",strokeDashoffset:"0px",textIndent:"0px",textShadow:"0px 0px 0px transparent",top:"auto",transform:"",verticalAlign:"0px",visibility:"visible",width:"auto",wordSpacing:"normal",zIndex:"auto"};b.propertyInterpolation=g}(c,d),function(a,b,c){function d(b){var c=a.calculateActiveDuration(b),d=function(d){return a.calculateIterationProgress(c,d,b)};return d._totalDuration=b.delay+c+b.endDelay,d}b.KeyframeEffect=function(c,e,f,g){var h,i=d(a.normalizeTimingInput(f)),j=b.convertEffectInput(e),k=function(){j(c,h)};return k._update=function(a){return null!==(h=i(a))},k._clear=function(){j(c,null)},k._hasSameTarget=function(a){return c===a},k._target=c,k._totalDuration=i._totalDuration,k._id=g,k}}(c,d),function(a,b){a.apply=function(b,c,d){b.style[a.propertyName(c)]=d},a.clear=function(b,c){b.style[a.propertyName(c)]=""}}(d),function(a){window.Element.prototype.animate=function(b,c){var d="";return c&&c.id&&(d=c.id),a.timeline._play(a.KeyframeEffect(this,b,c,d))}}(d),function(a,b){function c(a,b,d){if("number"==typeof a&&"number"==typeof b)return a*(1-d)+b*d;if("boolean"==typeof a&&"boolean"==typeof b)return d<.5?a:b;if(a.length==b.length){for(var e=[],f=0;f<a.length;f++)e.push(c(a[f],b[f],d));return e}throw"Mismatched interpolation arguments "+a+":"+b}a.Interpolation=function(a,b,d){return function(e){return d(c(a,b,e))}}}(d),function(a,b,c){a.sequenceNumber=0;var d=function(a,b,c){this.target=a,this.currentTime=b,this.timelineTime=c,this.type="finish",this.bubbles=!1,this.cancelable=!1,this.currentTarget=a,this.defaultPrevented=!1,this.eventPhase=Event.AT_TARGET,this.timeStamp=Date.now()};b.Animation=function(b){this.id="",b&&b._id&&(this.id=b._id),this._sequenceNumber=a.sequenceNumber++,this._currentTime=0,this._startTime=null,this._paused=!1,this._playbackRate=1,this._inTimeline=!0,this._finishedFlag=!0,this.onfinish=null,this._finishHandlers=[],this._effect=b,this._inEffect=this._effect._update(0),this._idle=!0,this._currentTimePending=!1},b.Animation.prototype={_ensureAlive:function(){this.playbackRate<0&&0===this.currentTime?this._inEffect=this._effect._update(-1):this._inEffect=this._effect._update(this.currentTime),this._inTimeline||!this._inEffect&&this._finishedFlag||(this._inTimeline=!0,b.timeline._animations.push(this))},_tickCurrentTime:function(a,b){a!=this._currentTime&&(this._currentTime=a,this._isFinished&&!b&&(this._currentTime=this._playbackRate>0?this._totalDuration:0),this._ensureAlive())},get currentTime(){return this._idle||this._currentTimePending?null:this._currentTime},set currentTime(a){a=+a,isNaN(a)||(b.restart(),this._paused||null==this._startTime||(this._startTime=this._timeline.currentTime-a/this._playbackRate),this._currentTimePending=!1,this._currentTime!=a&&(this._idle&&(this._idle=!1,this._paused=!0),this._tickCurrentTime(a,!0),b.applyDirtiedAnimation(this)))},get startTime(){return this._startTime},set startTime(a){a=+a,isNaN(a)||this._paused||this._idle||(this._startTime=a,this._tickCurrentTime((this._timeline.currentTime-this._startTime)*this.playbackRate),b.applyDirtiedAnimation(this))},get playbackRate(){return this._playbackRate},set playbackRate(a){if(a!=this._playbackRate){var c=this.currentTime;this._playbackRate=a,this._startTime=null,"paused"!=this.playState&&"idle"!=this.playState&&(this._finishedFlag=!1,this._idle=!1,this._ensureAlive(),b.applyDirtiedAnimation(this)),null!=c&&(this.currentTime=c)}},get _isFinished(){return!this._idle&&(this._playbackRate>0&&this._currentTime>=this._totalDuration||this._playbackRate<0&&this._currentTime<=0)},get _totalDuration(){return this._effect._totalDuration},get playState(){return this._idle?"idle":null==this._startTime&&!this._paused&&0!=this.playbackRate||this._currentTimePending?"pending":this._paused?"paused":this._isFinished?"finished":"running"},_rewind:function(){if(this._playbackRate>=0)this._currentTime=0;else{if(!(this._totalDuration<1/0))throw new DOMException("Unable to rewind negative playback rate animation with infinite duration","InvalidStateError");this._currentTime=this._totalDuration}},play:function(){this._paused=!1,(this._isFinished||this._idle)&&(this._rewind(),this._startTime=null),this._finishedFlag=!1,this._idle=!1,this._ensureAlive(),b.applyDirtiedAnimation(this)},pause:function(){this._isFinished||this._paused||this._idle?this._idle&&(this._rewind(),this._idle=!1):this._currentTimePending=!0,this._startTime=null,this._paused=!0},finish:function(){this._idle||(this.currentTime=this._playbackRate>0?this._totalDuration:0,this._startTime=this._totalDuration-this.currentTime,this._currentTimePending=!1,b.applyDirtiedAnimation(this))},cancel:function(){this._inEffect&&(this._inEffect=!1,this._idle=!0,this._paused=!1,this._isFinished=!0,this._finishedFlag=!0,this._currentTime=0,this._startTime=null,this._effect._update(null),b.applyDirtiedAnimation(this))},reverse:function(){this.playbackRate*=-1,this.play()},addEventListener:function(a,b){"function"==typeof b&&"finish"==a&&this._finishHandlers.push(b)},removeEventListener:function(a,b){if("finish"==a){var c=this._finishHandlers.indexOf(b);c>=0&&this._finishHandlers.splice(c,1)}},_fireEvents:function(a){if(this._isFinished){if(!this._finishedFlag){var b=new d(this,this._currentTime,a),c=this._finishHandlers.concat(this.onfinish?[this.onfinish]:[]);setTimeout(function(){c.forEach(function(a){a.call(b.target,b)})},0),this._finishedFlag=!0}}else this._finishedFlag=!1},_tick:function(a,b){this._idle||this._paused||(null==this._startTime?b&&(this.startTime=a-this._currentTime/this.playbackRate):this._isFinished||this._tickCurrentTime((a-this._startTime)*this.playbackRate)),b&&(this._currentTimePending=!1,this._fireEvents(a))},get _needsTick(){return this.playState in{pending:1,running:1}||!this._finishedFlag},_targetAnimations:function(){var a=this._effect._target;return a._activeAnimations||(a._activeAnimations=[]),a._activeAnimations},_markTarget:function(){var a=this._targetAnimations();-1===a.indexOf(this)&&a.push(this)},_unmarkTarget:function(){var a=this._targetAnimations(),b=a.indexOf(this);-1!==b&&a.splice(b,1)}}}(c,d),function(a,b,c){function d(a){var b=j;j=[],a<q.currentTime&&(a=q.currentTime),q._animations.sort(e),q._animations=h(a,!0,q._animations)[0],b.forEach(function(b){b[1](a)}),g(),l=void 0}function e(a,b){return a._sequenceNumber-b._sequenceNumber}function f(){this._animations=[],this.currentTime=window.performance&&performance.now?performance.now():0}function g(){o.forEach(function(a){a()}),o.length=0}function h(a,c,d){p=!0,n=!1,b.timeline.currentTime=a,m=!1;var e=[],f=[],g=[],h=[];return d.forEach(function(b){b._tick(a,c),b._inEffect?(f.push(b._effect),b._markTarget()):(e.push(b._effect),b._unmarkTarget()),b._needsTick&&(m=!0);var d=b._inEffect||b._needsTick;b._inTimeline=d,d?g.push(b):h.push(b)}),o.push.apply(o,e),o.push.apply(o,f),m&&requestAnimationFrame(function(){}),p=!1,[g,h]}var i=window.requestAnimationFrame,j=[],k=0;window.requestAnimationFrame=function(a){var b=k++;return 0==j.length&&i(d),j.push([b,a]),b},window.cancelAnimationFrame=function(a){j.forEach(function(b){b[0]==a&&(b[1]=function(){})})},f.prototype={_play:function(c){c._timing=a.normalizeTimingInput(c.timing);var d=new b.Animation(c);return d._idle=!1,d._timeline=this,this._animations.push(d),b.restart(),b.applyDirtiedAnimation(d),d}};var l=void 0,m=!1,n=!1;b.restart=function(){return m||(m=!0,requestAnimationFrame(function(){}),n=!0),n},b.applyDirtiedAnimation=function(a){if(!p){a._markTarget();var c=a._targetAnimations();c.sort(e),h(b.timeline.currentTime,!1,c.slice())[1].forEach(function(a){var b=q._animations.indexOf(a);-1!==b&&q._animations.splice(b,1)}),g()}};var o=[],p=!1,q=new f;b.timeline=q}(c,d),function(a){function b(a,b){var c=a.exec(b);if(c)return c=a.ignoreCase?c[0].toLowerCase():c[0],[c,b.substr(c.length)]}function c(a,b){b=b.replace(/^\s*/,"");var c=a(b);if(c)return[c[0],c[1].replace(/^\s*/,"")]}function d(a,d,e){a=c.bind(null,a);for(var f=[];;){var g=a(e);if(!g)return[f,e];if(f.push(g[0]),e=g[1],!(g=b(d,e))||""==g[1])return[f,e];e=g[1]}}function e(a,b){for(var c=0,d=0;d<b.length&&(!/\s|,/.test(b[d])||0!=c);d++)if("("==b[d])c++;else if(")"==b[d]&&(c--,0==c&&d++,c<=0))break;var e=a(b.substr(0,d));return void 0==e?void 0:[e,b.substr(d)]}function f(a,b){for(var c=a,d=b;c&&d;)c>d?c%=d:d%=c;return c=a*b/(c+d)}function g(a){return function(b){var c=a(b);return c&&(c[0]=void 0),c}}function h(a,b){return function(c){return a(c)||[b,c]}}function i(b,c){for(var d=[],e=0;e<b.length;e++){var f=a.consumeTrimmed(b[e],c);if(!f||""==f[0])return;void 0!==f[0]&&d.push(f[0]),c=f[1]}if(""==c)return d}function j(a,b,c,d,e){for(var g=[],h=[],i=[],j=f(d.length,e.length),k=0;k<j;k++){var l=b(d[k%d.length],e[k%e.length]);if(!l)return;g.push(l[0]),h.push(l[1]),i.push(l[2])}return[g,h,function(b){var d=b.map(function(a,b){return i[b](a)}).join(c);return a?a(d):d}]}function k(a,b,c){for(var d=[],e=[],f=[],g=0,h=0;h<c.length;h++)if("function"==typeof c[h]){var i=c[h](a[g],b[g++]);d.push(i[0]),e.push(i[1]),f.push(i[2])}else!function(a){d.push(!1),e.push(!1),f.push(function(){return c[a]})}(h);return[d,e,function(a){for(var b="",c=0;c<a.length;c++)b+=f[c](a[c]);return b}]}a.consumeToken=b,a.consumeTrimmed=c,a.consumeRepeated=d,a.consumeParenthesised=e,a.ignore=g,a.optional=h,a.consumeList=i,a.mergeNestedRepeated=j.bind(null,null),a.mergeWrappedNestedRepeated=j,a.mergeList=k}(d),function(a){function b(b){function c(b){var c=a.consumeToken(/^inset/i,b);if(c)return d.inset=!0,c;var c=a.consumeLengthOrPercent(b);if(c)return d.lengths.push(c[0]),c;var c=a.consumeColor(b);return c?(d.color=c[0],c):void 0}var d={inset:!1,lengths:[],color:null},e=a.consumeRepeated(c,/^/,b);if(e&&e[0].length)return[d,e[1]]}function c(c){var d=a.consumeRepeated(b,/^,/,c);if(d&&""==d[1])return d[0]}function d(b,c){for(;b.lengths.length<Math.max(b.lengths.length,c.lengths.length);)b.lengths.push({px:0});for(;c.lengths.length<Math.max(b.lengths.length,c.lengths.length);)c.lengths.push({px:0});if(b.inset==c.inset&&!!b.color==!!c.color){for(var d,e=[],f=[[],0],g=[[],0],h=0;h<b.lengths.length;h++){var i=a.mergeDimensions(b.lengths[h],c.lengths[h],2==h);f[0].push(i[0]),g[0].push(i[1]),e.push(i[2])}if(b.color&&c.color){var j=a.mergeColors(b.color,c.color);f[1]=j[0],g[1]=j[1],d=j[2]}return[f,g,function(a){for(var c=b.inset?"inset ":" ",f=0;f<e.length;f++)c+=e[f](a[0][f])+" ";return d&&(c+=d(a[1])),c}]}}function e(b,c,d,e){function f(a){return{inset:a,color:[0,0,0,0],lengths:[{px:0},{px:0},{px:0},{px:0}]}}for(var g=[],h=[],i=0;i<d.length||i<e.length;i++){var j=d[i]||f(e[i].inset),k=e[i]||f(d[i].inset);g.push(j),h.push(k)}return a.mergeNestedRepeated(b,c,g,h)}var f=e.bind(null,d,", ");a.addPropertiesHandler(c,f,["box-shadow","text-shadow"])}(d),function(a,b){function c(a){return a.toFixed(3).replace(/0+$/,"").replace(/\.$/,"")}function d(a,b,c){return Math.min(b,Math.max(a,c))}function e(a){if(/^\s*[-+]?(\d*\.)?\d+\s*$/.test(a))return Number(a)}function f(a,b){return[a,b,c]}function g(a,b){if(0!=a)return i(0,1/0)(a,b)}function h(a,b){return[a,b,function(a){return Math.round(d(1,1/0,a))}]}function i(a,b){return function(e,f){return[e,f,function(e){return c(d(a,b,e))}]}}function j(a){var b=a.trim().split(/\s*[\s,]\s*/);if(0!==b.length){for(var c=[],d=0;d<b.length;d++){var f=e(b[d]);if(void 0===f)return;c.push(f)}return c}}function k(a,b){if(a.length==b.length)return[a,b,function(a){return a.map(c).join(" ")}]}function l(a,b){return[a,b,Math.round]}a.clamp=d,a.addPropertiesHandler(j,k,["stroke-dasharray"]),a.addPropertiesHandler(e,i(0,1/0),["border-image-width","line-height"]),a.addPropertiesHandler(e,i(0,1),["opacity","shape-image-threshold"]),a.addPropertiesHandler(e,g,["flex-grow","flex-shrink"]),a.addPropertiesHandler(e,h,["orphans","widows"]),a.addPropertiesHandler(e,l,["z-index"]),a.parseNumber=e,a.parseNumberList=j,a.mergeNumbers=f,a.numberToString=c}(d),function(a,b){function c(a,b){if("visible"==a||"visible"==b)return[0,1,function(c){return c<=0?a:c>=1?b:"visible"}]}a.addPropertiesHandler(String,c,["visibility"])}(d),function(a,b){function c(a){a=a.trim(),f.fillStyle="#000",f.fillStyle=a;var b=f.fillStyle;if(f.fillStyle="#fff",f.fillStyle=a,b==f.fillStyle){f.fillRect(0,0,1,1);var c=f.getImageData(0,0,1,1).data;f.clearRect(0,0,1,1);var d=c[3]/255;return[c[0]*d,c[1]*d,c[2]*d,d]}}function d(b,c){return[b,c,function(b){function c(a){return Math.max(0,Math.min(255,a))}if(b[3])for(var d=0;d<3;d++)b[d]=Math.round(c(b[d]/b[3]));return b[3]=a.numberToString(a.clamp(0,1,b[3])),"rgba("+b.join(",")+")"}]}var e=document.createElementNS("http://www.w3.org/1999/xhtml","canvas");e.width=e.height=1;var f=e.getContext("2d");a.addPropertiesHandler(c,d,["background-color","border-bottom-color","border-left-color","border-right-color","border-top-color","color","fill","flood-color","lighting-color","outline-color","stop-color","stroke","text-decoration-color"]),a.consumeColor=a.consumeParenthesised.bind(null,c),a.mergeColors=d}(d),function(a,b){function c(a,b){if("0"==(b=b.trim().toLowerCase())&&"px".search(a)>=0)return{px:0};if(/^[^(]*$|^calc/.test(b)){b=b.replace(/calc\(/g,"(");var c={};b=b.replace(a,function(a){return c[a]=null,"U"+a});for(var d="U("+a.source+")",e=b.replace(/[-+]?(\d*\.)?\d+/g,"N").replace(new RegExp("N"+d,"g"),"D").replace(/\s[+-]\s/g,"O").replace(/\s/g,""),f=[/N\*(D)/g,/(N|D)[*\/]N/g,/(N|D)O\1/g,/\((N|D)\)/g],g=0;g<f.length;)f[g].test(e)?(e=e.replace(f[g],"$1"),g=0):g++;if("D"==e){for(var h in c){var i=eval(b.replace(new RegExp("U"+h,"g"),"").replace(new RegExp(d,"g"),"*0"));if(!isFinite(i))return;c[h]=i}return c}}}function d(a,b){return e(a,b,!0)}function e(b,c,d){var e,f=[];for(e in b)f.push(e);for(e in c)f.indexOf(e)<0&&f.push(e);return b=f.map(function(a){return b[a]||0}),c=f.map(function(a){return c[a]||0}),[b,c,function(b){var c=b.map(function(c,e){return 1==b.length&&d&&(c=Math.max(c,0)),a.numberToString(c)+f[e]}).join(" + ");return b.length>1?"calc("+c+")":c}]}var f="px|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc",g=c.bind(null,new RegExp(f,"g")),h=c.bind(null,new RegExp(f+"|%","g")),i=c.bind(null,/deg|rad|grad|turn/g);a.parseLength=g,a.parseLengthOrPercent=h,a.consumeLengthOrPercent=a.consumeParenthesised.bind(null,h),a.parseAngle=i,a.mergeDimensions=e;var j=a.consumeParenthesised.bind(null,g),k=a.consumeRepeated.bind(void 0,j,/^/),l=a.consumeRepeated.bind(void 0,k,/^,/);a.consumeSizePairList=l;var m=function(a){var b=l(a);if(b&&""==b[1])return b[0]},n=a.mergeNestedRepeated.bind(void 0,d," "),o=a.mergeNestedRepeated.bind(void 0,n,",");a.mergeNonNegativeSizePair=n,a.addPropertiesHandler(m,o,["background-size"]),a.addPropertiesHandler(h,d,["border-bottom-width","border-image-width","border-left-width","border-right-width","border-top-width","flex-basis","font-size","height","line-height","max-height","max-width","outline-width","width"]),a.addPropertiesHandler(h,e,["border-bottom-left-radius","border-bottom-right-radius","border-top-left-radius","border-top-right-radius","bottom","left","letter-spacing","margin-bottom","margin-left","margin-right","margin-top","min-height","min-width","outline-offset","padding-bottom","padding-left","padding-right","padding-top","perspective","right","shape-margin","stroke-dashoffset","text-indent","top","vertical-align","word-spacing"])}(d,f),function(a,b){function c(b){return a.consumeLengthOrPercent(b)||a.consumeToken(/^auto/,b)}function d(b){var d=a.consumeList([a.ignore(a.consumeToken.bind(null,/^rect/)),a.ignore(a.consumeToken.bind(null,/^\(/)),a.consumeRepeated.bind(null,c,/^,/),a.ignore(a.consumeToken.bind(null,/^\)/))],b);if(d&&4==d[0].length)return d[0]}function e(b,c){return"auto"==b||"auto"==c?[!0,!1,function(d){var e=d?b:c;if("auto"==e)return"auto";var f=a.mergeDimensions(e,e);return f[2](f[0])}]:a.mergeDimensions(b,c)}function f(a){return"rect("+a+")"}var g=a.mergeWrappedNestedRepeated.bind(null,f,e,", ");a.parseBox=d,a.mergeBoxes=g,a.addPropertiesHandler(d,g,["clip"])}(d),function(a,b){function c(a){return function(b){var c=0;return a.map(function(a){return a===k?b[c++]:a})}}function d(a){return a}function e(b){if("none"==(b=b.toLowerCase().trim()))return[];for(var c,d=/\s*(\w+)\(([^)]*)\)/g,e=[],f=0;c=d.exec(b);){if(c.index!=f)return;f=c.index+c[0].length;var g=c[1],h=n[g];if(!h)return;var i=c[2].split(","),j=h[0];if(j.length<i.length)return;for(var k=[],o=0;o<j.length;o++){var p,q=i[o],r=j[o];if(void 0===(p=q?{A:function(b){return"0"==b.trim()?m:a.parseAngle(b)},N:a.parseNumber,T:a.parseLengthOrPercent,L:a.parseLength}[r.toUpperCase()](q):{a:m,n:k[0],t:l}[r]))return;k.push(p)}if(e.push({t:g,d:k}),d.lastIndex==b.length)return e}}function f(a){return a.toFixed(6).replace(".000000","")}function g(b,c){if(b.decompositionPair!==c){b.decompositionPair=c;var d=a.makeMatrixDecomposition(b)}if(c.decompositionPair!==b){c.decompositionPair=b;var e=a.makeMatrixDecomposition(c)}return null==d[0]||null==e[0]?[[!1],[!0],function(a){return a?c[0].d:b[0].d}]:(d[0].push(0),e[0].push(1),[d,e,function(b){var c=a.quat(d[0][3],e[0][3],b[5]);return a.composeMatrix(b[0],b[1],b[2],c,b[4]).map(f).join(",")}])}function h(a){return a.replace(/[xy]/,"")}function i(a){return a.replace(/(x|y|z|3d)?$/,"3d")}function j(b,c){var d=a.makeMatrixDecomposition&&!0,e=!1;if(!b.length||!c.length){b.length||(e=!0,b=c,c=[]);for(var f=0;f<b.length;f++){var j=b[f].t,k=b[f].d,l="scale"==j.substr(0,5)?1:0;c.push({t:j,d:k.map(function(a){if("number"==typeof a)return l;var b={};for(var c in a)b[c]=l;return b})})}}var m=function(a,b){return"perspective"==a&&"perspective"==b||("matrix"==a||"matrix3d"==a)&&("matrix"==b||"matrix3d"==b)},o=[],p=[],q=[];if(b.length!=c.length){if(!d)return;var r=g(b,c);o=[r[0]],p=[r[1]],q=[["matrix",[r[2]]]]}else for(var f=0;f<b.length;f++){var j,s=b[f].t,t=c[f].t,u=b[f].d,v=c[f].d,w=n[s],x=n[t];if(m(s,t)){if(!d)return;var r=g([b[f]],[c[f]]);o.push(r[0]),p.push(r[1]),q.push(["matrix",[r[2]]])}else{if(s==t)j=s;else if(w[2]&&x[2]&&h(s)==h(t))j=h(s),u=w[2](u),v=x[2](v);else{if(!w[1]||!x[1]||i(s)!=i(t)){if(!d)return;var r=g(b,c);o=[r[0]],p=[r[1]],q=[["matrix",[r[2]]]];break}j=i(s),u=w[1](u),v=x[1](v)}for(var y=[],z=[],A=[],B=0;B<u.length;B++){var C="number"==typeof u[B]?a.mergeNumbers:a.mergeDimensions,r=C(u[B],v[B]);y[B]=r[0],z[B]=r[1],A.push(r[2])}o.push(y),p.push(z),q.push([j,A])}}if(e){var D=o;o=p,p=D}return[o,p,function(a){return a.map(function(a,b){var c=a.map(function(a,c){return q[b][1][c](a)}).join(",");return"matrix"==q[b][0]&&16==c.split(",").length&&(q[b][0]="matrix3d"),q[b][0]+"("+c+")"}).join(" ")}]}var k=null,l={px:0},m={deg:0},n={matrix:["NNNNNN",[k,k,0,0,k,k,0,0,0,0,1,0,k,k,0,1],d],matrix3d:["NNNNNNNNNNNNNNNN",d],rotate:["A"],rotatex:["A"],rotatey:["A"],rotatez:["A"],rotate3d:["NNNA"],perspective:["L"],scale:["Nn",c([k,k,1]),d],scalex:["N",c([k,1,1]),c([k,1])],scaley:["N",c([1,k,1]),c([1,k])],scalez:["N",c([1,1,k])],scale3d:["NNN",d],skew:["Aa",null,d],skewx:["A",null,c([k,m])],skewy:["A",null,c([m,k])],translate:["Tt",c([k,k,l]),d],translatex:["T",c([k,l,l]),c([k,l])],translatey:["T",c([l,k,l]),c([l,k])],translatez:["L",c([l,l,k])],translate3d:["TTL",d]};a.addPropertiesHandler(e,j,["transform"])}(d),function(a,b){function c(a,b){b.concat([a]).forEach(function(b){b in document.documentElement.style&&(d[a]=b)})}var d={};c("transform",["webkitTransform","msTransform"]),c("transformOrigin",["webkitTransformOrigin"]),c("perspective",["webkitPerspective"]),c("perspectiveOrigin",["webkitPerspectiveOrigin"]),a.propertyName=function(a){return d[a]||a}}(d)}(),function(){if(void 0===document.createElement("div").animate([]).oncancel){var a;if(window.performance&&performance.now)var a=function(){return performance.now()};else var a=function(){return Date.now()};var b=function(a,b,c){this.target=a,this.currentTime=b,this.timelineTime=c,this.type="cancel",this.bubbles=!1,this.cancelable=!1,this.currentTarget=a,this.defaultPrevented=!1,this.eventPhase=Event.AT_TARGET,this.timeStamp=Date.now()},c=window.Element.prototype.animate;window.Element.prototype.animate=function(d,e){var f=c.call(this,d,e);f._cancelHandlers=[],f.oncancel=null;var g=f.cancel;f.cancel=function(){g.call(this);var c=new b(this,null,a()),d=this._cancelHandlers.concat(this.oncancel?[this.oncancel]:[]);setTimeout(function(){d.forEach(function(a){a.call(c.target,c)})},0)};var h=f.addEventListener;f.addEventListener=function(a,b){"function"==typeof b&&"cancel"==a?this._cancelHandlers.push(b):h.call(this,a,b)};var i=f.removeEventListener;return f.removeEventListener=function(a,b){if("cancel"==a){var c=this._cancelHandlers.indexOf(b);c>=0&&this._cancelHandlers.splice(c,1)}else i.call(this,a,b)},f}}}(),function(a){var b=document.documentElement,c=null,d=!1;try{var e=getComputedStyle(b).getPropertyValue("opacity"),f="0"==e?"1":"0";c=b.animate({opacity:[f,f]},{duration:1}),c.currentTime=0,d=getComputedStyle(b).getPropertyValue("opacity")==f}catch(a){}finally{c&&c.cancel()}if(!d){var g=window.Element.prototype.animate;window.Element.prototype.animate=function(b,c){return window.Symbol&&Symbol.iterator&&Array.prototype.from&&b[Symbol.iterator]&&(b=Array.from(b)),Array.isArray(b)||null===b||(b=a.convertToArrayForm(b)),g.call(this,b,c)}}}(c),function(a,b,c){function d(a){var c=b.timeline;c.currentTime=a,c._discardAnimations(),0==c._animations.length?f=!1:requestAnimationFrame(d)}var e=window.requestAnimationFrame;window.requestAnimationFrame=function(a){return e(function(c){b.timeline._updateAnimationsPromises(),a(c),b.timeline._updateAnimationsPromises()})},b.AnimationTimeline=function(){this._animations=[],this.currentTime=void 0},b.AnimationTimeline.prototype={getAnimations:function(){return this._discardAnimations(),this._animations.slice()},_updateAnimationsPromises:function(){b.animationsWithPromises=b.animationsWithPromises.filter(function(a){return a._updatePromises()})},_discardAnimations:function(){this._updateAnimationsPromises(),this._animations=this._animations.filter(function(a){return"finished"!=a.playState&&"idle"!=a.playState})},_play:function(a){var c=new b.Animation(a,this);return this._animations.push(c),b.restartWebAnimationsNextTick(),c._updatePromises(),c._animation.play(),c._updatePromises(),c},play:function(a){return a&&a.remove(),this._play(a)}};var f=!1;b.restartWebAnimationsNextTick=function(){f||(f=!0,requestAnimationFrame(d))};var g=new b.AnimationTimeline;b.timeline=g;try{Object.defineProperty(window.document,"timeline",{configurable:!0,get:function(){return g}})}catch(a){}try{window.document.timeline=g}catch(a){}}(0,e),function(a,b,c){b.animationsWithPromises=[],b.Animation=function(b,c){if(this.id="",b&&b._id&&(this.id=b._id),this.effect=b,b&&(b._animation=this),!c)throw new Error("Animation with null timeline is not supported");this._timeline=c,this._sequenceNumber=a.sequenceNumber++,this._holdTime=0,this._paused=!1,this._isGroup=!1,this._animation=null,this._childAnimations=[],this._callback=null,this._oldPlayState="idle",this._rebuildUnderlyingAnimation(),this._animation.cancel(),this._updatePromises()},b.Animation.prototype={_updatePromises:function(){var a=this._oldPlayState,b=this.playState;return this._readyPromise&&b!==a&&("idle"==b?(this._rejectReadyPromise(),this._readyPromise=void 0):"pending"==a?this._resolveReadyPromise():"pending"==b&&(this._readyPromise=void 0)),this._finishedPromise&&b!==a&&("idle"==b?(this._rejectFinishedPromise(),this._finishedPromise=void 0):"finished"==b?this._resolveFinishedPromise():"finished"==a&&(this._finishedPromise=void 0)),this._oldPlayState=this.playState,this._readyPromise||this._finishedPromise},_rebuildUnderlyingAnimation:function(){this._updatePromises();var a,c,d,e,f=!!this._animation;f&&(a=this.playbackRate,c=this._paused,d=this.startTime,e=this.currentTime,this._animation.cancel(),this._animation._wrapper=null,this._animation=null),(!this.effect||this.effect instanceof window.KeyframeEffect)&&(this._animation=b.newUnderlyingAnimationForKeyframeEffect(this.effect),b.bindAnimationForKeyframeEffect(this)),(this.effect instanceof window.SequenceEffect||this.effect instanceof window.GroupEffect)&&(this._animation=b.newUnderlyingAnimationForGroup(this.effect),b.bindAnimationForGroup(this)),this.effect&&this.effect._onsample&&b.bindAnimationForCustomEffect(this),f&&(1!=a&&(this.playbackRate=a),null!==d?this.startTime=d:null!==e?this.currentTime=e:null!==this._holdTime&&(this.currentTime=this._holdTime),c&&this.pause()),this._updatePromises()},_updateChildren:function(){if(this.effect&&"idle"!=this.playState){var a=this.effect._timing.delay;this._childAnimations.forEach(function(c){this._arrangeChildren(c,a),this.effect instanceof window.SequenceEffect&&(a+=b.groupChildDuration(c.effect))}.bind(this))}},_setExternalAnimation:function(a){if(this.effect&&this._isGroup)for(var b=0;b<this.effect.children.length;b++)this.effect.children[b]._animation=a,this._childAnimations[b]._setExternalAnimation(a)},_constructChildAnimations:function(){if(this.effect&&this._isGroup){var a=this.effect._timing.delay;this._removeChildAnimations(),this.effect.children.forEach(function(c){var d=b.timeline._play(c);this._childAnimations.push(d),d.playbackRate=this.playbackRate,this._paused&&d.pause(),c._animation=this.effect._animation,this._arrangeChildren(d,a),this.effect instanceof window.SequenceEffect&&(a+=b.groupChildDuration(c))}.bind(this))}},_arrangeChildren:function(a,b){null===this.startTime?a.currentTime=this.currentTime-b/this.playbackRate:a.startTime!==this.startTime+b/this.playbackRate&&(a.startTime=this.startTime+b/this.playbackRate)},get timeline(){return this._timeline},get playState(){return this._animation?this._animation.playState:"idle"},get finished(){return window.Promise?(this._finishedPromise||(-1==b.animationsWithPromises.indexOf(this)&&b.animationsWithPromises.push(this),this._finishedPromise=new Promise(function(a,b){this._resolveFinishedPromise=function(){a(this)},this._rejectFinishedPromise=function(){b({type:DOMException.ABORT_ERR,name:"AbortError"})}}.bind(this)),"finished"==this.playState&&this._resolveFinishedPromise()),this._finishedPromise):(console.warn("Animation Promises require JavaScript Promise constructor"),null)},get ready(){return window.Promise?(this._readyPromise||(-1==b.animationsWithPromises.indexOf(this)&&b.animationsWithPromises.push(this),this._readyPromise=new Promise(function(a,b){this._resolveReadyPromise=function(){a(this)},this._rejectReadyPromise=function(){b({type:DOMException.ABORT_ERR,name:"AbortError"})}}.bind(this)),"pending"!==this.playState&&this._resolveReadyPromise()),this._readyPromise):(console.warn("Animation Promises require JavaScript Promise constructor"),null)},get onfinish(){return this._animation.onfinish},set onfinish(a){this._animation.onfinish="function"==typeof a?function(b){b.target=this,a.call(this,b)}.bind(this):a},get oncancel(){return this._animation.oncancel},set oncancel(a){this._animation.oncancel="function"==typeof a?function(b){b.target=this,a.call(this,b)}.bind(this):a},get currentTime(){this._updatePromises();var a=this._animation.currentTime;return this._updatePromises(),a},set currentTime(a){this._updatePromises(),this._animation.currentTime=isFinite(a)?a:Math.sign(a)*Number.MAX_VALUE,this._register(),this._forEachChild(function(b,c){b.currentTime=a-c}),this._updatePromises()},get startTime(){return this._animation.startTime},set startTime(a){this._updatePromises(),this._animation.startTime=isFinite(a)?a:Math.sign(a)*Number.MAX_VALUE,this._register(),this._forEachChild(function(b,c){b.startTime=a+c}),this._updatePromises()},get playbackRate(){return this._animation.playbackRate},set playbackRate(a){this._updatePromises();var b=this.currentTime;this._animation.playbackRate=a,this._forEachChild(function(b){b.playbackRate=a}),null!==b&&(this.currentTime=b),this._updatePromises()},play:function(){this._updatePromises(),this._paused=!1,this._animation.play(),-1==this._timeline._animations.indexOf(this)&&this._timeline._animations.push(this),this._register(),b.awaitStartTime(this),this._forEachChild(function(a){var b=a.currentTime;a.play(),a.currentTime=b}),this._updatePromises()},pause:function(){this._updatePromises(),this.currentTime&&(this._holdTime=this.currentTime),this._animation.pause(),this._register(),this._forEachChild(function(a){a.pause()}),this._paused=!0,this._updatePromises()},finish:function(){this._updatePromises(),this._animation.finish(),this._register(),this._updatePromises()},cancel:function(){this._updatePromises(),this._animation.cancel(),this._register(),this._removeChildAnimations(),this._updatePromises()},reverse:function(){this._updatePromises();var a=this.currentTime;this._animation.reverse(),this._forEachChild(function(a){a.reverse()}),null!==a&&(this.currentTime=a),this._updatePromises()},addEventListener:function(a,b){var c=b;"function"==typeof b&&(c=function(a){a.target=this,b.call(this,a)}.bind(this),b._wrapper=c),this._animation.addEventListener(a,c)},removeEventListener:function(a,b){this._animation.removeEventListener(a,b&&b._wrapper||b)},_removeChildAnimations:function(){for(;this._childAnimations.length;)this._childAnimations.pop().cancel()},_forEachChild:function(b){var c=0;if(this.effect.children&&this._childAnimations.length<this.effect.children.length&&this._constructChildAnimations(),this._childAnimations.forEach(function(a){b.call(this,a,c),this.effect instanceof window.SequenceEffect&&(c+=a.effect.activeDuration)}.bind(this)),"pending"!=this.playState){var d=this.effect._timing,e=this.currentTime;null!==e&&(e=a.calculateIterationProgress(a.calculateActiveDuration(d),e,d)),(null==e||isNaN(e))&&this._removeChildAnimations()}}},window.Animation=b.Animation}(c,e),function(a,b,c){function d(b){this._frames=a.normalizeKeyframes(b)}function e(){for(var a=!1;i.length;)i.shift()._updateChildren(),a=!0;return a}var f=function(a){if(a._animation=void 0,a instanceof window.SequenceEffect||a instanceof window.GroupEffect)for(var b=0;b<a.children.length;b++)f(a.children[b])};b.removeMulti=function(a){for(var b=[],c=0;c<a.length;c++){var d=a[c];d._parent?(-1==b.indexOf(d._parent)&&b.push(d._parent),d._parent.children.splice(d._parent.children.indexOf(d),1),d._parent=null,f(d)):d._animation&&d._animation.effect==d&&(d._animation.cancel(),d._animation.effect=new KeyframeEffect(null,[]),d._animation._callback&&(d._animation._callback._animation=null),d._animation._rebuildUnderlyingAnimation(),f(d))}for(c=0;c<b.length;c++)b[c]._rebuild()},b.KeyframeEffect=function(b,c,e,f){return this.target=b,this._parent=null,e=a.numericTimingToObject(e),this._timingInput=a.cloneTimingInput(e),this._timing=a.normalizeTimingInput(e),this.timing=a.makeTiming(e,!1,this),this.timing._effect=this,"function"==typeof c?(a.deprecated("Custom KeyframeEffect","2015-06-22","Use KeyframeEffect.onsample instead."),this._normalizedKeyframes=c):this._normalizedKeyframes=new d(c),this._keyframes=c,this.activeDuration=a.calculateActiveDuration(this._timing),this._id=f,this},b.KeyframeEffect.prototype={getFrames:function(){return"function"==typeof this._normalizedKeyframes?this._normalizedKeyframes:this._normalizedKeyframes._frames},set onsample(a){if("function"==typeof this.getFrames())throw new Error("Setting onsample on custom effect KeyframeEffect is not supported.");this._onsample=a,this._animation&&this._animation._rebuildUnderlyingAnimation()},get parent(){return this._parent},clone:function(){if("function"==typeof this.getFrames())throw new Error("Cloning custom effects is not supported.");var b=new KeyframeEffect(this.target,[],a.cloneTimingInput(this._timingInput),this._id);return b._normalizedKeyframes=this._normalizedKeyframes,b._keyframes=this._keyframes,b},remove:function(){b.removeMulti([this])}};var g=Element.prototype.animate;Element.prototype.animate=function(a,c){var d="";return c&&c.id&&(d=c.id),b.timeline._play(new b.KeyframeEffect(this,a,c,d))};var h=document.createElementNS("http://www.w3.org/1999/xhtml","div");b.newUnderlyingAnimationForKeyframeEffect=function(a){if(a){var b=a.target||h,c=a._keyframes;"function"==typeof c&&(c=[]);var d=a._timingInput;d.id=a._id}else var b=h,c=[],d=0;return g.apply(b,[c,d])},b.bindAnimationForKeyframeEffect=function(a){a.effect&&"function"==typeof a.effect._normalizedKeyframes&&b.bindAnimationForCustomEffect(a)};var i=[];b.awaitStartTime=function(a){null===a.startTime&&a._isGroup&&(0==i.length&&requestAnimationFrame(e),i.push(a))};var j=window.getComputedStyle;Object.defineProperty(window,"getComputedStyle",{configurable:!0,enumerable:!0,value:function(){b.timeline._updateAnimationsPromises();var a=j.apply(this,arguments);return e()&&(a=j.apply(this,arguments)),b.timeline._updateAnimationsPromises(),a}}),window.KeyframeEffect=b.KeyframeEffect,window.Element.prototype.getAnimations=function(){return document.timeline.getAnimations().filter(function(a){return null!==a.effect&&a.effect.target==this}.bind(this))}}(c,e),function(a,b,c){function d(a){a._registered||(a._registered=!0,g.push(a),h||(h=!0,requestAnimationFrame(e)))}function e(a){var b=g;g=[],b.sort(function(a,b){return a._sequenceNumber-b._sequenceNumber}),b=b.filter(function(a){a();var b=a._animation?a._animation.playState:"idle";return"running"!=b&&"pending"!=b&&(a._registered=!1),a._registered}),g.push.apply(g,b),g.length?(h=!0,requestAnimationFrame(e)):h=!1}var f=(document.createElementNS("http://www.w3.org/1999/xhtml","div"),0);b.bindAnimationForCustomEffect=function(b){var c,e=b.effect.target,g="function"==typeof b.effect.getFrames();c=g?b.effect.getFrames():b.effect._onsample;var h=b.effect.timing,i=null;h=a.normalizeTimingInput(h);var j=function(){var d=j._animation?j._animation.currentTime:null;null!==d&&(d=a.calculateIterationProgress(a.calculateActiveDuration(h),d,h),isNaN(d)&&(d=null)),d!==i&&(g?c(d,e,b.effect):c(d,b.effect,b.effect._animation)),i=d};j._animation=b,j._registered=!1,j._sequenceNumber=f++,b._callback=j,d(j)};var g=[],h=!1;b.Animation.prototype._register=function(){this._callback&&d(this._callback)}}(c,e),function(a,b,c){function d(a){return a._timing.delay+a.activeDuration+a._timing.endDelay}function e(b,c,d){this._id=d,this._parent=null,this.children=b||[],this._reparent(this.children),c=a.numericTimingToObject(c),this._timingInput=a.cloneTimingInput(c),this._timing=a.normalizeTimingInput(c,!0),this.timing=a.makeTiming(c,!0,this),this.timing._effect=this,"auto"===this._timing.duration&&(this._timing.duration=this.activeDuration)}window.SequenceEffect=function(){e.apply(this,arguments)},window.GroupEffect=function(){e.apply(this,arguments)},e.prototype={_isAncestor:function(a){for(var b=this;null!==b;){if(b==a)return!0;b=b._parent}return!1},_rebuild:function(){for(var a=this;a;)"auto"===a.timing.duration&&(a._timing.duration=a.activeDuration),a=a._parent;this._animation&&this._animation._rebuildUnderlyingAnimation()},_reparent:function(a){b.removeMulti(a);for(var c=0;c<a.length;c++)a[c]._parent=this},_putChild:function(a,b){for(var c=b?"Cannot append an ancestor or self":"Cannot prepend an ancestor or self",d=0;d<a.length;d++)if(this._isAncestor(a[d]))throw{type:DOMException.HIERARCHY_REQUEST_ERR,name:"HierarchyRequestError",message:c};for(var d=0;d<a.length;d++)b?this.children.push(a[d]):this.children.unshift(a[d]);this._reparent(a),this._rebuild()},append:function(){this._putChild(arguments,!0)},prepend:function(){this._putChild(arguments,!1)},get parent(){return this._parent},get firstChild(){return this.children.length?this.children[0]:null},get lastChild(){return this.children.length?this.children[this.children.length-1]:null},clone:function(){for(var b=a.cloneTimingInput(this._timingInput),c=[],d=0;d<this.children.length;d++)c.push(this.children[d].clone());return this instanceof GroupEffect?new GroupEffect(c,b):new SequenceEffect(c,b)},remove:function(){b.removeMulti([this])}},window.SequenceEffect.prototype=Object.create(e.prototype),Object.defineProperty(window.SequenceEffect.prototype,"activeDuration",{get:function(){var a=0;return this.children.forEach(function(b){a+=d(b)}),Math.max(a,0)}}),window.GroupEffect.prototype=Object.create(e.prototype),Object.defineProperty(window.GroupEffect.prototype,"activeDuration",{get:function(){var a=0;return this.children.forEach(function(b){a=Math.max(a,d(b))}),a}}),b.newUnderlyingAnimationForGroup=function(c){var d,e=null,f=function(b){var c=d._wrapper;if(c&&"pending"!=c.playState&&c.effect)return null==b?void c._removeChildAnimations():0==b&&c.playbackRate<0&&(e||(e=a.normalizeTimingInput(c.effect.timing)),b=a.calculateIterationProgress(a.calculateActiveDuration(e),-1,e),isNaN(b)||null==b)?(c._forEachChild(function(a){a.currentTime=-1}),void c._removeChildAnimations()):void 0},g=new KeyframeEffect(null,[],c._timing,c._id);return g.onsample=f,d=b.timeline._play(g)},b.bindAnimationForGroup=function(a){a._animation._wrapper=a,a._isGroup=!0,b.awaitStartTime(a),a._constructChildAnimations(),a._setExternalAnimation(a)},b.groupChildDuration=d}(c,e),b.true=a}({},function(){return this}());
+//# sourceMappingURL=web-animations-next-lite.min.js.map
+Polymer({
+
+    is: 'opaque-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+      this._effect = new KeyframeEffect(node, [
+        {'opacity': '1'},
+        {'opacity': '1'}
+      ], this.timingFromConfig(config));
+      node.style.opacity = '0';
+      return this._effect;
+    },
+
+    complete: function(config) {
+      config.node.style.opacity = '';
+    }
+
+  });
+(function() {
+    'use strict';
+    /**
+     * Used to calculate the scroll direction during touch events.
+     * @type {!Object}
+     */
+    var lastTouchPosition = {
+      pageX: 0,
+      pageY: 0
+    };
+    /**
+     * Used to avoid computing event.path and filter scrollable nodes (better perf).
+     * @type {?EventTarget}
+     */
+    var lastRootTarget = null;
+    /**
+     * @type {!Array<Node>}
+     */
+    var lastScrollableNodes = [];
+
+    var scrollEvents = [
+      // Modern `wheel` event for mouse wheel scrolling:
+      'wheel',
+      // Older, non-standard `mousewheel` event for some FF:
+      'mousewheel',
+      // IE:
+      'DOMMouseScroll',
+      // Touch enabled devices
+      'touchstart',
+      'touchmove'
+    ];
+
+    /**
+     * The IronDropdownScrollManager is intended to provide a central source
+     * of authority and control over which elements in a document are currently
+     * allowed to scroll.
+     */
+
+    Polymer.IronDropdownScrollManager = {
+
+      /**
+       * The current element that defines the DOM boundaries of the
+       * scroll lock. This is always the most recently locking element.
+       */
+      get currentLockingElement() {
+        return this._lockingElements[this._lockingElements.length - 1];
+      },
+
+      /**
+       * Returns true if the provided element is "scroll locked", which is to
+       * say that it cannot be scrolled via pointer or keyboard interactions.
+       *
+       * @param {HTMLElement} element An HTML element instance which may or may
+       * not be scroll locked.
+       */
+      elementIsScrollLocked: function(element) {
+        var currentLockingElement = this.currentLockingElement;
+
+        if (currentLockingElement === undefined)
+          return false;
+
+        var scrollLocked;
+
+        if (this._hasCachedLockedElement(element)) {
+          return true;
+        }
+
+        if (this._hasCachedUnlockedElement(element)) {
+          return false;
+        }
+
+        scrollLocked = !!currentLockingElement &&
+          currentLockingElement !== element &&
+          !this._composedTreeContains(currentLockingElement, element);
+
+        if (scrollLocked) {
+          this._lockedElementCache.push(element);
+        } else {
+          this._unlockedElementCache.push(element);
+        }
+
+        return scrollLocked;
+      },
+
+      /**
+       * Push an element onto the current scroll lock stack. The most recently
+       * pushed element and its children will be considered scrollable. All
+       * other elements will not be scrollable.
+       *
+       * Scroll locking is implemented as a stack so that cases such as
+       * dropdowns within dropdowns are handled well.
+       *
+       * @param {HTMLElement} element The element that should lock scroll.
+       */
+      pushScrollLock: function(element) {
+        // Prevent pushing the same element twice
+        if (this._lockingElements.indexOf(element) >= 0) {
+          return;
+        }
+
+        if (this._lockingElements.length === 0) {
+          this._lockScrollInteractions();
+        }
+
+        this._lockingElements.push(element);
+
+        this._lockedElementCache = [];
+        this._unlockedElementCache = [];
+      },
+
+      /**
+       * Remove an element from the scroll lock stack. The element being
+       * removed does not need to be the most recently pushed element. However,
+       * the scroll lock constraints only change when the most recently pushed
+       * element is removed.
+       *
+       * @param {HTMLElement} element The element to remove from the scroll
+       * lock stack.
+       */
+      removeScrollLock: function(element) {
+        var index = this._lockingElements.indexOf(element);
+
+        if (index === -1) {
+          return;
+        }
+
+        this._lockingElements.splice(index, 1);
+
+        this._lockedElementCache = [];
+        this._unlockedElementCache = [];
+
+        if (this._lockingElements.length === 0) {
+          this._unlockScrollInteractions();
+        }
+      },
+
+      _lockingElements: [],
+
+      _lockedElementCache: null,
+
+      _unlockedElementCache: null,
+
+      _hasCachedLockedElement: function(element) {
+        return this._lockedElementCache.indexOf(element) > -1;
+      },
+
+      _hasCachedUnlockedElement: function(element) {
+        return this._unlockedElementCache.indexOf(element) > -1;
+      },
+
+      _composedTreeContains: function(element, child) {
+        // NOTE(cdata): This method iterates over content elements and their
+        // corresponding distributed nodes to implement a contains-like method
+        // that pierces through the composed tree of the ShadowDOM. Results of
+        // this operation are cached (elsewhere) on a per-scroll-lock basis, to
+        // guard against potentially expensive lookups happening repeatedly as
+        // a user scrolls / touchmoves.
+        var contentElements;
+        var distributedNodes;
+        var contentIndex;
+        var nodeIndex;
+
+        if (element.contains(child)) {
+          return true;
+        }
+
+        contentElements = Polymer.dom(element).querySelectorAll('content');
+
+        for (contentIndex = 0; contentIndex < contentElements.length; ++contentIndex) {
+
+          distributedNodes = Polymer.dom(contentElements[contentIndex]).getDistributedNodes();
+
+          for (nodeIndex = 0; nodeIndex < distributedNodes.length; ++nodeIndex) {
+
+            if (this._composedTreeContains(distributedNodes[nodeIndex], child)) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      },
+
+      _scrollInteractionHandler: function(event) {
+        // Avoid canceling an event with cancelable=false, e.g. scrolling is in
+        // progress and cannot be interrupted.
+        if (event.cancelable && this._shouldPreventScrolling(event)) {
+          event.preventDefault();
+        }
+        // If event has targetTouches (touch event), update last touch position.
+        if (event.targetTouches) {
+          var touch = event.targetTouches[0];
+          lastTouchPosition.pageX = touch.pageX;
+          lastTouchPosition.pageY = touch.pageY;
+        }
+      },
+
+      _lockScrollInteractions: function() {
+        this._boundScrollHandler = this._boundScrollHandler ||
+          this._scrollInteractionHandler.bind(this);
+        for (var i = 0, l = scrollEvents.length; i < l; i++) {
+          // NOTE: browsers that don't support objects as third arg will
+          // interpret it as boolean, hence useCapture = true in this case. 
+          document.addEventListener(scrollEvents[i], this._boundScrollHandler, {
+            capture: true,
+            passive: false
+          });
+        }
+      },
+
+      _unlockScrollInteractions: function() {
+        for (var i = 0, l = scrollEvents.length; i < l; i++) {
+          // NOTE: browsers that don't support objects as third arg will
+          // interpret it as boolean, hence useCapture = true in this case.
+          document.removeEventListener(scrollEvents[i], this._boundScrollHandler, {
+            capture: true,
+            passive: false
+          });
+        }
+      },
+
+      /**
+       * Returns true if the event causes scroll outside the current locking
+       * element, e.g. pointer/keyboard interactions, or scroll "leaking"
+       * outside the locking element when it is already at its scroll boundaries.
+       * @param {!Event} event
+       * @return {boolean}
+       * @private
+       */
+      _shouldPreventScrolling: function(event) {
+
+        // Update if root target changed. For touch events, ensure we don't
+        // update during touchmove.
+        var target = Polymer.dom(event).rootTarget;
+        if (event.type !== 'touchmove' && lastRootTarget !== target) {
+          lastRootTarget = target;
+          lastScrollableNodes = this._getScrollableNodes(Polymer.dom(event).path);
+        }
+
+        // Prevent event if no scrollable nodes.
+        if (!lastScrollableNodes.length) {
+          return true;
+        }
+        // Don't prevent touchstart event inside the locking element when it has
+        // scrollable nodes.
+        if (event.type === 'touchstart') {
+          return false;
+        }
+        // Get deltaX/Y.
+        var info = this._getScrollInfo(event);
+        // Prevent if there is no child that can scroll.
+        return !this._getScrollingNode(lastScrollableNodes, info.deltaX, info.deltaY);
+      },
+
+      /**
+       * Returns an array of scrollable nodes up to the current locking element,
+       * which is included too if scrollable.
+       * @param {!Array<Node>} nodes
+       * @return {Array<Node>} scrollables
+       * @private
+       */
+      _getScrollableNodes: function(nodes) {
+        var scrollables = [];
+        var lockingIndex = nodes.indexOf(this.currentLockingElement);
+        // Loop from root target to locking element (included).
+        for (var i = 0; i <= lockingIndex; i++) {
+          // Skip non-Element nodes.
+          if (nodes[i].nodeType !== Node.ELEMENT_NODE) {
+            continue;
+          }
+          var node = /** @type {!Element} */ (nodes[i]);
+          // Check inline style before checking computed style.
+          var style = node.style;
+          if (style.overflow !== 'scroll' && style.overflow !== 'auto') {
+            style = window.getComputedStyle(node);
+          }
+          if (style.overflow === 'scroll' || style.overflow === 'auto') {
+            scrollables.push(node);
+          }
+        }
+        return scrollables;
+      },
+
+      /**
+       * Returns the node that is scrolling. If there is no scrolling,
+       * returns undefined.
+       * @param {!Array<Node>} nodes
+       * @param {number} deltaX Scroll delta on the x-axis
+       * @param {number} deltaY Scroll delta on the y-axis
+       * @return {Node|undefined}
+       * @private
+       */
+      _getScrollingNode: function(nodes, deltaX, deltaY) {
+        // No scroll.
+        if (!deltaX && !deltaY) {
+          return;
+        }
+        // Check only one axis according to where there is more scroll.
+        // Prefer vertical to horizontal.
+        var verticalScroll = Math.abs(deltaY) >= Math.abs(deltaX);
+        for (var i = 0; i < nodes.length; i++) {
+          var node = nodes[i];
+          var canScroll = false;
+          if (verticalScroll) {
+            // delta < 0 is scroll up, delta > 0 is scroll down.
+            canScroll = deltaY < 0 ? node.scrollTop > 0 :
+              node.scrollTop < node.scrollHeight - node.clientHeight;
+          } else {
+            // delta < 0 is scroll left, delta > 0 is scroll right.
+            canScroll = deltaX < 0 ? node.scrollLeft > 0 :
+              node.scrollLeft < node.scrollWidth - node.clientWidth;
+          }
+          if (canScroll) {
+            return node;
+          }
+        }
+      },
+
+      /**
+       * Returns scroll `deltaX` and `deltaY`.
+       * @param {!Event} event The scroll event
+       * @return {{deltaX: number, deltaY: number}} Object containing the
+       * x-axis scroll delta (positive: scroll right, negative: scroll left,
+       * 0: no scroll), and the y-axis scroll delta (positive: scroll down,
+       * negative: scroll up, 0: no scroll).
+       * @private
+       */
+      _getScrollInfo: function(event) {
+        var info = {
+          deltaX: event.deltaX,
+          deltaY: event.deltaY
+        };
+        // Already available.
+        if ('deltaX' in event) {
+          // do nothing, values are already good.
+        }
+        // Safari has scroll info in `wheelDeltaX/Y`.
+        else if ('wheelDeltaX' in event) {
+          info.deltaX = -event.wheelDeltaX;
+          info.deltaY = -event.wheelDeltaY;
+        }
+        // Firefox has scroll info in `detail` and `axis`.
+        else if ('axis' in event) {
+          info.deltaX = event.axis === 1 ? event.detail : 0;
+          info.deltaY = event.axis === 2 ? event.detail : 0;
+        }
+        // On mobile devices, calculate scroll direction.
+        else if (event.targetTouches) {
+          var touch = event.targetTouches[0];
+          // Touch moves from right to left => scrolling goes right.
+          info.deltaX = lastTouchPosition.pageX - touch.pageX;
+          // Touch moves from down to up => scrolling goes down.
+          info.deltaY = lastTouchPosition.pageY - touch.pageY;
+        }
+        return info;
+      }
+    };
+  })();
+(function() {
+      'use strict';
+
+      Polymer({
+        is: 'iron-dropdown',
+
+        behaviors: [
+          Polymer.IronControlState,
+          Polymer.IronA11yKeysBehavior,
+          Polymer.IronOverlayBehavior,
+          Polymer.NeonAnimationRunnerBehavior
+        ],
+
+        properties: {
+          /**
+           * The orientation against which to align the dropdown content
+           * horizontally relative to the dropdown trigger.
+           * Overridden from `Polymer.IronFitBehavior`.
+           */
+          horizontalAlign: {
+            type: String,
+            value: 'left',
+            reflectToAttribute: true
+          },
+
+          /**
+           * The orientation against which to align the dropdown content
+           * vertically relative to the dropdown trigger.
+           * Overridden from `Polymer.IronFitBehavior`.
+           */
+          verticalAlign: {
+            type: String,
+            value: 'top',
+            reflectToAttribute: true
+          },
+
+          /**
+           * An animation config. If provided, this will be used to animate the
+           * opening of the dropdown. Pass an Array for multiple animations.
+           * See `neon-animation` documentation for more animation configuration
+           * details.
+           */
+          openAnimationConfig: {
+            type: Object
+          },
+
+          /**
+           * An animation config. If provided, this will be used to animate the
+           * closing of the dropdown. Pass an Array for multiple animations.
+           * See `neon-animation` documentation for more animation configuration
+           * details.
+           */
+          closeAnimationConfig: {
+            type: Object
+          },
+
+          /**
+           * If provided, this will be the element that will be focused when
+           * the dropdown opens.
+           */
+          focusTarget: {
+            type: Object
+          },
+
+          /**
+           * Set to true to disable animations when opening and closing the
+           * dropdown.
+           */
+          noAnimations: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * By default, the dropdown will constrain scrolling on the page
+           * to itself when opened.
+           * Set to true in order to prevent scroll from being constrained
+           * to the dropdown when it opens.
+           */
+          allowOutsideScroll: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * Callback for scroll events.
+           * @type {Function}
+           * @private
+           */
+          _boundOnCaptureScroll: {
+            type: Function,
+            value: function() {
+              return this._onCaptureScroll.bind(this);
+            }
+          }
+        },
+
+        listeners: {
+          'neon-animation-finish': '_onNeonAnimationFinish'
+        },
+
+        observers: [
+          '_updateOverlayPosition(positionTarget, verticalAlign, horizontalAlign, verticalOffset, horizontalOffset)'
+        ],
+
+        /**
+         * The element that is contained by the dropdown, if any.
+         */
+        get containedElement() {
+          return Polymer.dom(this.$.content).getDistributedNodes()[0];
+        },
+
+        /**
+         * The element that should be focused when the dropdown opens.
+         * @deprecated
+         */
+        get _focusTarget() {
+          return this.focusTarget || this.containedElement;
+        },
+
+        ready: function() {
+          // Memoized scrolling position, used to block scrolling outside.
+          this._scrollTop = 0;
+          this._scrollLeft = 0;
+          // Used to perform a non-blocking refit on scroll.
+          this._refitOnScrollRAF = null;
+        },
+
+        attached: function () {
+          if (!this.sizingTarget || this.sizingTarget === this) {
+            this.sizingTarget = this.containedElement || this;
+          }
+        },
+
+        detached: function() {
+          this.cancelAnimation();
+          document.removeEventListener('scroll', this._boundOnCaptureScroll);
+          Polymer.IronDropdownScrollManager.removeScrollLock(this);
+        },
+
+        /**
+         * Called when the value of `opened` changes.
+         * Overridden from `IronOverlayBehavior`
+         */
+        _openedChanged: function() {
+          if (this.opened && this.disabled) {
+            this.cancel();
+          } else {
+            this.cancelAnimation();
+            this._updateAnimationConfig();
+            this._saveScrollPosition();
+            if (this.opened) {
+              document.addEventListener('scroll', this._boundOnCaptureScroll);
+              !this.allowOutsideScroll && Polymer.IronDropdownScrollManager.pushScrollLock(this);
+            } else {
+              document.removeEventListener('scroll', this._boundOnCaptureScroll);
+              Polymer.IronDropdownScrollManager.removeScrollLock(this);
+            }
+            Polymer.IronOverlayBehaviorImpl._openedChanged.apply(this, arguments);
+          }
+        },
+
+        /**
+         * Overridden from `IronOverlayBehavior`.
+         */
+        _renderOpened: function() {
+          if (!this.noAnimations && this.animationConfig.open) {
+            this.$.contentWrapper.classList.add('animating');
+            this.playAnimation('open');
+          } else {
+            Polymer.IronOverlayBehaviorImpl._renderOpened.apply(this, arguments);
+          }
+        },
+
+        /**
+         * Overridden from `IronOverlayBehavior`.
+         */
+        _renderClosed: function() {
+
+          if (!this.noAnimations && this.animationConfig.close) {
+            this.$.contentWrapper.classList.add('animating');
+            this.playAnimation('close');
+          } else {
+            Polymer.IronOverlayBehaviorImpl._renderClosed.apply(this, arguments);
+          }
+        },
+
+        /**
+         * Called when animation finishes on the dropdown (when opening or
+         * closing). Responsible for "completing" the process of opening or
+         * closing the dropdown by positioning it or setting its display to
+         * none.
+         */
+        _onNeonAnimationFinish: function() {
+          this.$.contentWrapper.classList.remove('animating');
+          if (this.opened) {
+            this._finishRenderOpened();
+          } else {
+            this._finishRenderClosed();
+          }
+        },
+
+        _onCaptureScroll: function() {
+          if (!this.allowOutsideScroll) {
+            this._restoreScrollPosition();
+          } else {
+            this._refitOnScrollRAF && window.cancelAnimationFrame(this._refitOnScrollRAF);
+            this._refitOnScrollRAF = window.requestAnimationFrame(this.refit.bind(this));
+          }
+        },
+
+        /**
+         * Memoizes the scroll position of the outside scrolling element.
+         * @private
+         */
+        _saveScrollPosition: function() {
+          if (document.scrollingElement) {
+            this._scrollTop = document.scrollingElement.scrollTop;
+            this._scrollLeft = document.scrollingElement.scrollLeft;
+          } else {
+            // Since we don't know if is the body or html, get max.
+            this._scrollTop = Math.max(document.documentElement.scrollTop, document.body.scrollTop);
+            this._scrollLeft = Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
+          }
+        },
+
+        /**
+         * Resets the scroll position of the outside scrolling element.
+         * @private
+         */
+        _restoreScrollPosition: function() {
+          if (document.scrollingElement) {
+            document.scrollingElement.scrollTop = this._scrollTop;
+            document.scrollingElement.scrollLeft = this._scrollLeft;
+          } else {
+            // Since we don't know if is the body or html, set both.
+            document.documentElement.scrollTop = this._scrollTop;
+            document.documentElement.scrollLeft = this._scrollLeft;
+            document.body.scrollTop = this._scrollTop;
+            document.body.scrollLeft = this._scrollLeft;
+          }
+        },
+
+        /**
+         * Constructs the final animation config from different properties used
+         * to configure specific parts of the opening and closing animations.
+         */
+        _updateAnimationConfig: function() {
+          // Update the animation node to be the containedElement.
+          var animationNode = this.containedElement;
+          var animations = [].concat(this.openAnimationConfig || []).concat(this.closeAnimationConfig || []);
+          for (var i = 0; i < animations.length; i++) {
+            animations[i].node = animationNode;
+          }
+          this.animationConfig = {
+            open: this.openAnimationConfig,
+            close: this.closeAnimationConfig
+          };
+        },
+
+        /**
+         * Updates the overlay position based on configured horizontal
+         * and vertical alignment.
+         */
+        _updateOverlayPosition: function() {
+          if (this.isAttached) {
+            // This triggers iron-resize, and iron-overlay-behavior will call refit if needed.
+            this.notifyResize();
+          }
+        },
+
+        /**
+         * Apply focus to focusTarget or containedElement
+         */
+        _applyFocus: function () {
+          var focusTarget = this.focusTarget || this.containedElement;
+          if (focusTarget && this.opened && !this.noAutoFocus) {
+            focusTarget.focus();
+          } else {
+            Polymer.IronOverlayBehaviorImpl._applyFocus.apply(this, arguments);
+          }
+        }
+      });
+    })();
+Polymer({
+
+    is: 'fade-in-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+      this._effect = new KeyframeEffect(node, [
+        {'opacity': '0'},
+        {'opacity': '1'}
+      ], this.timingFromConfig(config));
+      return this._effect;
+    }
+
+  });
+Polymer({
+
+    is: 'fade-out-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+      this._effect = new KeyframeEffect(node, [
+        {'opacity': '1'},
+        {'opacity': '0'}
+      ], this.timingFromConfig(config));
+      return this._effect;
+    }
+
+  });
+Polymer({
+    is: 'paper-menu-grow-height-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+      var rect = node.getBoundingClientRect();
+      var height = rect.height;
+
+      this._effect = new KeyframeEffect(node, [{
+        height: (height / 2) + 'px'
+      }, {
+        height: height + 'px'
+      }], this.timingFromConfig(config));
+
+      return this._effect;
+    }
+  });
+
+  Polymer({
+    is: 'paper-menu-grow-width-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+      var rect = node.getBoundingClientRect();
+      var width = rect.width;
+
+      this._effect = new KeyframeEffect(node, [{
+        width: (width / 2) + 'px'
+      }, {
+        width: width + 'px'
+      }], this.timingFromConfig(config));
+
+      return this._effect;
+    }
+  });
+
+  Polymer({
+    is: 'paper-menu-shrink-width-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+      var rect = node.getBoundingClientRect();
+      var width = rect.width;
+
+      this._effect = new KeyframeEffect(node, [{
+        width: width + 'px'
+      }, {
+        width: width - (width / 20) + 'px'
+      }], this.timingFromConfig(config));
+
+      return this._effect;
+    }
+  });
+
+  Polymer({
+    is: 'paper-menu-shrink-height-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+      var rect = node.getBoundingClientRect();
+      var height = rect.height;
+      var top = rect.top;
+
+      this.setPrefixedProperty(node, 'transformOrigin', '0 0');
+
+      this._effect = new KeyframeEffect(node, [{
+        height: height + 'px',
+        transform: 'translateY(0)'
+      }, {
+        height: height / 2 + 'px',
+        transform: 'translateY(-20px)'
+      }], this.timingFromConfig(config));
+
+      return this._effect;
+    }
+  });
+(function() {
+      'use strict';
+
+      var config = {
+        ANIMATION_CUBIC_BEZIER: 'cubic-bezier(.3,.95,.5,1)',
+        MAX_ANIMATION_TIME_MS: 400
+      };
+
+      var PaperMenuButton = Polymer({
+        is: 'paper-menu-button',
+
+        /**
+         * Fired when the dropdown opens.
+         *
+         * @event paper-dropdown-open
+         */
+
+        /**
+         * Fired when the dropdown closes.
+         *
+         * @event paper-dropdown-close
+         */
+
+        behaviors: [
+          Polymer.IronA11yKeysBehavior,
+          Polymer.IronControlState
+        ],
+
+        properties: {
+          /**
+           * True if the content is currently displayed.
+           */
+          opened: {
+            type: Boolean,
+            value: false,
+            notify: true,
+            observer: '_openedChanged'
+          },
+
+          /**
+           * The orientation against which to align the menu dropdown
+           * horizontally relative to the dropdown trigger.
+           */
+          horizontalAlign: {
+            type: String,
+            value: 'left',
+            reflectToAttribute: true
+          },
+
+          /**
+           * The orientation against which to align the menu dropdown
+           * vertically relative to the dropdown trigger.
+           */
+          verticalAlign: {
+            type: String,
+            value: 'top',
+            reflectToAttribute: true
+          },
+
+          /**
+           * If true, the `horizontalAlign` and `verticalAlign` properties will
+           * be considered preferences instead of strict requirements when
+           * positioning the dropdown and may be changed if doing so reduces
+           * the area of the dropdown falling outside of `fitInto`.
+           */
+          dynamicAlign: {
+            type: Boolean
+          },
+
+          /**
+           * A pixel value that will be added to the position calculated for the
+           * given `horizontalAlign`. Use a negative value to offset to the
+           * left, or a positive value to offset to the right.
+           */
+          horizontalOffset: {
+            type: Number,
+            value: 0,
+            notify: true
+          },
+
+          /**
+           * A pixel value that will be added to the position calculated for the
+           * given `verticalAlign`. Use a negative value to offset towards the
+           * top, or a positive value to offset towards the bottom.
+           */
+          verticalOffset: {
+            type: Number,
+            value: 0,
+            notify: true
+          },
+
+          /**
+           * If true, the dropdown will be positioned so that it doesn't overlap
+           * the button.
+           */
+          noOverlap: {
+            type: Boolean
+          },
+
+          /**
+           * Set to true to disable animations when opening and closing the
+           * dropdown.
+           */
+          noAnimations: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * Set to true to disable automatically closing the dropdown after
+           * a selection has been made.
+           */
+          ignoreSelect: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * Set to true to enable automatically closing the dropdown after an
+           * item has been activated, even if the selection did not change.
+           */
+          closeOnActivate: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * An animation config. If provided, this will be used to animate the
+           * opening of the dropdown.
+           */
+          openAnimationConfig: {
+            type: Object,
+            value: function() {
+              return [{
+                name: 'fade-in-animation',
+                timing: {
+                  delay: 100,
+                  duration: 200
+                }
+              }, {
+                name: 'paper-menu-grow-width-animation',
+                timing: {
+                  delay: 100,
+                  duration: 150,
+                  easing: config.ANIMATION_CUBIC_BEZIER
+                }
+              }, {
+                name: 'paper-menu-grow-height-animation',
+                timing: {
+                  delay: 100,
+                  duration: 275,
+                  easing: config.ANIMATION_CUBIC_BEZIER
+                }
+              }];
+            }
+          },
+
+          /**
+           * An animation config. If provided, this will be used to animate the
+           * closing of the dropdown.
+           */
+          closeAnimationConfig: {
+            type: Object,
+            value: function() {
+              return [{
+                name: 'fade-out-animation',
+                timing: {
+                  duration: 150
+                }
+              }, {
+                name: 'paper-menu-shrink-width-animation',
+                timing: {
+                  delay: 100,
+                  duration: 50,
+                  easing: config.ANIMATION_CUBIC_BEZIER
+                }
+              }, {
+                name: 'paper-menu-shrink-height-animation',
+                timing: {
+                  duration: 200,
+                  easing: 'ease-in'
+                }
+              }];
+            }
+          },
+
+          /**
+           * By default, the dropdown will constrain scrolling on the page
+           * to itself when opened.
+           * Set to true in order to prevent scroll from being constrained
+           * to the dropdown when it opens.
+           */
+          allowOutsideScroll: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * Whether focus should be restored to the button when the menu closes.
+           */
+          restoreFocusOnClose: {
+            type: Boolean,
+            value: true
+          },
+
+          /**
+           * This is the element intended to be bound as the focus target
+           * for the `iron-dropdown` contained by `paper-menu-button`.
+           */
+          _dropdownContent: {
+            type: Object
+          }
+        },
+
+        hostAttributes: {
+          role: 'group',
+          'aria-haspopup': 'true'
+        },
+
+        listeners: {
+          'iron-activate': '_onIronActivate',
+          'iron-select': '_onIronSelect'
+        },
+
+        /**
+         * The content element that is contained by the menu button, if any.
+         */
+        get contentElement() {
+          return Polymer.dom(this.$.content).getDistributedNodes()[0];
+        },
+
+        /**
+         * Toggles the drowpdown content between opened and closed.
+         */
+        toggle: function() {
+          if (this.opened) {
+            this.close();
+          } else {
+            this.open();
+          }
+        },
+
+        /**
+         * Make the dropdown content appear as an overlay positioned relative
+         * to the dropdown trigger.
+         */
+        open: function() {
+          if (this.disabled) {
+            return;
+          }
+
+          this.$.dropdown.open();
+        },
+
+        /**
+         * Hide the dropdown content.
+         */
+        close: function() {
+          this.$.dropdown.close();
+        },
+
+        /**
+         * When an `iron-select` event is received, the dropdown should
+         * automatically close on the assumption that a value has been chosen.
+         *
+         * @param {CustomEvent} event A CustomEvent instance with type
+         * set to `"iron-select"`.
+         */
+        _onIronSelect: function(event) {
+          if (!this.ignoreSelect) {
+            this.close();
+          }
+        },
+
+        /**
+         * Closes the dropdown when an `iron-activate` event is received if
+         * `closeOnActivate` is true.
+         *
+         * @param {CustomEvent} event A CustomEvent of type 'iron-activate'.
+         */
+        _onIronActivate: function(event) {
+          if (this.closeOnActivate) {
+            this.close();
+          }
+        },
+
+        /**
+         * When the dropdown opens, the `paper-menu-button` fires `paper-open`.
+         * When the dropdown closes, the `paper-menu-button` fires `paper-close`.
+         *
+         * @param {boolean} opened True if the dropdown is opened, otherwise false.
+         * @param {boolean} oldOpened The previous value of `opened`.
+         */
+        _openedChanged: function(opened, oldOpened) {
+          if (opened) {
+            // TODO(cdata): Update this when we can measure changes in distributed
+            // children in an idiomatic way.
+            // We poke this property in case the element has changed. This will
+            // cause the focus target for the `iron-dropdown` to be updated as
+            // necessary:
+            this._dropdownContent = this.contentElement;
+            this.fire('paper-dropdown-open');
+          } else if (oldOpened != null) {
+            this.fire('paper-dropdown-close');
+          }
+        },
+
+        /**
+         * If the dropdown is open when disabled becomes true, close the
+         * dropdown.
+         *
+         * @param {boolean} disabled True if disabled, otherwise false.
+         */
+        _disabledChanged: function(disabled) {
+          Polymer.IronControlState._disabledChanged.apply(this, arguments);
+          if (disabled && this.opened) {
+            this.close();
+          }
+        },
+
+        __onIronOverlayCanceled: function(event) {
+          var uiEvent = event.detail;
+          var target = Polymer.dom(uiEvent).rootTarget;
+          var trigger = this.$.trigger;
+          var path = Polymer.dom(uiEvent).path;
+
+          if (path.indexOf(trigger) > -1) {
+            event.preventDefault();
+          }
+        }
+      });
+
+      Object.keys(config).forEach(function (key) {
+        PaperMenuButton[key] = config[key];
+      });
+
+      Polymer.PaperMenuButton = PaperMenuButton;
+    })();
+(function() {
+      'use strict';
+
+      Polymer({
+        is: 'paper-dropdown-menu',
+
+        behaviors: [
+          Polymer.IronButtonState,
+          Polymer.IronControlState,
+          Polymer.IronFormElementBehavior,
+          Polymer.IronValidatableBehavior
+        ],
+
+        properties: {
+          /**
+           * The derived "label" of the currently selected item. This value
+           * is the `label` property on the selected item if set, or else the
+           * trimmed text content of the selected item.
+           */
+          selectedItemLabel: {
+            type: String,
+            notify: true,
+            readOnly: true
+          },
+
+          /**
+           * The last selected item. An item is selected if the dropdown menu has
+           * a child with class `dropdown-content`, and that child triggers an
+           * `iron-select` event with the selected `item` in the `detail`.
+           *
+           * @type {?Object}
+           */
+          selectedItem: {
+            type: Object,
+            notify: true,
+            readOnly: true
+          },
+
+          /**
+           * The value for this element that will be used when submitting in
+           * a form. It is read only, and will always have the same value
+           * as `selectedItemLabel`.
+           */
+          value: {
+            type: String,
+            notify: true,
+            readOnly: true
+          },
+
+          /**
+           * The label for the dropdown.
+           */
+          label: {
+            type: String
+          },
+
+          /**
+           * The placeholder for the dropdown.
+           */
+          placeholder: {
+            type: String
+          },
+
+          /**
+           * The error message to display when invalid.
+           */
+          errorMessage: {
+              type: String
+          },
+
+          /**
+           * True if the dropdown is open. Otherwise, false.
+           */
+          opened: {
+            type: Boolean,
+            notify: true,
+            value: false,
+            observer: '_openedChanged'
+          },
+
+          /**
+           * By default, the dropdown will constrain scrolling on the page
+           * to itself when opened.
+           * Set to true in order to prevent scroll from being constrained
+           * to the dropdown when it opens.
+           */
+          allowOutsideScroll: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * Set to true to disable the floating label. Bind this to the
+           * `<paper-input-container>`'s `noLabelFloat` property.
+           */
+          noLabelFloat: {
+              type: Boolean,
+              value: false,
+              reflectToAttribute: true
+          },
+
+          /**
+           * Set to true to always float the label. Bind this to the
+           * `<paper-input-container>`'s `alwaysFloatLabel` property.
+           */
+          alwaysFloatLabel: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * Set to true to disable animations when opening and closing the
+           * dropdown.
+           */
+          noAnimations: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * The orientation against which to align the menu dropdown
+           * horizontally relative to the dropdown trigger.
+           */
+          horizontalAlign: {
+            type: String,
+            value: 'right'
+          },
+
+          /**
+           * The orientation against which to align the menu dropdown
+           * vertically relative to the dropdown trigger.
+           */
+          verticalAlign: {
+            type: String,
+            value: 'top'
+          },
+
+          /**
+           * If true, the `horizontalAlign` and `verticalAlign` properties will
+           * be considered preferences instead of strict requirements when
+           * positioning the dropdown and may be changed if doing so reduces
+           * the area of the dropdown falling outside of `fitInto`.
+           */
+          dynamicAlign: {
+            type: Boolean
+          },
+            
+          /**
+           * Whether focus should be restored to the dropdown when the menu closes.
+           */
+          restoreFocusOnClose: {
+            type: Boolean,
+            value: true
+          },
+        },
+
+        listeners: {
+          'tap': '_onTap'
+        },
+
+        keyBindings: {
+          'up down': 'open',
+          'esc': 'close'
+        },
+
+        hostAttributes: {
+          role: 'combobox',
+          'aria-autocomplete': 'none',
+          'aria-haspopup': 'true'
+        },
+
+        observers: [
+          '_selectedItemChanged(selectedItem)'
+        ],
+
+        attached: function() {
+          // NOTE(cdata): Due to timing, a preselected value in a `IronSelectable`
+          // child will cause an `iron-select` event to fire while the element is
+          // still in a `DocumentFragment`. This has the effect of causing
+          // handlers not to fire. So, we double check this value on attached:
+          var contentElement = this.contentElement;
+          if (contentElement && contentElement.selectedItem) {
+            this._setSelectedItem(contentElement.selectedItem);
+          }
+        },
+
+        /**
+         * The content element that is contained by the dropdown menu, if any.
+         */
+        get contentElement() {
+          return Polymer.dom(this.$.content).getDistributedNodes()[0];
+        },
+
+        /**
+         * Show the dropdown content.
+         */
+        open: function() {
+          this.$.menuButton.open();
+        },
+
+        /**
+         * Hide the dropdown content.
+         */
+        close: function() {
+          this.$.menuButton.close();
+        },
+
+        /**
+         * A handler that is called when `iron-select` is fired.
+         *
+         * @param {CustomEvent} event An `iron-select` event.
+         */
+        _onIronSelect: function(event) {
+          this._setSelectedItem(event.detail.item);
+        },
+
+        /**
+         * A handler that is called when `iron-deselect` is fired.
+         *
+         * @param {CustomEvent} event An `iron-deselect` event.
+         */
+        _onIronDeselect: function(event) {
+          this._setSelectedItem(null);
+        },
+
+        /**
+         * A handler that is called when the dropdown is tapped.
+         *
+         * @param {CustomEvent} event A tap event.
+         */
+        _onTap: function(event) {
+          if (Polymer.Gestures.findOriginalTarget(event) === this) {
+            this.open();
+          }
+        },
+
+        /**
+         * Compute the label for the dropdown given a selected item.
+         *
+         * @param {Element} selectedItem A selected Element item, with an
+         * optional `label` property.
+         */
+        _selectedItemChanged: function(selectedItem) {
+          var value = '';
+          if (!selectedItem) {
+            value = '';
+          } else {
+            value = selectedItem.label || selectedItem.getAttribute('label') || selectedItem.textContent.trim();
+          }
+
+          this._setValue(value);
+          this._setSelectedItemLabel(value);
+        },
+
+        /**
+         * Compute the vertical offset of the menu based on the value of
+         * `noLabelFloat`.
+         *
+         * @param {boolean} noLabelFloat True if the label should not float
+         * above the input, otherwise false.
+         */
+        _computeMenuVerticalOffset: function(noLabelFloat) {
+          // NOTE(cdata): These numbers are somewhat magical because they are
+          // derived from the metrics of elements internal to `paper-input`'s
+          // template. The metrics will change depending on whether or not the
+          // input has a floating label.
+          return noLabelFloat ? -4 : 8;
+        },
+
+        /**
+         * Returns false if the element is required and does not have a selection,
+         * and true otherwise.
+         * @param {*=} _value Ignored.
+         * @return {boolean} true if `required` is false, or if `required` is true
+         * and the element has a valid selection.
+         */
+        _getValidity: function(_value) {
+          return this.disabled || !this.required || (this.required && !!this.value);
+        },
+
+        _openedChanged: function() {
+          var openState = this.opened ? 'true' : 'false';
+          var e = this.contentElement;
+          if (e) {
+            e.setAttribute('aria-expanded', openState);
+          }
+        }
+      });
+    })();
+/**
+   * `Polymer.PaperInkyFocusBehavior` implements a ripple when the element has keyboard focus.
+   *
+   * @polymerBehavior Polymer.PaperInkyFocusBehavior
+   */
+  Polymer.PaperInkyFocusBehaviorImpl = {
+    observers: [
+      '_focusedChanged(receivedFocusFromKeyboard)'
+    ],
+
+    _focusedChanged: function(receivedFocusFromKeyboard) {
+      if (receivedFocusFromKeyboard) {
+        this.ensureRipple();
+      }
+      if (this.hasRipple()) {
+        this._ripple.holdDown = receivedFocusFromKeyboard;
+      }
+    },
+
+    _createRipple: function() {
+      var ripple = Polymer.PaperRippleBehavior._createRipple();
+      ripple.id = 'ink';
+      ripple.setAttribute('center', '');
+      ripple.classList.add('circle');
+      return ripple;
+    }
+  };
+
+  /** @polymerBehavior Polymer.PaperInkyFocusBehavior */
+  Polymer.PaperInkyFocusBehavior = [
+    Polymer.IronButtonState,
+    Polymer.IronControlState,
+    Polymer.PaperRippleBehavior,
+    Polymer.PaperInkyFocusBehaviorImpl
+  ];
+Polymer({
+      is: 'paper-icon-button',
+
+      hostAttributes: {
+        role: 'button',
+        tabindex: '0'
+      },
+
+      behaviors: [
+        Polymer.PaperInkyFocusBehavior
+      ],
+
+      properties: {
+        /**
+         * The URL of an image for the icon. If the src property is specified,
+         * the icon property should not be.
+         */
+        src: {
+          type: String
+        },
+
+        /**
+         * Specifies the icon name or index in the set of icons available in
+         * the icon's icon set. If the icon property is specified,
+         * the src property should not be.
+         */
+        icon: {
+          type: String
+        },
+
+        /**
+         * Specifies the alternate text for the button, for accessibility.
+         */
+        alt: {
+          type: String,
+          observer: "_altChanged"
+        }
+      },
+
+      _altChanged: function(newValue, oldValue) {
+        var label = this.getAttribute('aria-label');
+
+        // Don't stomp over a user-set aria-label.
+        if (!label || oldValue == label) {
+          this.setAttribute('aria-label', newValue);
+        }
+      }
+    });
 /** @polymerBehavior Polymer.PaperItemBehavior */
   Polymer.PaperItemBehaviorImpl = {
     hostAttributes: {
@@ -18810,6 +20801,397 @@ Polymer({
         Polymer.PaperItemBehavior
       ]
     });
+/**
+   * `Polymer.IronMenuBehavior` implements accessible menu behavior.
+   *
+   * @demo demo/index.html
+   * @polymerBehavior Polymer.IronMenuBehavior
+   */
+  Polymer.IronMenuBehaviorImpl = {
+
+    properties: {
+
+      /**
+       * Returns the currently focused item.
+       * @type {?Object}
+       */
+      focusedItem: {
+        observer: '_focusedItemChanged',
+        readOnly: true,
+        type: Object
+      },
+
+      /**
+       * The attribute to use on menu items to look up the item title. Typing the first
+       * letter of an item when the menu is open focuses that item. If unset, `textContent`
+       * will be used.
+       */
+      attrForItemTitle: {
+        type: String
+      },
+
+      disabled: {
+        type: Boolean,
+        value: false,
+        observer: '_disabledChanged',
+      },
+    },
+
+    _SEARCH_RESET_TIMEOUT_MS: 1000,
+
+    _previousTabIndex: 0,
+
+    hostAttributes: {
+      'role': 'menu',
+    },
+
+    observers: [
+      '_updateMultiselectable(multi)'
+    ],
+
+    listeners: {
+      'focus': '_onFocus',
+      'keydown': '_onKeydown',
+      'iron-items-changed': '_onIronItemsChanged'
+    },
+
+    keyBindings: {
+      'up': '_onUpKey',
+      'down': '_onDownKey',
+      'esc': '_onEscKey',
+      'shift+tab:keydown': '_onShiftTabDown'
+    },
+
+    attached: function() {
+      this._resetTabindices();
+    },
+
+    /**
+     * Selects the given value. If the `multi` property is true, then the selected state of the
+     * `value` will be toggled; otherwise the `value` will be selected.
+     *
+     * @param {string|number} value the value to select.
+     */
+    select: function(value) {
+      // Cancel automatically focusing a default item if the menu received focus
+      // through a user action selecting a particular item.
+      if (this._defaultFocusAsync) {
+        this.cancelAsync(this._defaultFocusAsync);
+        this._defaultFocusAsync = null;
+      }
+      var item = this._valueToItem(value);
+      if (item && item.hasAttribute('disabled')) return;
+      this._setFocusedItem(item);
+      Polymer.IronMultiSelectableBehaviorImpl.select.apply(this, arguments);
+    },
+
+    /**
+     * Resets all tabindex attributes to the appropriate value based on the
+     * current selection state. The appropriate value is `0` (focusable) for
+     * the default selected item, and `-1` (not keyboard focusable) for all
+     * other items.
+     */
+    _resetTabindices: function() {
+      var selectedItem = this.multi ? (this.selectedItems && this.selectedItems[0]) : this.selectedItem;
+
+      this.items.forEach(function(item) {
+        item.setAttribute('tabindex', item === selectedItem ? '0' : '-1');
+      }, this);
+    },
+
+    /**
+     * Sets appropriate ARIA based on whether or not the menu is meant to be
+     * multi-selectable.
+     *
+     * @param {boolean} multi True if the menu should be multi-selectable.
+     */
+    _updateMultiselectable: function(multi) {
+      if (multi) {
+        this.setAttribute('aria-multiselectable', 'true');
+      } else {
+        this.removeAttribute('aria-multiselectable');
+      }
+    },
+
+    /**
+     * Given a KeyboardEvent, this method will focus the appropriate item in the
+     * menu (if there is a relevant item, and it is possible to focus it).
+     *
+     * @param {KeyboardEvent} event A KeyboardEvent.
+     */
+    _focusWithKeyboardEvent: function(event) {
+      this.cancelDebouncer('_clearSearchText');
+
+      var searchText = this._searchText || '';
+      var key = event.key && event.key.length == 1 ? event.key :
+          String.fromCharCode(event.keyCode);
+      searchText += key.toLocaleLowerCase();
+
+      var searchLength = searchText.length;
+
+      for (var i = 0, item; item = this.items[i]; i++) {
+        if (item.hasAttribute('disabled')) {
+          continue;
+        }
+
+        var attr = this.attrForItemTitle || 'textContent';
+        var title = (item[attr] || item.getAttribute(attr) || '').trim();
+
+        if (title.length < searchLength) {
+          continue;
+        }
+
+        if (title.slice(0, searchLength).toLocaleLowerCase() == searchText) {
+          this._setFocusedItem(item);
+          break;
+        }
+      }
+
+      this._searchText = searchText;
+      this.debounce('_clearSearchText', this._clearSearchText,
+                    this._SEARCH_RESET_TIMEOUT_MS);
+    },
+
+    _clearSearchText: function() {
+      this._searchText = '';
+    },
+
+    /**
+     * Focuses the previous item (relative to the currently focused item) in the
+     * menu, disabled items will be skipped.
+     * Loop until length + 1 to handle case of single item in menu.
+     */
+    _focusPrevious: function() {
+      var length = this.items.length;
+      var curFocusIndex = Number(this.indexOf(this.focusedItem));
+
+      for (var i = 1; i < length + 1; i++) {
+        var item = this.items[(curFocusIndex - i + length) % length];
+        if (!item.hasAttribute('disabled')) {
+          var owner = Polymer.dom(item).getOwnerRoot() || document;
+          this._setFocusedItem(item);
+
+          // Focus might not have worked, if the element was hidden or not
+          // focusable. In that case, try again.
+          if (Polymer.dom(owner).activeElement == item) {
+            return;
+          }
+        }
+      }
+    },
+
+    /**
+     * Focuses the next item (relative to the currently focused item) in the
+     * menu, disabled items will be skipped.
+     * Loop until length + 1 to handle case of single item in menu.
+     */
+    _focusNext: function() {
+      var length = this.items.length;
+      var curFocusIndex = Number(this.indexOf(this.focusedItem));
+
+      for (var i = 1; i < length + 1; i++) {
+        var item = this.items[(curFocusIndex + i) % length];
+        if (!item.hasAttribute('disabled')) {
+          var owner = Polymer.dom(item).getOwnerRoot() || document;
+          this._setFocusedItem(item);
+
+          // Focus might not have worked, if the element was hidden or not
+          // focusable. In that case, try again.
+          if (Polymer.dom(owner).activeElement == item) {
+            return;
+          }
+        }
+      }
+    },
+
+    /**
+     * Mutates items in the menu based on provided selection details, so that
+     * all items correctly reflect selection state.
+     *
+     * @param {Element} item An item in the menu.
+     * @param {boolean} isSelected True if the item should be shown in a
+     * selected state, otherwise false.
+     */
+    _applySelection: function(item, isSelected) {
+      if (isSelected) {
+        item.setAttribute('aria-selected', 'true');
+      } else {
+        item.removeAttribute('aria-selected');
+      }
+      Polymer.IronSelectableBehavior._applySelection.apply(this, arguments);
+    },
+
+    /**
+     * Discretely updates tabindex values among menu items as the focused item
+     * changes.
+     *
+     * @param {Element} focusedItem The element that is currently focused.
+     * @param {?Element} old The last element that was considered focused, if
+     * applicable.
+     */
+    _focusedItemChanged: function(focusedItem, old) {
+      old && old.setAttribute('tabindex', '-1');
+      if (focusedItem && !focusedItem.hasAttribute('disabled') && !this.disabled) {
+        focusedItem.setAttribute('tabindex', '0');
+        focusedItem.focus();
+      }
+    },
+
+    /**
+     * A handler that responds to mutation changes related to the list of items
+     * in the menu.
+     *
+     * @param {CustomEvent} event An event containing mutation records as its
+     * detail.
+     */
+    _onIronItemsChanged: function(event) {
+      if (event.detail.addedNodes.length) {
+        this._resetTabindices();
+      }
+    },
+
+    /**
+     * Handler that is called when a shift+tab keypress is detected by the menu.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onShiftTabDown: function(event) {
+      var oldTabIndex = this.getAttribute('tabindex');
+
+      Polymer.IronMenuBehaviorImpl._shiftTabPressed = true;
+
+      this._setFocusedItem(null);
+
+      this.setAttribute('tabindex', '-1');
+
+      this.async(function() {
+        this.setAttribute('tabindex', oldTabIndex);
+        Polymer.IronMenuBehaviorImpl._shiftTabPressed = false;
+        // NOTE(cdata): polymer/polymer#1305
+      }, 1);
+    },
+
+    /**
+     * Handler that is called when the menu receives focus.
+     *
+     * @param {FocusEvent} event A focus event.
+     */
+    _onFocus: function(event) {
+      if (Polymer.IronMenuBehaviorImpl._shiftTabPressed) {
+        // do not focus the menu itself
+        return;
+      }
+
+      // Do not focus the selected tab if the deepest target is part of the
+      // menu element's local DOM and is focusable.
+      var rootTarget = /** @type {?HTMLElement} */(
+          Polymer.dom(event).rootTarget);
+      if (rootTarget !== this && typeof rootTarget.tabIndex !== "undefined" && !this.isLightDescendant(rootTarget)) {
+        return;
+      }
+
+      // clear the cached focus item
+      this._defaultFocusAsync = this.async(function() {
+        // focus the selected item when the menu receives focus, or the first item
+        // if no item is selected
+        var selectedItem = this.multi ? (this.selectedItems && this.selectedItems[0]) : this.selectedItem;
+
+        this._setFocusedItem(null);
+
+        if (selectedItem) {
+          this._setFocusedItem(selectedItem);
+        } else if (this.items[0]) {
+          // We find the first none-disabled item (if one exists)
+          this._focusNext();
+        }
+      });
+    },
+
+    /**
+     * Handler that is called when the up key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onUpKey: function(event) {
+      // up and down arrows moves the focus
+      this._focusPrevious();
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    /**
+     * Handler that is called when the down key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onDownKey: function(event) {
+      this._focusNext();
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    /**
+     * Handler that is called when the esc key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onEscKey: function(event) {
+      // esc blurs the control
+      this.focusedItem.blur();
+    },
+
+    /**
+     * Handler that is called when a keydown event is detected.
+     *
+     * @param {KeyboardEvent} event A keyboard event.
+     */
+    _onKeydown: function(event) {
+      if (!this.keyboardEventMatchesKeys(event, 'up down esc')) {
+        // all other keys focus the menu item starting with that character
+        this._focusWithKeyboardEvent(event);
+      }
+      event.stopPropagation();
+    },
+
+    // override _activateHandler
+    _activateHandler: function(event) {
+      Polymer.IronSelectableBehavior._activateHandler.call(this, event);
+      event.stopPropagation();
+    },
+
+    /**
+     * Updates this element's tab index when it's enabled/disabled.
+     * @param {boolean} disabled
+     */
+    _disabledChanged: function(disabled) {
+      if (disabled) {
+        this._previousTabIndex = this.hasAttribute('tabindex') ? this.tabIndex : 0;
+        this.removeAttribute('tabindex');  // No tabindex means not tab-able or select-able.
+      } else if (!this.hasAttribute('tabindex')) {
+        this.setAttribute('tabindex', this._previousTabIndex);
+      }
+    }
+  };
+
+  Polymer.IronMenuBehaviorImpl._shiftTabPressed = false;
+
+  /** @polymerBehavior Polymer.IronMenuBehavior */
+  Polymer.IronMenuBehavior = [
+    Polymer.IronMultiSelectableBehavior,
+    Polymer.IronA11yKeysBehavior,
+    Polymer.IronMenuBehaviorImpl
+  ];
+(function() {
+      Polymer({
+        is: 'paper-listbox',
+
+        behaviors: [
+          Polymer.IronMenuBehavior
+        ],
+
+        hostAttributes: {
+          role: 'listbox'
+        }
+      });
+    })();
 Polymer({
     is: 'paper-material',
 
@@ -18922,6 +21304,563 @@ Polymer({
       behaviors: [
         Polymer.PaperSpinnerBehavior
       ]
+    });
+Polymer({
+      is: 'paper-tab',
+
+      behaviors: [
+        Polymer.IronControlState,
+        Polymer.IronButtonState,
+        Polymer.PaperRippleBehavior
+      ],
+
+      properties: {
+
+        /**
+         * If true, the tab will forward keyboard clicks (enter/space) to
+         * the first anchor element found in its descendants
+         */
+        link: {
+          type: Boolean,
+          value: false,
+          reflectToAttribute: true
+        }
+
+      },
+
+      hostAttributes: {
+        role: 'tab'
+      },
+
+      listeners: {
+        down: '_updateNoink',
+        tap: '_onTap'
+      },
+
+      attached: function() {
+        this._updateNoink();
+      },
+
+      get _parentNoink () {
+        var parent = Polymer.dom(this).parentNode;
+        return !!parent && !!parent.noink;
+      },
+
+      _updateNoink: function() {
+        this.noink = !!this.noink || !!this._parentNoink;
+      },
+
+      _onTap: function(event) {
+        if (this.link) {
+          var anchor = this.queryEffectiveChildren('a');
+
+          if (!anchor) {
+            return;
+          }
+
+          // Don't get stuck in a loop delegating
+          // the listener from the child anchor
+          if (event.target === anchor) {
+            return;
+          }
+
+          anchor.click();
+        }
+      }
+
+    });
+/**
+   * `Polymer.IronMenubarBehavior` implements accessible menubar behavior.
+   *
+   * @polymerBehavior Polymer.IronMenubarBehavior
+   */
+  Polymer.IronMenubarBehaviorImpl = {
+
+    hostAttributes: {
+      'role': 'menubar'
+    },
+
+    keyBindings: {
+      'left': '_onLeftKey',
+      'right': '_onRightKey'
+    },
+
+    _onUpKey: function(event) {
+      this.focusedItem.click();
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    _onDownKey: function(event) {
+      this.focusedItem.click();
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    get _isRTL() {
+      return window.getComputedStyle(this)['direction'] === 'rtl';
+    },
+
+    _onLeftKey: function(event) {
+      if (this._isRTL) {
+        this._focusNext();
+      } else {
+        this._focusPrevious();
+      }
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    _onRightKey: function(event) {
+      if (this._isRTL) {
+        this._focusPrevious();
+      } else {
+        this._focusNext();
+      }
+      event.detail.keyboardEvent.preventDefault();
+    },
+
+    _onKeydown: function(event) {
+      if (this.keyboardEventMatchesKeys(event, 'up down left right esc')) {
+        return;
+      }
+
+      // all other keys focus the menu item starting with that character
+      this._focusWithKeyboardEvent(event);
+    }
+
+  };
+
+  /** @polymerBehavior Polymer.IronMenubarBehavior */
+  Polymer.IronMenubarBehavior = [
+    Polymer.IronMenuBehavior,
+    Polymer.IronMenubarBehaviorImpl
+  ];
+Polymer({
+      is: 'paper-tabs',
+
+      behaviors: [
+        Polymer.IronResizableBehavior,
+        Polymer.IronMenubarBehavior
+      ],
+
+      properties: {
+        /**
+         * If true, ink ripple effect is disabled. When this property is changed,
+         * all descendant `<paper-tab>` elements have their `noink` property
+         * changed to the new value as well.
+         */
+        noink: {
+          type: Boolean,
+          value: false,
+          observer: '_noinkChanged'
+        },
+
+        /**
+         * If true, the bottom bar to indicate the selected tab will not be shown.
+         */
+        noBar: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * If true, the slide effect for the bottom bar is disabled.
+         */
+        noSlide: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * If true, tabs are scrollable and the tab width is based on the label width.
+         */
+        scrollable: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * If true, tabs expand to fit their container. This currently only applies when
+         * scrollable is true.
+         */
+        fitContainer: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * If true, dragging on the tabs to scroll is disabled.
+         */
+        disableDrag: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * If true, scroll buttons (left/right arrow) will be hidden for scrollable tabs.
+         */
+        hideScrollButtons: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * If true, the tabs are aligned to bottom (the selection bar appears at the top).
+         */
+        alignBottom: {
+          type: Boolean,
+          value: false
+        },
+
+        selectable: {
+          type: String,
+          value: 'paper-tab'
+        },
+
+        /**
+         * If true, tabs are automatically selected when focused using the
+         * keyboard.
+         */
+        autoselect: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * The delay (in milliseconds) between when the user stops interacting
+         * with the tabs through the keyboard and when the focused item is
+         * automatically selected (if `autoselect` is true).
+         */
+        autoselectDelay: {
+          type: Number,
+          value: 0
+        },
+
+        _step: {
+          type: Number,
+          value: 10
+        },
+
+        _holdDelay: {
+          type: Number,
+          value: 1
+        },
+
+        _leftHidden: {
+          type: Boolean,
+          value: false
+        },
+
+        _rightHidden: {
+          type: Boolean,
+          value: false
+        },
+
+        _previousTab: {
+          type: Object
+        }
+      },
+
+      hostAttributes: {
+        role: 'tablist'
+      },
+
+      listeners: {
+        'iron-resize': '_onTabSizingChanged',
+        'iron-items-changed': '_onTabSizingChanged',
+        'iron-select': '_onIronSelect',
+        'iron-deselect': '_onIronDeselect'
+      },
+
+      keyBindings: {
+        'left:keyup right:keyup': '_onArrowKeyup'
+      },
+
+      created: function() {
+        this._holdJob = null;
+        this._pendingActivationItem = undefined;
+        this._pendingActivationTimeout = undefined;
+        this._bindDelayedActivationHandler = this._delayedActivationHandler.bind(this);
+        this.addEventListener('blur', this._onBlurCapture.bind(this), true);
+      },
+
+      ready: function() {
+        this.setScrollDirection('y', this.$.tabsContainer);
+      },
+
+      detached: function() {
+        this._cancelPendingActivation();
+      },
+
+      _noinkChanged: function(noink) {
+        var childTabs = Polymer.dom(this).querySelectorAll('paper-tab');
+        childTabs.forEach(noink ? this._setNoinkAttribute : this._removeNoinkAttribute);
+      },
+
+      _setNoinkAttribute: function(element) {
+        element.setAttribute('noink', '');
+      },
+
+      _removeNoinkAttribute: function(element) {
+        element.removeAttribute('noink');
+      },
+
+      _computeScrollButtonClass: function(hideThisButton, scrollable, hideScrollButtons) {
+        if (!scrollable || hideScrollButtons) {
+          return 'hidden';
+        }
+
+        if (hideThisButton) {
+          return 'not-visible';
+        }
+
+        return '';
+      },
+
+      _computeTabsContentClass: function(scrollable, fitContainer) {
+        return scrollable ? 'scrollable' + (fitContainer ? ' fit-container' : '') : ' fit-container';
+      },
+
+      _computeSelectionBarClass: function(noBar, alignBottom) {
+        if (noBar) {
+          return 'hidden';
+        } else if (alignBottom) {
+          return 'align-bottom';
+        }
+
+        return '';
+      },
+
+      // TODO(cdata): Add `track` response back in when gesture lands.
+
+      _onTabSizingChanged: function() {
+        this.debounce('_onTabSizingChanged', function() {
+          this._scroll();
+          this._tabChanged(this.selectedItem);
+        }, 10);
+      },
+
+      _onIronSelect: function(event) {
+        this._tabChanged(event.detail.item, this._previousTab);
+        this._previousTab = event.detail.item;
+        this.cancelDebouncer('tab-changed');
+      },
+
+      _onIronDeselect: function(event) {
+        this.debounce('tab-changed', function() {
+          this._tabChanged(null, this._previousTab);
+          this._previousTab = null;
+        // See polymer/polymer#1305
+        }, 1);
+      },
+
+      _activateHandler: function() {
+        // Cancel item activations scheduled by keyboard events when any other
+        // action causes an item to be activated (e.g. clicks).
+        this._cancelPendingActivation();
+
+        Polymer.IronMenuBehaviorImpl._activateHandler.apply(this, arguments);
+      },
+
+      /**
+       * Activates an item after a delay (in milliseconds).
+       */
+      _scheduleActivation: function(item, delay) {
+        this._pendingActivationItem = item;
+        this._pendingActivationTimeout = this.async(
+            this._bindDelayedActivationHandler, delay);
+      },
+
+      /**
+       * Activates the last item given to `_scheduleActivation`.
+       */
+      _delayedActivationHandler: function() {
+        var item = this._pendingActivationItem;
+        this._pendingActivationItem = undefined;
+        this._pendingActivationTimeout = undefined;
+        item.fire(this.activateEvent, null, {
+          bubbles: true,
+          cancelable: true
+        });
+      },
+
+      /**
+       * Cancels a previously scheduled item activation made with
+       * `_scheduleActivation`.
+       */
+      _cancelPendingActivation: function() {
+        if (this._pendingActivationTimeout !== undefined) {
+          this.cancelAsync(this._pendingActivationTimeout);
+          this._pendingActivationItem = undefined;
+          this._pendingActivationTimeout = undefined;
+        }
+      },
+
+      _onArrowKeyup: function(event) {
+        if (this.autoselect) {
+          this._scheduleActivation(this.focusedItem, this.autoselectDelay);
+        }
+      },
+
+      _onBlurCapture: function(event) {
+        // Cancel a scheduled item activation (if any) when that item is
+        // blurred.
+        if (event.target === this._pendingActivationItem) {
+          this._cancelPendingActivation();
+        }
+      },
+
+      get _tabContainerScrollSize () {
+        return Math.max(
+          0,
+          this.$.tabsContainer.scrollWidth -
+            this.$.tabsContainer.offsetWidth
+        );
+      },
+
+      _scroll: function(e, detail) {
+        if (!this.scrollable) {
+          return;
+        }
+
+        var ddx = (detail && -detail.ddx) || 0;
+        this._affectScroll(ddx);
+      },
+
+      _down: function(e) {
+        // go one beat async to defeat IronMenuBehavior
+        // autorefocus-on-no-selection timeout
+        this.async(function() {
+          if (this._defaultFocusAsync) {
+            this.cancelAsync(this._defaultFocusAsync);
+            this._defaultFocusAsync = null;
+          }
+        }, 1);
+      },
+
+      _affectScroll: function(dx) {
+        this.$.tabsContainer.scrollLeft += dx;
+
+        var scrollLeft = this.$.tabsContainer.scrollLeft;
+
+        this._leftHidden = scrollLeft === 0;
+        this._rightHidden = scrollLeft === this._tabContainerScrollSize;
+      },
+
+      _onLeftScrollButtonDown: function() {
+        this._scrollToLeft();
+        this._holdJob = setInterval(this._scrollToLeft.bind(this), this._holdDelay);
+      },
+
+      _onRightScrollButtonDown: function() {
+        this._scrollToRight();
+        this._holdJob = setInterval(this._scrollToRight.bind(this), this._holdDelay);
+      },
+
+      _onScrollButtonUp: function() {
+        clearInterval(this._holdJob);
+        this._holdJob = null;
+      },
+
+      _scrollToLeft: function() {
+        this._affectScroll(-this._step);
+      },
+
+      _scrollToRight: function() {
+        this._affectScroll(this._step);
+      },
+
+      _tabChanged: function(tab, old) {
+        if (!tab) {
+          // Remove the bar without animation.
+          this.$.selectionBar.classList.remove('expand');
+          this.$.selectionBar.classList.remove('contract');
+          this._positionBar(0, 0);
+          return;
+        }
+
+        var r = this.$.tabsContent.getBoundingClientRect();
+        var w = r.width;
+        var tabRect = tab.getBoundingClientRect();
+        var tabOffsetLeft = tabRect.left - r.left;
+
+        this._pos = {
+          width: this._calcPercent(tabRect.width, w),
+          left: this._calcPercent(tabOffsetLeft, w)
+        };
+
+        if (this.noSlide || old == null) {
+          // Position the bar without animation.
+          this.$.selectionBar.classList.remove('expand');
+          this.$.selectionBar.classList.remove('contract');
+          this._positionBar(this._pos.width, this._pos.left);
+          return;
+        }
+
+        var oldRect = old.getBoundingClientRect();
+        var oldIndex = this.items.indexOf(old);
+        var index = this.items.indexOf(tab);
+        var m = 5;
+
+        // bar animation: expand
+        this.$.selectionBar.classList.add('expand');
+
+        var moveRight = oldIndex < index;
+        var isRTL = this._isRTL;
+        if (isRTL) {
+          moveRight = !moveRight;
+        }
+
+        if (moveRight) {
+          this._positionBar(this._calcPercent(tabRect.left + tabRect.width - oldRect.left, w) - m,
+              this._left);
+        } else {
+          this._positionBar(this._calcPercent(oldRect.left + oldRect.width - tabRect.left, w) - m,
+              this._calcPercent(tabOffsetLeft, w) + m);
+        }
+
+        if (this.scrollable) {
+          this._scrollToSelectedIfNeeded(tabRect.width, tabOffsetLeft);
+        }
+      },
+
+      _scrollToSelectedIfNeeded: function(tabWidth, tabOffsetLeft) {
+        var l = tabOffsetLeft - this.$.tabsContainer.scrollLeft;
+        if (l < 0) {
+          this.$.tabsContainer.scrollLeft += l;
+        } else {
+          l += (tabWidth - this.$.tabsContainer.offsetWidth);
+          if (l > 0) {
+            this.$.tabsContainer.scrollLeft += l;
+          }
+        }
+      },
+
+      _calcPercent: function(w, w0) {
+        return 100 * w / w0;
+      },
+
+      _positionBar: function(width, left) {
+        width = width || 0;
+        left = left || 0;
+
+        this._width = width;
+        this._left = left;
+        this.transform(
+            'translateX(' + left + '%) scaleX(' + (width / 100) + ')',
+            this.$.selectionBar);
+      },
+
+      _onBarTransitionEnd: function(e) {
+        var cl = this.$.selectionBar.classList;
+        // bar animation: expand -> contract
+        if (cl.contains('expand')) {
+          cl.remove('expand');
+          cl.add('contract');
+          this._positionBar(this._pos.width, this._pos.left);
+        // bar animation done
+        } else if (cl.contains('contract')) {
+          cl.remove('contract');
+        }
+      }
     });
 (function() {
       // Keeps track of the toast currently opened.
@@ -19131,127 +22070,6 @@ Polymer({
          */
       });
     })();
-/**
-   * Use `Polymer.NeonAnimationBehavior` to implement an animation.
-   * @polymerBehavior
-   */
-  Polymer.NeonAnimationBehavior = {
-
-    properties: {
-
-      /**
-       * Defines the animation timing.
-       */
-      animationTiming: {
-        type: Object,
-        value: function() {
-          return {
-            duration: 500,
-            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-            fill: 'both'
-          }
-        }
-      }
-
-    },
-
-    /**
-     * Can be used to determine that elements implement this behavior.
-     */
-    isNeonAnimation: true,
-
-    /**
-     * Do any animation configuration here.
-     */
-    // configure: function(config) {
-    // },
-
-    /**
-     * Returns the animation timing by mixing in properties from `config` to the defaults defined
-     * by the animation.
-     */
-    timingFromConfig: function(config) {
-      if (config.timing) {
-        for (var property in config.timing) {
-          this.animationTiming[property] = config.timing[property];
-        }
-      }
-      return this.animationTiming;
-    },
-
-    /**
-     * Sets `transform` and `transformOrigin` properties along with the prefixed versions.
-     */
-    setPrefixedProperty: function(node, property, value) {
-      var map = {
-        'transform': ['webkitTransform'],
-        'transformOrigin': ['mozTransformOrigin', 'webkitTransformOrigin']
-      };
-      var prefixes = map[property];
-      for (var prefix, index = 0; prefix = prefixes[index]; index++) {
-        node.style[prefix] = value;
-      }
-      node.style[property] = value;
-    },
-
-    /**
-     * Called when the animation finishes.
-     */
-    complete: function() {}
-
-  };
-// Copyright 2014 Google Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-//     You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//     See the License for the specific language governing permissions and
-// limitations under the License.
-
-!function(a,b){var c={},d={},e={},f=null;!function(a,b){function c(a){if("number"==typeof a)return a;var b={};for(var c in a)b[c]=a[c];return b}function d(){this._delay=0,this._endDelay=0,this._fill="none",this._iterationStart=0,this._iterations=1,this._duration=0,this._playbackRate=1,this._direction="normal",this._easing="linear",this._easingFunction=x}function e(){return a.isDeprecated("Invalid timing inputs","2016-03-02","TypeError exceptions will be thrown instead.",!0)}function f(b,c,e){var f=new d;return c&&(f.fill="both",f.duration="auto"),"number"!=typeof b||isNaN(b)?void 0!==b&&Object.getOwnPropertyNames(b).forEach(function(c){if("auto"!=b[c]){if(("number"==typeof f[c]||"duration"==c)&&("number"!=typeof b[c]||isNaN(b[c])))return;if("fill"==c&&-1==v.indexOf(b[c]))return;if("direction"==c&&-1==w.indexOf(b[c]))return;if("playbackRate"==c&&1!==b[c]&&a.isDeprecated("AnimationEffectTiming.playbackRate","2014-11-28","Use Animation.playbackRate instead."))return;f[c]=b[c]}}):f.duration=b,f}function g(a){return"number"==typeof a&&(a=isNaN(a)?{duration:0}:{duration:a}),a}function h(b,c){return b=a.numericTimingToObject(b),f(b,c)}function i(a,b,c,d){return a<0||a>1||c<0||c>1?x:function(e){function f(a,b,c){return 3*a*(1-c)*(1-c)*c+3*b*(1-c)*c*c+c*c*c}if(e<=0){var g=0;return a>0?g=b/a:!b&&c>0&&(g=d/c),g*e}if(e>=1){var h=0;return c<1?h=(d-1)/(c-1):1==c&&a<1&&(h=(b-1)/(a-1)),1+h*(e-1)}for(var i=0,j=1;i<j;){var k=(i+j)/2,l=f(a,c,k);if(Math.abs(e-l)<1e-5)return f(b,d,k);l<e?i=k:j=k}return f(b,d,k)}}function j(a,b){return function(c){if(c>=1)return 1;var d=1/a;return(c+=b*d)-c%d}}function k(a){C||(C=document.createElement("div").style),C.animationTimingFunction="",C.animationTimingFunction=a;var b=C.animationTimingFunction;if(""==b&&e())throw new TypeError(a+" is not a valid value for easing");return b}function l(a){if("linear"==a)return x;var b=E.exec(a);if(b)return i.apply(this,b.slice(1).map(Number));var c=F.exec(a);return c?j(Number(c[1]),{start:y,middle:z,end:A}[c[2]]):B[a]||x}function m(a){return Math.abs(n(a)/a.playbackRate)}function n(a){return 0===a.duration||0===a.iterations?0:a.duration*a.iterations}function o(a,b,c){if(null==b)return G;var d=c.delay+a+c.endDelay;return b<Math.min(c.delay,d)?H:b>=Math.min(c.delay+a,d)?I:J}function p(a,b,c,d,e){switch(d){case H:return"backwards"==b||"both"==b?0:null;case J:return c-e;case I:return"forwards"==b||"both"==b?a:null;case G:return null}}function q(a,b,c,d,e){var f=e;return 0===a?b!==H&&(f+=c):f+=d/a,f}function r(a,b,c,d,e,f){var g=a===1/0?b%1:a%1;return 0!==g||c!==I||0===d||0===e&&0!==f||(g=1),g}function s(a,b,c,d){return a===I&&b===1/0?1/0:1===c?Math.floor(d)-1:Math.floor(d)}function t(a,b,c){var d=a;if("normal"!==a&&"reverse"!==a){var e=b;"alternate-reverse"===a&&(e+=1),d="normal",e!==1/0&&e%2!=0&&(d="reverse")}return"normal"===d?c:1-c}function u(a,b,c){var d=o(a,b,c),e=p(a,c.fill,b,d,c.delay);if(null===e)return null;var f=q(c.duration,d,c.iterations,e,c.iterationStart),g=r(f,c.iterationStart,d,c.iterations,e,c.duration),h=s(d,c.iterations,g,f),i=t(c.direction,h,g);return c._easingFunction(i)}var v="backwards|forwards|both|none".split("|"),w="reverse|alternate|alternate-reverse".split("|"),x=function(a){return a};d.prototype={_setMember:function(b,c){this["_"+b]=c,this._effect&&(this._effect._timingInput[b]=c,this._effect._timing=a.normalizeTimingInput(this._effect._timingInput),this._effect.activeDuration=a.calculateActiveDuration(this._effect._timing),this._effect._animation&&this._effect._animation._rebuildUnderlyingAnimation())},get playbackRate(){return this._playbackRate},set delay(a){this._setMember("delay",a)},get delay(){return this._delay},set endDelay(a){this._setMember("endDelay",a)},get endDelay(){return this._endDelay},set fill(a){this._setMember("fill",a)},get fill(){return this._fill},set iterationStart(a){if((isNaN(a)||a<0)&&e())throw new TypeError("iterationStart must be a non-negative number, received: "+timing.iterationStart);this._setMember("iterationStart",a)},get iterationStart(){return this._iterationStart},set duration(a){if("auto"!=a&&(isNaN(a)||a<0)&&e())throw new TypeError("duration must be non-negative or auto, received: "+a);this._setMember("duration",a)},get duration(){return this._duration},set direction(a){this._setMember("direction",a)},get direction(){return this._direction},set easing(a){this._easingFunction=l(k(a)),this._setMember("easing",a)},get easing(){return this._easing},set iterations(a){if((isNaN(a)||a<0)&&e())throw new TypeError("iterations must be non-negative, received: "+a);this._setMember("iterations",a)},get iterations(){return this._iterations}};var y=1,z=.5,A=0,B={ease:i(.25,.1,.25,1),"ease-in":i(.42,0,1,1),"ease-out":i(0,0,.58,1),"ease-in-out":i(.42,0,.58,1),"step-start":j(1,y),"step-middle":j(1,z),"step-end":j(1,A)},C=null,D="\\s*(-?\\d+\\.?\\d*|-?\\.\\d+)\\s*",E=new RegExp("cubic-bezier\\("+D+","+D+","+D+","+D+"\\)"),F=/steps\(\s*(\d+)\s*,\s*(start|middle|end)\s*\)/,G=0,H=1,I=2,J=3;a.cloneTimingInput=c,a.makeTiming=f,a.numericTimingToObject=g,a.normalizeTimingInput=h,a.calculateActiveDuration=m,a.calculateIterationProgress=u,a.calculatePhase=o,a.normalizeEasing=k,a.parseEasingFunction=l}(c),function(a,b){function c(a,b){return a in k?k[a][b]||b:b}function d(a){return"display"===a||0===a.lastIndexOf("animation",0)||0===a.lastIndexOf("transition",0)}function e(a,b,e){if(!d(a)){var f=h[a];if(f){i.style[a]=b;for(var g in f){var j=f[g],k=i.style[j];e[j]=c(j,k)}}else e[a]=c(a,b)}}function f(a){var b=[];for(var c in a)if(!(c in["easing","offset","composite"])){var d=a[c];Array.isArray(d)||(d=[d]);for(var e,f=d.length,g=0;g<f;g++)e={},e.offset="offset"in a?a.offset:1==f?1:g/(f-1),"easing"in a&&(e.easing=a.easing),"composite"in a&&(e.composite=a.composite),e[c]=d[g],b.push(e)}return b.sort(function(a,b){return a.offset-b.offset}),b}function g(b){function c(){var a=d.length;null==d[a-1].offset&&(d[a-1].offset=1),a>1&&null==d[0].offset&&(d[0].offset=0);for(var b=0,c=d[0].offset,e=1;e<a;e++){var f=d[e].offset;if(null!=f){for(var g=1;g<e-b;g++)d[b+g].offset=c+(f-c)*g/(e-b);b=e,c=f}}}if(null==b)return[];window.Symbol&&Symbol.iterator&&Array.prototype.from&&b[Symbol.iterator]&&(b=Array.from(b)),Array.isArray(b)||(b=f(b));for(var d=b.map(function(b){var c={};for(var d in b){var f=b[d];if("offset"==d){if(null!=f){if(f=Number(f),!isFinite(f))throw new TypeError("Keyframe offsets must be numbers.");if(f<0||f>1)throw new TypeError("Keyframe offsets must be between 0 and 1.")}}else if("composite"==d){if("add"==f||"accumulate"==f)throw{type:DOMException.NOT_SUPPORTED_ERR,name:"NotSupportedError",message:"add compositing is not supported"};if("replace"!=f)throw new TypeError("Invalid composite mode "+f+".")}else f="easing"==d?a.normalizeEasing(f):""+f;e(d,f,c)}return void 0==c.offset&&(c.offset=null),void 0==c.easing&&(c.easing="linear"),c}),g=!0,h=-1/0,i=0;i<d.length;i++){var j=d[i].offset;if(null!=j){if(j<h)throw new TypeError("Keyframes are not loosely sorted by offset. Sort or specify offsets.");h=j}else g=!1}return d=d.filter(function(a){return a.offset>=0&&a.offset<=1}),g||c(),d}var h={background:["backgroundImage","backgroundPosition","backgroundSize","backgroundRepeat","backgroundAttachment","backgroundOrigin","backgroundClip","backgroundColor"],border:["borderTopColor","borderTopStyle","borderTopWidth","borderRightColor","borderRightStyle","borderRightWidth","borderBottomColor","borderBottomStyle","borderBottomWidth","borderLeftColor","borderLeftStyle","borderLeftWidth"],borderBottom:["borderBottomWidth","borderBottomStyle","borderBottomColor"],borderColor:["borderTopColor","borderRightColor","borderBottomColor","borderLeftColor"],borderLeft:["borderLeftWidth","borderLeftStyle","borderLeftColor"],borderRadius:["borderTopLeftRadius","borderTopRightRadius","borderBottomRightRadius","borderBottomLeftRadius"],borderRight:["borderRightWidth","borderRightStyle","borderRightColor"],borderTop:["borderTopWidth","borderTopStyle","borderTopColor"],borderWidth:["borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth"],flex:["flexGrow","flexShrink","flexBasis"],font:["fontFamily","fontSize","fontStyle","fontVariant","fontWeight","lineHeight"],margin:["marginTop","marginRight","marginBottom","marginLeft"],outline:["outlineColor","outlineStyle","outlineWidth"],padding:["paddingTop","paddingRight","paddingBottom","paddingLeft"]},i=document.createElementNS("http://www.w3.org/1999/xhtml","div"),j={thin:"1px",medium:"3px",thick:"5px"},k={borderBottomWidth:j,borderLeftWidth:j,borderRightWidth:j,borderTopWidth:j,fontSize:{"xx-small":"60%","x-small":"75%",small:"89%",medium:"100%",large:"120%","x-large":"150%","xx-large":"200%"},fontWeight:{normal:"400",bold:"700"},outlineWidth:j,textShadow:{none:"0px 0px 0px transparent"},boxShadow:{none:"0px 0px 0px 0px transparent"}};a.convertToArrayForm=f,a.normalizeKeyframes=g}(c),function(a){var b={};a.isDeprecated=function(a,c,d,e){var f=e?"are":"is",g=new Date,h=new Date(c);return h.setMonth(h.getMonth()+3),!(g<h&&(a in b||console.warn("Web Animations: "+a+" "+f+" deprecated and will stop working on "+h.toDateString()+". "+d),b[a]=!0,1))},a.deprecated=function(b,c,d,e){var f=e?"are":"is";if(a.isDeprecated(b,c,d,e))throw new Error(b+" "+f+" no longer supported. "+d)}}(c),function(){if(document.documentElement.animate){var a=document.documentElement.animate([],0),b=!0;if(a&&(b=!1,"play|currentTime|pause|reverse|playbackRate|cancel|finish|startTime|playState".split("|").forEach(function(c){void 0===a[c]&&(b=!0)})),!b)return}!function(a,b,c){function d(a){for(var b={},c=0;c<a.length;c++)for(var d in a[c])if("offset"!=d&&"easing"!=d&&"composite"!=d){var e={offset:a[c].offset,easing:a[c].easing,value:a[c][d]};b[d]=b[d]||[],b[d].push(e)}for(var f in b){var g=b[f];if(0!=g[0].offset||1!=g[g.length-1].offset)throw{type:DOMException.NOT_SUPPORTED_ERR,name:"NotSupportedError",message:"Partial keyframes are not supported"}}return b}function e(c){var d=[];for(var e in c)for(var f=c[e],g=0;g<f.length-1;g++){var h=g,i=g+1,j=f[h].offset,k=f[i].offset,l=j,m=k;0==g&&(l=-1/0,0==k&&(i=h)),g==f.length-2&&(m=1/0,1==j&&(h=i)),d.push({applyFrom:l,applyTo:m,startOffset:f[h].offset,endOffset:f[i].offset,easingFunction:a.parseEasingFunction(f[h].easing),property:e,interpolation:b.propertyInterpolation(e,f[h].value,f[i].value)})}return d.sort(function(a,b){return a.startOffset-b.startOffset}),d}b.convertEffectInput=function(c){var f=a.normalizeKeyframes(c),g=d(f),h=e(g);return function(a,c){if(null!=c)h.filter(function(a){return c>=a.applyFrom&&c<a.applyTo}).forEach(function(d){var e=c-d.startOffset,f=d.endOffset-d.startOffset,g=0==f?0:d.easingFunction(e/f);b.apply(a,d.property,d.interpolation(g))});else for(var d in g)"offset"!=d&&"easing"!=d&&"composite"!=d&&b.clear(a,d)}}}(c,d),function(a,b,c){function d(a){return a.replace(/-(.)/g,function(a,b){return b.toUpperCase()})}function e(a,b,c){h[c]=h[c]||[],h[c].push([a,b])}function f(a,b,c){for(var f=0;f<c.length;f++){e(a,b,d(c[f]))}}function g(c,e,f){var g=c;/-/.test(c)&&!a.isDeprecated("Hyphenated property names","2016-03-22","Use camelCase instead.",!0)&&(g=d(c)),"initial"!=e&&"initial"!=f||("initial"==e&&(e=i[g]),"initial"==f&&(f=i[g]));for(var j=e==f?[]:h[g],k=0;j&&k<j.length;k++){var l=j[k][0](e),m=j[k][0](f);if(void 0!==l&&void 0!==m){var n=j[k][1](l,m);if(n){var o=b.Interpolation.apply(null,n);return function(a){return 0==a?e:1==a?f:o(a)}}}}return b.Interpolation(!1,!0,function(a){return a?f:e})}var h={};b.addPropertiesHandler=f;var i={backgroundColor:"transparent",backgroundPosition:"0% 0%",borderBottomColor:"currentColor",borderBottomLeftRadius:"0px",borderBottomRightRadius:"0px",borderBottomWidth:"3px",borderLeftColor:"currentColor",borderLeftWidth:"3px",borderRightColor:"currentColor",borderRightWidth:"3px",borderSpacing:"2px",borderTopColor:"currentColor",borderTopLeftRadius:"0px",borderTopRightRadius:"0px",borderTopWidth:"3px",bottom:"auto",clip:"rect(0px, 0px, 0px, 0px)",color:"black",fontSize:"100%",fontWeight:"400",height:"auto",left:"auto",letterSpacing:"normal",lineHeight:"120%",marginBottom:"0px",marginLeft:"0px",marginRight:"0px",marginTop:"0px",maxHeight:"none",maxWidth:"none",minHeight:"0px",minWidth:"0px",opacity:"1.0",outlineColor:"invert",outlineOffset:"0px",outlineWidth:"3px",paddingBottom:"0px",paddingLeft:"0px",paddingRight:"0px",paddingTop:"0px",right:"auto",strokeDasharray:"none",strokeDashoffset:"0px",textIndent:"0px",textShadow:"0px 0px 0px transparent",top:"auto",transform:"",verticalAlign:"0px",visibility:"visible",width:"auto",wordSpacing:"normal",zIndex:"auto"};b.propertyInterpolation=g}(c,d),function(a,b,c){function d(b){var c=a.calculateActiveDuration(b),d=function(d){return a.calculateIterationProgress(c,d,b)};return d._totalDuration=b.delay+c+b.endDelay,d}b.KeyframeEffect=function(c,e,f,g){var h,i=d(a.normalizeTimingInput(f)),j=b.convertEffectInput(e),k=function(){j(c,h)};return k._update=function(a){return null!==(h=i(a))},k._clear=function(){j(c,null)},k._hasSameTarget=function(a){return c===a},k._target=c,k._totalDuration=i._totalDuration,k._id=g,k}}(c,d),function(a,b){a.apply=function(b,c,d){b.style[a.propertyName(c)]=d},a.clear=function(b,c){b.style[a.propertyName(c)]=""}}(d),function(a){window.Element.prototype.animate=function(b,c){var d="";return c&&c.id&&(d=c.id),a.timeline._play(a.KeyframeEffect(this,b,c,d))}}(d),function(a,b){function c(a,b,d){if("number"==typeof a&&"number"==typeof b)return a*(1-d)+b*d;if("boolean"==typeof a&&"boolean"==typeof b)return d<.5?a:b;if(a.length==b.length){for(var e=[],f=0;f<a.length;f++)e.push(c(a[f],b[f],d));return e}throw"Mismatched interpolation arguments "+a+":"+b}a.Interpolation=function(a,b,d){return function(e){return d(c(a,b,e))}}}(d),function(a,b,c){a.sequenceNumber=0;var d=function(a,b,c){this.target=a,this.currentTime=b,this.timelineTime=c,this.type="finish",this.bubbles=!1,this.cancelable=!1,this.currentTarget=a,this.defaultPrevented=!1,this.eventPhase=Event.AT_TARGET,this.timeStamp=Date.now()};b.Animation=function(b){this.id="",b&&b._id&&(this.id=b._id),this._sequenceNumber=a.sequenceNumber++,this._currentTime=0,this._startTime=null,this._paused=!1,this._playbackRate=1,this._inTimeline=!0,this._finishedFlag=!0,this.onfinish=null,this._finishHandlers=[],this._effect=b,this._inEffect=this._effect._update(0),this._idle=!0,this._currentTimePending=!1},b.Animation.prototype={_ensureAlive:function(){this.playbackRate<0&&0===this.currentTime?this._inEffect=this._effect._update(-1):this._inEffect=this._effect._update(this.currentTime),this._inTimeline||!this._inEffect&&this._finishedFlag||(this._inTimeline=!0,b.timeline._animations.push(this))},_tickCurrentTime:function(a,b){a!=this._currentTime&&(this._currentTime=a,this._isFinished&&!b&&(this._currentTime=this._playbackRate>0?this._totalDuration:0),this._ensureAlive())},get currentTime(){return this._idle||this._currentTimePending?null:this._currentTime},set currentTime(a){a=+a,isNaN(a)||(b.restart(),this._paused||null==this._startTime||(this._startTime=this._timeline.currentTime-a/this._playbackRate),this._currentTimePending=!1,this._currentTime!=a&&(this._idle&&(this._idle=!1,this._paused=!0),this._tickCurrentTime(a,!0),b.applyDirtiedAnimation(this)))},get startTime(){return this._startTime},set startTime(a){a=+a,isNaN(a)||this._paused||this._idle||(this._startTime=a,this._tickCurrentTime((this._timeline.currentTime-this._startTime)*this.playbackRate),b.applyDirtiedAnimation(this))},get playbackRate(){return this._playbackRate},set playbackRate(a){if(a!=this._playbackRate){var c=this.currentTime;this._playbackRate=a,this._startTime=null,"paused"!=this.playState&&"idle"!=this.playState&&(this._finishedFlag=!1,this._idle=!1,this._ensureAlive(),b.applyDirtiedAnimation(this)),null!=c&&(this.currentTime=c)}},get _isFinished(){return!this._idle&&(this._playbackRate>0&&this._currentTime>=this._totalDuration||this._playbackRate<0&&this._currentTime<=0)},get _totalDuration(){return this._effect._totalDuration},get playState(){return this._idle?"idle":null==this._startTime&&!this._paused&&0!=this.playbackRate||this._currentTimePending?"pending":this._paused?"paused":this._isFinished?"finished":"running"},_rewind:function(){if(this._playbackRate>=0)this._currentTime=0;else{if(!(this._totalDuration<1/0))throw new DOMException("Unable to rewind negative playback rate animation with infinite duration","InvalidStateError");this._currentTime=this._totalDuration}},play:function(){this._paused=!1,(this._isFinished||this._idle)&&(this._rewind(),this._startTime=null),this._finishedFlag=!1,this._idle=!1,this._ensureAlive(),b.applyDirtiedAnimation(this)},pause:function(){this._isFinished||this._paused||this._idle?this._idle&&(this._rewind(),this._idle=!1):this._currentTimePending=!0,this._startTime=null,this._paused=!0},finish:function(){this._idle||(this.currentTime=this._playbackRate>0?this._totalDuration:0,this._startTime=this._totalDuration-this.currentTime,this._currentTimePending=!1,b.applyDirtiedAnimation(this))},cancel:function(){this._inEffect&&(this._inEffect=!1,this._idle=!0,this._paused=!1,this._isFinished=!0,this._finishedFlag=!0,this._currentTime=0,this._startTime=null,this._effect._update(null),b.applyDirtiedAnimation(this))},reverse:function(){this.playbackRate*=-1,this.play()},addEventListener:function(a,b){"function"==typeof b&&"finish"==a&&this._finishHandlers.push(b)},removeEventListener:function(a,b){if("finish"==a){var c=this._finishHandlers.indexOf(b);c>=0&&this._finishHandlers.splice(c,1)}},_fireEvents:function(a){if(this._isFinished){if(!this._finishedFlag){var b=new d(this,this._currentTime,a),c=this._finishHandlers.concat(this.onfinish?[this.onfinish]:[]);setTimeout(function(){c.forEach(function(a){a.call(b.target,b)})},0),this._finishedFlag=!0}}else this._finishedFlag=!1},_tick:function(a,b){this._idle||this._paused||(null==this._startTime?b&&(this.startTime=a-this._currentTime/this.playbackRate):this._isFinished||this._tickCurrentTime((a-this._startTime)*this.playbackRate)),b&&(this._currentTimePending=!1,this._fireEvents(a))},get _needsTick(){return this.playState in{pending:1,running:1}||!this._finishedFlag},_targetAnimations:function(){var a=this._effect._target;return a._activeAnimations||(a._activeAnimations=[]),a._activeAnimations},_markTarget:function(){var a=this._targetAnimations();-1===a.indexOf(this)&&a.push(this)},_unmarkTarget:function(){var a=this._targetAnimations(),b=a.indexOf(this);-1!==b&&a.splice(b,1)}}}(c,d),function(a,b,c){function d(a){var b=j;j=[],a<q.currentTime&&(a=q.currentTime),q._animations.sort(e),q._animations=h(a,!0,q._animations)[0],b.forEach(function(b){b[1](a)}),g(),l=void 0}function e(a,b){return a._sequenceNumber-b._sequenceNumber}function f(){this._animations=[],this.currentTime=window.performance&&performance.now?performance.now():0}function g(){o.forEach(function(a){a()}),o.length=0}function h(a,c,d){p=!0,n=!1,b.timeline.currentTime=a,m=!1;var e=[],f=[],g=[],h=[];return d.forEach(function(b){b._tick(a,c),b._inEffect?(f.push(b._effect),b._markTarget()):(e.push(b._effect),b._unmarkTarget()),b._needsTick&&(m=!0);var d=b._inEffect||b._needsTick;b._inTimeline=d,d?g.push(b):h.push(b)}),o.push.apply(o,e),o.push.apply(o,f),m&&requestAnimationFrame(function(){}),p=!1,[g,h]}var i=window.requestAnimationFrame,j=[],k=0;window.requestAnimationFrame=function(a){var b=k++;return 0==j.length&&i(d),j.push([b,a]),b},window.cancelAnimationFrame=function(a){j.forEach(function(b){b[0]==a&&(b[1]=function(){})})},f.prototype={_play:function(c){c._timing=a.normalizeTimingInput(c.timing);var d=new b.Animation(c);return d._idle=!1,d._timeline=this,this._animations.push(d),b.restart(),b.applyDirtiedAnimation(d),d}};var l=void 0,m=!1,n=!1;b.restart=function(){return m||(m=!0,requestAnimationFrame(function(){}),n=!0),n},b.applyDirtiedAnimation=function(a){if(!p){a._markTarget();var c=a._targetAnimations();c.sort(e),h(b.timeline.currentTime,!1,c.slice())[1].forEach(function(a){var b=q._animations.indexOf(a);-1!==b&&q._animations.splice(b,1)}),g()}};var o=[],p=!1,q=new f;b.timeline=q}(c,d),function(a){function b(a,b){var c=a.exec(b);if(c)return c=a.ignoreCase?c[0].toLowerCase():c[0],[c,b.substr(c.length)]}function c(a,b){b=b.replace(/^\s*/,"");var c=a(b);if(c)return[c[0],c[1].replace(/^\s*/,"")]}function d(a,d,e){a=c.bind(null,a);for(var f=[];;){var g=a(e);if(!g)return[f,e];if(f.push(g[0]),e=g[1],!(g=b(d,e))||""==g[1])return[f,e];e=g[1]}}function e(a,b){for(var c=0,d=0;d<b.length&&(!/\s|,/.test(b[d])||0!=c);d++)if("("==b[d])c++;else if(")"==b[d]&&(c--,0==c&&d++,c<=0))break;var e=a(b.substr(0,d));return void 0==e?void 0:[e,b.substr(d)]}function f(a,b){for(var c=a,d=b;c&&d;)c>d?c%=d:d%=c;return c=a*b/(c+d)}function g(a){return function(b){var c=a(b);return c&&(c[0]=void 0),c}}function h(a,b){return function(c){return a(c)||[b,c]}}function i(b,c){for(var d=[],e=0;e<b.length;e++){var f=a.consumeTrimmed(b[e],c);if(!f||""==f[0])return;void 0!==f[0]&&d.push(f[0]),c=f[1]}if(""==c)return d}function j(a,b,c,d,e){for(var g=[],h=[],i=[],j=f(d.length,e.length),k=0;k<j;k++){var l=b(d[k%d.length],e[k%e.length]);if(!l)return;g.push(l[0]),h.push(l[1]),i.push(l[2])}return[g,h,function(b){var d=b.map(function(a,b){return i[b](a)}).join(c);return a?a(d):d}]}function k(a,b,c){for(var d=[],e=[],f=[],g=0,h=0;h<c.length;h++)if("function"==typeof c[h]){var i=c[h](a[g],b[g++]);d.push(i[0]),e.push(i[1]),f.push(i[2])}else!function(a){d.push(!1),e.push(!1),f.push(function(){return c[a]})}(h);return[d,e,function(a){for(var b="",c=0;c<a.length;c++)b+=f[c](a[c]);return b}]}a.consumeToken=b,a.consumeTrimmed=c,a.consumeRepeated=d,a.consumeParenthesised=e,a.ignore=g,a.optional=h,a.consumeList=i,a.mergeNestedRepeated=j.bind(null,null),a.mergeWrappedNestedRepeated=j,a.mergeList=k}(d),function(a){function b(b){function c(b){var c=a.consumeToken(/^inset/i,b);if(c)return d.inset=!0,c;var c=a.consumeLengthOrPercent(b);if(c)return d.lengths.push(c[0]),c;var c=a.consumeColor(b);return c?(d.color=c[0],c):void 0}var d={inset:!1,lengths:[],color:null},e=a.consumeRepeated(c,/^/,b);if(e&&e[0].length)return[d,e[1]]}function c(c){var d=a.consumeRepeated(b,/^,/,c);if(d&&""==d[1])return d[0]}function d(b,c){for(;b.lengths.length<Math.max(b.lengths.length,c.lengths.length);)b.lengths.push({px:0});for(;c.lengths.length<Math.max(b.lengths.length,c.lengths.length);)c.lengths.push({px:0});if(b.inset==c.inset&&!!b.color==!!c.color){for(var d,e=[],f=[[],0],g=[[],0],h=0;h<b.lengths.length;h++){var i=a.mergeDimensions(b.lengths[h],c.lengths[h],2==h);f[0].push(i[0]),g[0].push(i[1]),e.push(i[2])}if(b.color&&c.color){var j=a.mergeColors(b.color,c.color);f[1]=j[0],g[1]=j[1],d=j[2]}return[f,g,function(a){for(var c=b.inset?"inset ":" ",f=0;f<e.length;f++)c+=e[f](a[0][f])+" ";return d&&(c+=d(a[1])),c}]}}function e(b,c,d,e){function f(a){return{inset:a,color:[0,0,0,0],lengths:[{px:0},{px:0},{px:0},{px:0}]}}for(var g=[],h=[],i=0;i<d.length||i<e.length;i++){var j=d[i]||f(e[i].inset),k=e[i]||f(d[i].inset);g.push(j),h.push(k)}return a.mergeNestedRepeated(b,c,g,h)}var f=e.bind(null,d,", ");a.addPropertiesHandler(c,f,["box-shadow","text-shadow"])}(d),function(a,b){function c(a){return a.toFixed(3).replace(/0+$/,"").replace(/\.$/,"")}function d(a,b,c){return Math.min(b,Math.max(a,c))}function e(a){if(/^\s*[-+]?(\d*\.)?\d+\s*$/.test(a))return Number(a)}function f(a,b){return[a,b,c]}function g(a,b){if(0!=a)return i(0,1/0)(a,b)}function h(a,b){return[a,b,function(a){return Math.round(d(1,1/0,a))}]}function i(a,b){return function(e,f){return[e,f,function(e){return c(d(a,b,e))}]}}function j(a){var b=a.trim().split(/\s*[\s,]\s*/);if(0!==b.length){for(var c=[],d=0;d<b.length;d++){var f=e(b[d]);if(void 0===f)return;c.push(f)}return c}}function k(a,b){if(a.length==b.length)return[a,b,function(a){return a.map(c).join(" ")}]}function l(a,b){return[a,b,Math.round]}a.clamp=d,a.addPropertiesHandler(j,k,["stroke-dasharray"]),a.addPropertiesHandler(e,i(0,1/0),["border-image-width","line-height"]),a.addPropertiesHandler(e,i(0,1),["opacity","shape-image-threshold"]),a.addPropertiesHandler(e,g,["flex-grow","flex-shrink"]),a.addPropertiesHandler(e,h,["orphans","widows"]),a.addPropertiesHandler(e,l,["z-index"]),a.parseNumber=e,a.parseNumberList=j,a.mergeNumbers=f,a.numberToString=c}(d),function(a,b){function c(a,b){if("visible"==a||"visible"==b)return[0,1,function(c){return c<=0?a:c>=1?b:"visible"}]}a.addPropertiesHandler(String,c,["visibility"])}(d),function(a,b){function c(a){a=a.trim(),f.fillStyle="#000",f.fillStyle=a;var b=f.fillStyle;if(f.fillStyle="#fff",f.fillStyle=a,b==f.fillStyle){f.fillRect(0,0,1,1);var c=f.getImageData(0,0,1,1).data;f.clearRect(0,0,1,1);var d=c[3]/255;return[c[0]*d,c[1]*d,c[2]*d,d]}}function d(b,c){return[b,c,function(b){function c(a){return Math.max(0,Math.min(255,a))}if(b[3])for(var d=0;d<3;d++)b[d]=Math.round(c(b[d]/b[3]));return b[3]=a.numberToString(a.clamp(0,1,b[3])),"rgba("+b.join(",")+")"}]}var e=document.createElementNS("http://www.w3.org/1999/xhtml","canvas");e.width=e.height=1;var f=e.getContext("2d");a.addPropertiesHandler(c,d,["background-color","border-bottom-color","border-left-color","border-right-color","border-top-color","color","fill","flood-color","lighting-color","outline-color","stop-color","stroke","text-decoration-color"]),a.consumeColor=a.consumeParenthesised.bind(null,c),a.mergeColors=d}(d),function(a,b){function c(a,b){if("0"==(b=b.trim().toLowerCase())&&"px".search(a)>=0)return{px:0};if(/^[^(]*$|^calc/.test(b)){b=b.replace(/calc\(/g,"(");var c={};b=b.replace(a,function(a){return c[a]=null,"U"+a});for(var d="U("+a.source+")",e=b.replace(/[-+]?(\d*\.)?\d+/g,"N").replace(new RegExp("N"+d,"g"),"D").replace(/\s[+-]\s/g,"O").replace(/\s/g,""),f=[/N\*(D)/g,/(N|D)[*\/]N/g,/(N|D)O\1/g,/\((N|D)\)/g],g=0;g<f.length;)f[g].test(e)?(e=e.replace(f[g],"$1"),g=0):g++;if("D"==e){for(var h in c){var i=eval(b.replace(new RegExp("U"+h,"g"),"").replace(new RegExp(d,"g"),"*0"));if(!isFinite(i))return;c[h]=i}return c}}}function d(a,b){return e(a,b,!0)}function e(b,c,d){var e,f=[];for(e in b)f.push(e);for(e in c)f.indexOf(e)<0&&f.push(e);return b=f.map(function(a){return b[a]||0}),c=f.map(function(a){return c[a]||0}),[b,c,function(b){var c=b.map(function(c,e){return 1==b.length&&d&&(c=Math.max(c,0)),a.numberToString(c)+f[e]}).join(" + ");return b.length>1?"calc("+c+")":c}]}var f="px|em|ex|ch|rem|vw|vh|vmin|vmax|cm|mm|in|pt|pc",g=c.bind(null,new RegExp(f,"g")),h=c.bind(null,new RegExp(f+"|%","g")),i=c.bind(null,/deg|rad|grad|turn/g);a.parseLength=g,a.parseLengthOrPercent=h,a.consumeLengthOrPercent=a.consumeParenthesised.bind(null,h),a.parseAngle=i,a.mergeDimensions=e;var j=a.consumeParenthesised.bind(null,g),k=a.consumeRepeated.bind(void 0,j,/^/),l=a.consumeRepeated.bind(void 0,k,/^,/);a.consumeSizePairList=l;var m=function(a){var b=l(a);if(b&&""==b[1])return b[0]},n=a.mergeNestedRepeated.bind(void 0,d," "),o=a.mergeNestedRepeated.bind(void 0,n,",");a.mergeNonNegativeSizePair=n,a.addPropertiesHandler(m,o,["background-size"]),a.addPropertiesHandler(h,d,["border-bottom-width","border-image-width","border-left-width","border-right-width","border-top-width","flex-basis","font-size","height","line-height","max-height","max-width","outline-width","width"]),a.addPropertiesHandler(h,e,["border-bottom-left-radius","border-bottom-right-radius","border-top-left-radius","border-top-right-radius","bottom","left","letter-spacing","margin-bottom","margin-left","margin-right","margin-top","min-height","min-width","outline-offset","padding-bottom","padding-left","padding-right","padding-top","perspective","right","shape-margin","stroke-dashoffset","text-indent","top","vertical-align","word-spacing"])}(d,f),function(a,b){function c(b){return a.consumeLengthOrPercent(b)||a.consumeToken(/^auto/,b)}function d(b){var d=a.consumeList([a.ignore(a.consumeToken.bind(null,/^rect/)),a.ignore(a.consumeToken.bind(null,/^\(/)),a.consumeRepeated.bind(null,c,/^,/),a.ignore(a.consumeToken.bind(null,/^\)/))],b);if(d&&4==d[0].length)return d[0]}function e(b,c){return"auto"==b||"auto"==c?[!0,!1,function(d){var e=d?b:c;if("auto"==e)return"auto";var f=a.mergeDimensions(e,e);return f[2](f[0])}]:a.mergeDimensions(b,c)}function f(a){return"rect("+a+")"}var g=a.mergeWrappedNestedRepeated.bind(null,f,e,", ");a.parseBox=d,a.mergeBoxes=g,a.addPropertiesHandler(d,g,["clip"])}(d),function(a,b){function c(a){return function(b){var c=0;return a.map(function(a){return a===k?b[c++]:a})}}function d(a){return a}function e(b){if("none"==(b=b.toLowerCase().trim()))return[];for(var c,d=/\s*(\w+)\(([^)]*)\)/g,e=[],f=0;c=d.exec(b);){if(c.index!=f)return;f=c.index+c[0].length;var g=c[1],h=n[g];if(!h)return;var i=c[2].split(","),j=h[0];if(j.length<i.length)return;for(var k=[],o=0;o<j.length;o++){var p,q=i[o],r=j[o];if(void 0===(p=q?{A:function(b){return"0"==b.trim()?m:a.parseAngle(b)},N:a.parseNumber,T:a.parseLengthOrPercent,L:a.parseLength}[r.toUpperCase()](q):{a:m,n:k[0],t:l}[r]))return;k.push(p)}if(e.push({t:g,d:k}),d.lastIndex==b.length)return e}}function f(a){return a.toFixed(6).replace(".000000","")}function g(b,c){if(b.decompositionPair!==c){b.decompositionPair=c;var d=a.makeMatrixDecomposition(b)}if(c.decompositionPair!==b){c.decompositionPair=b;var e=a.makeMatrixDecomposition(c)}return null==d[0]||null==e[0]?[[!1],[!0],function(a){return a?c[0].d:b[0].d}]:(d[0].push(0),e[0].push(1),[d,e,function(b){var c=a.quat(d[0][3],e[0][3],b[5]);return a.composeMatrix(b[0],b[1],b[2],c,b[4]).map(f).join(",")}])}function h(a){return a.replace(/[xy]/,"")}function i(a){return a.replace(/(x|y|z|3d)?$/,"3d")}function j(b,c){var d=a.makeMatrixDecomposition&&!0,e=!1;if(!b.length||!c.length){b.length||(e=!0,b=c,c=[]);for(var f=0;f<b.length;f++){var j=b[f].t,k=b[f].d,l="scale"==j.substr(0,5)?1:0;c.push({t:j,d:k.map(function(a){if("number"==typeof a)return l;var b={};for(var c in a)b[c]=l;return b})})}}var m=function(a,b){return"perspective"==a&&"perspective"==b||("matrix"==a||"matrix3d"==a)&&("matrix"==b||"matrix3d"==b)},o=[],p=[],q=[];if(b.length!=c.length){if(!d)return;var r=g(b,c);o=[r[0]],p=[r[1]],q=[["matrix",[r[2]]]]}else for(var f=0;f<b.length;f++){var j,s=b[f].t,t=c[f].t,u=b[f].d,v=c[f].d,w=n[s],x=n[t];if(m(s,t)){if(!d)return;var r=g([b[f]],[c[f]]);o.push(r[0]),p.push(r[1]),q.push(["matrix",[r[2]]])}else{if(s==t)j=s;else if(w[2]&&x[2]&&h(s)==h(t))j=h(s),u=w[2](u),v=x[2](v);else{if(!w[1]||!x[1]||i(s)!=i(t)){if(!d)return;var r=g(b,c);o=[r[0]],p=[r[1]],q=[["matrix",[r[2]]]];break}j=i(s),u=w[1](u),v=x[1](v)}for(var y=[],z=[],A=[],B=0;B<u.length;B++){var C="number"==typeof u[B]?a.mergeNumbers:a.mergeDimensions,r=C(u[B],v[B]);y[B]=r[0],z[B]=r[1],A.push(r[2])}o.push(y),p.push(z),q.push([j,A])}}if(e){var D=o;o=p,p=D}return[o,p,function(a){return a.map(function(a,b){var c=a.map(function(a,c){return q[b][1][c](a)}).join(",");return"matrix"==q[b][0]&&16==c.split(",").length&&(q[b][0]="matrix3d"),q[b][0]+"("+c+")"}).join(" ")}]}var k=null,l={px:0},m={deg:0},n={matrix:["NNNNNN",[k,k,0,0,k,k,0,0,0,0,1,0,k,k,0,1],d],matrix3d:["NNNNNNNNNNNNNNNN",d],rotate:["A"],rotatex:["A"],rotatey:["A"],rotatez:["A"],rotate3d:["NNNA"],perspective:["L"],scale:["Nn",c([k,k,1]),d],scalex:["N",c([k,1,1]),c([k,1])],scaley:["N",c([1,k,1]),c([1,k])],scalez:["N",c([1,1,k])],scale3d:["NNN",d],skew:["Aa",null,d],skewx:["A",null,c([k,m])],skewy:["A",null,c([m,k])],translate:["Tt",c([k,k,l]),d],translatex:["T",c([k,l,l]),c([k,l])],translatey:["T",c([l,k,l]),c([l,k])],translatez:["L",c([l,l,k])],translate3d:["TTL",d]};a.addPropertiesHandler(e,j,["transform"])}(d),function(a,b){function c(a,b){b.concat([a]).forEach(function(b){b in document.documentElement.style&&(d[a]=b)})}var d={};c("transform",["webkitTransform","msTransform"]),c("transformOrigin",["webkitTransformOrigin"]),c("perspective",["webkitPerspective"]),c("perspectiveOrigin",["webkitPerspectiveOrigin"]),a.propertyName=function(a){return d[a]||a}}(d)}(),function(){if(void 0===document.createElement("div").animate([]).oncancel){var a;if(window.performance&&performance.now)var a=function(){return performance.now()};else var a=function(){return Date.now()};var b=function(a,b,c){this.target=a,this.currentTime=b,this.timelineTime=c,this.type="cancel",this.bubbles=!1,this.cancelable=!1,this.currentTarget=a,this.defaultPrevented=!1,this.eventPhase=Event.AT_TARGET,this.timeStamp=Date.now()},c=window.Element.prototype.animate;window.Element.prototype.animate=function(d,e){var f=c.call(this,d,e);f._cancelHandlers=[],f.oncancel=null;var g=f.cancel;f.cancel=function(){g.call(this);var c=new b(this,null,a()),d=this._cancelHandlers.concat(this.oncancel?[this.oncancel]:[]);setTimeout(function(){d.forEach(function(a){a.call(c.target,c)})},0)};var h=f.addEventListener;f.addEventListener=function(a,b){"function"==typeof b&&"cancel"==a?this._cancelHandlers.push(b):h.call(this,a,b)};var i=f.removeEventListener;return f.removeEventListener=function(a,b){if("cancel"==a){var c=this._cancelHandlers.indexOf(b);c>=0&&this._cancelHandlers.splice(c,1)}else i.call(this,a,b)},f}}}(),function(a){var b=document.documentElement,c=null,d=!1;try{var e=getComputedStyle(b).getPropertyValue("opacity"),f="0"==e?"1":"0";c=b.animate({opacity:[f,f]},{duration:1}),c.currentTime=0,d=getComputedStyle(b).getPropertyValue("opacity")==f}catch(a){}finally{c&&c.cancel()}if(!d){var g=window.Element.prototype.animate;window.Element.prototype.animate=function(b,c){return window.Symbol&&Symbol.iterator&&Array.prototype.from&&b[Symbol.iterator]&&(b=Array.from(b)),Array.isArray(b)||null===b||(b=a.convertToArrayForm(b)),g.call(this,b,c)}}}(c),function(a,b,c){function d(a){var c=b.timeline;c.currentTime=a,c._discardAnimations(),0==c._animations.length?f=!1:requestAnimationFrame(d)}var e=window.requestAnimationFrame;window.requestAnimationFrame=function(a){return e(function(c){b.timeline._updateAnimationsPromises(),a(c),b.timeline._updateAnimationsPromises()})},b.AnimationTimeline=function(){this._animations=[],this.currentTime=void 0},b.AnimationTimeline.prototype={getAnimations:function(){return this._discardAnimations(),this._animations.slice()},_updateAnimationsPromises:function(){b.animationsWithPromises=b.animationsWithPromises.filter(function(a){return a._updatePromises()})},_discardAnimations:function(){this._updateAnimationsPromises(),this._animations=this._animations.filter(function(a){return"finished"!=a.playState&&"idle"!=a.playState})},_play:function(a){var c=new b.Animation(a,this);return this._animations.push(c),b.restartWebAnimationsNextTick(),c._updatePromises(),c._animation.play(),c._updatePromises(),c},play:function(a){return a&&a.remove(),this._play(a)}};var f=!1;b.restartWebAnimationsNextTick=function(){f||(f=!0,requestAnimationFrame(d))};var g=new b.AnimationTimeline;b.timeline=g;try{Object.defineProperty(window.document,"timeline",{configurable:!0,get:function(){return g}})}catch(a){}try{window.document.timeline=g}catch(a){}}(0,e),function(a,b,c){b.animationsWithPromises=[],b.Animation=function(b,c){if(this.id="",b&&b._id&&(this.id=b._id),this.effect=b,b&&(b._animation=this),!c)throw new Error("Animation with null timeline is not supported");this._timeline=c,this._sequenceNumber=a.sequenceNumber++,this._holdTime=0,this._paused=!1,this._isGroup=!1,this._animation=null,this._childAnimations=[],this._callback=null,this._oldPlayState="idle",this._rebuildUnderlyingAnimation(),this._animation.cancel(),this._updatePromises()},b.Animation.prototype={_updatePromises:function(){var a=this._oldPlayState,b=this.playState;return this._readyPromise&&b!==a&&("idle"==b?(this._rejectReadyPromise(),this._readyPromise=void 0):"pending"==a?this._resolveReadyPromise():"pending"==b&&(this._readyPromise=void 0)),this._finishedPromise&&b!==a&&("idle"==b?(this._rejectFinishedPromise(),this._finishedPromise=void 0):"finished"==b?this._resolveFinishedPromise():"finished"==a&&(this._finishedPromise=void 0)),this._oldPlayState=this.playState,this._readyPromise||this._finishedPromise},_rebuildUnderlyingAnimation:function(){this._updatePromises();var a,c,d,e,f=!!this._animation;f&&(a=this.playbackRate,c=this._paused,d=this.startTime,e=this.currentTime,this._animation.cancel(),this._animation._wrapper=null,this._animation=null),(!this.effect||this.effect instanceof window.KeyframeEffect)&&(this._animation=b.newUnderlyingAnimationForKeyframeEffect(this.effect),b.bindAnimationForKeyframeEffect(this)),(this.effect instanceof window.SequenceEffect||this.effect instanceof window.GroupEffect)&&(this._animation=b.newUnderlyingAnimationForGroup(this.effect),b.bindAnimationForGroup(this)),this.effect&&this.effect._onsample&&b.bindAnimationForCustomEffect(this),f&&(1!=a&&(this.playbackRate=a),null!==d?this.startTime=d:null!==e?this.currentTime=e:null!==this._holdTime&&(this.currentTime=this._holdTime),c&&this.pause()),this._updatePromises()},_updateChildren:function(){if(this.effect&&"idle"!=this.playState){var a=this.effect._timing.delay;this._childAnimations.forEach(function(c){this._arrangeChildren(c,a),this.effect instanceof window.SequenceEffect&&(a+=b.groupChildDuration(c.effect))}.bind(this))}},_setExternalAnimation:function(a){if(this.effect&&this._isGroup)for(var b=0;b<this.effect.children.length;b++)this.effect.children[b]._animation=a,this._childAnimations[b]._setExternalAnimation(a)},_constructChildAnimations:function(){if(this.effect&&this._isGroup){var a=this.effect._timing.delay;this._removeChildAnimations(),this.effect.children.forEach(function(c){var d=b.timeline._play(c);this._childAnimations.push(d),d.playbackRate=this.playbackRate,this._paused&&d.pause(),c._animation=this.effect._animation,this._arrangeChildren(d,a),this.effect instanceof window.SequenceEffect&&(a+=b.groupChildDuration(c))}.bind(this))}},_arrangeChildren:function(a,b){null===this.startTime?a.currentTime=this.currentTime-b/this.playbackRate:a.startTime!==this.startTime+b/this.playbackRate&&(a.startTime=this.startTime+b/this.playbackRate)},get timeline(){return this._timeline},get playState(){return this._animation?this._animation.playState:"idle"},get finished(){return window.Promise?(this._finishedPromise||(-1==b.animationsWithPromises.indexOf(this)&&b.animationsWithPromises.push(this),this._finishedPromise=new Promise(function(a,b){this._resolveFinishedPromise=function(){a(this)},this._rejectFinishedPromise=function(){b({type:DOMException.ABORT_ERR,name:"AbortError"})}}.bind(this)),"finished"==this.playState&&this._resolveFinishedPromise()),this._finishedPromise):(console.warn("Animation Promises require JavaScript Promise constructor"),null)},get ready(){return window.Promise?(this._readyPromise||(-1==b.animationsWithPromises.indexOf(this)&&b.animationsWithPromises.push(this),this._readyPromise=new Promise(function(a,b){this._resolveReadyPromise=function(){a(this)},this._rejectReadyPromise=function(){b({type:DOMException.ABORT_ERR,name:"AbortError"})}}.bind(this)),"pending"!==this.playState&&this._resolveReadyPromise()),this._readyPromise):(console.warn("Animation Promises require JavaScript Promise constructor"),null)},get onfinish(){return this._animation.onfinish},set onfinish(a){this._animation.onfinish="function"==typeof a?function(b){b.target=this,a.call(this,b)}.bind(this):a},get oncancel(){return this._animation.oncancel},set oncancel(a){this._animation.oncancel="function"==typeof a?function(b){b.target=this,a.call(this,b)}.bind(this):a},get currentTime(){this._updatePromises();var a=this._animation.currentTime;return this._updatePromises(),a},set currentTime(a){this._updatePromises(),this._animation.currentTime=isFinite(a)?a:Math.sign(a)*Number.MAX_VALUE,this._register(),this._forEachChild(function(b,c){b.currentTime=a-c}),this._updatePromises()},get startTime(){return this._animation.startTime},set startTime(a){this._updatePromises(),this._animation.startTime=isFinite(a)?a:Math.sign(a)*Number.MAX_VALUE,this._register(),this._forEachChild(function(b,c){b.startTime=a+c}),this._updatePromises()},get playbackRate(){return this._animation.playbackRate},set playbackRate(a){this._updatePromises();var b=this.currentTime;this._animation.playbackRate=a,this._forEachChild(function(b){b.playbackRate=a}),null!==b&&(this.currentTime=b),this._updatePromises()},play:function(){this._updatePromises(),this._paused=!1,this._animation.play(),-1==this._timeline._animations.indexOf(this)&&this._timeline._animations.push(this),this._register(),b.awaitStartTime(this),this._forEachChild(function(a){var b=a.currentTime;a.play(),a.currentTime=b}),this._updatePromises()},pause:function(){this._updatePromises(),this.currentTime&&(this._holdTime=this.currentTime),this._animation.pause(),this._register(),this._forEachChild(function(a){a.pause()}),this._paused=!0,this._updatePromises()},finish:function(){this._updatePromises(),this._animation.finish(),this._register(),this._updatePromises()},cancel:function(){this._updatePromises(),this._animation.cancel(),this._register(),this._removeChildAnimations(),this._updatePromises()},reverse:function(){this._updatePromises();var a=this.currentTime;this._animation.reverse(),this._forEachChild(function(a){a.reverse()}),null!==a&&(this.currentTime=a),this._updatePromises()},addEventListener:function(a,b){var c=b;"function"==typeof b&&(c=function(a){a.target=this,b.call(this,a)}.bind(this),b._wrapper=c),this._animation.addEventListener(a,c)},removeEventListener:function(a,b){this._animation.removeEventListener(a,b&&b._wrapper||b)},_removeChildAnimations:function(){for(;this._childAnimations.length;)this._childAnimations.pop().cancel()},_forEachChild:function(b){var c=0;if(this.effect.children&&this._childAnimations.length<this.effect.children.length&&this._constructChildAnimations(),this._childAnimations.forEach(function(a){b.call(this,a,c),this.effect instanceof window.SequenceEffect&&(c+=a.effect.activeDuration)}.bind(this)),"pending"!=this.playState){var d=this.effect._timing,e=this.currentTime;null!==e&&(e=a.calculateIterationProgress(a.calculateActiveDuration(d),e,d)),(null==e||isNaN(e))&&this._removeChildAnimations()}}},window.Animation=b.Animation}(c,e),function(a,b,c){function d(b){this._frames=a.normalizeKeyframes(b)}function e(){for(var a=!1;i.length;)i.shift()._updateChildren(),a=!0;return a}var f=function(a){if(a._animation=void 0,a instanceof window.SequenceEffect||a instanceof window.GroupEffect)for(var b=0;b<a.children.length;b++)f(a.children[b])};b.removeMulti=function(a){for(var b=[],c=0;c<a.length;c++){var d=a[c];d._parent?(-1==b.indexOf(d._parent)&&b.push(d._parent),d._parent.children.splice(d._parent.children.indexOf(d),1),d._parent=null,f(d)):d._animation&&d._animation.effect==d&&(d._animation.cancel(),d._animation.effect=new KeyframeEffect(null,[]),d._animation._callback&&(d._animation._callback._animation=null),d._animation._rebuildUnderlyingAnimation(),f(d))}for(c=0;c<b.length;c++)b[c]._rebuild()},b.KeyframeEffect=function(b,c,e,f){return this.target=b,this._parent=null,e=a.numericTimingToObject(e),this._timingInput=a.cloneTimingInput(e),this._timing=a.normalizeTimingInput(e),this.timing=a.makeTiming(e,!1,this),this.timing._effect=this,"function"==typeof c?(a.deprecated("Custom KeyframeEffect","2015-06-22","Use KeyframeEffect.onsample instead."),this._normalizedKeyframes=c):this._normalizedKeyframes=new d(c),this._keyframes=c,this.activeDuration=a.calculateActiveDuration(this._timing),this._id=f,this},b.KeyframeEffect.prototype={getFrames:function(){return"function"==typeof this._normalizedKeyframes?this._normalizedKeyframes:this._normalizedKeyframes._frames},set onsample(a){if("function"==typeof this.getFrames())throw new Error("Setting onsample on custom effect KeyframeEffect is not supported.");this._onsample=a,this._animation&&this._animation._rebuildUnderlyingAnimation()},get parent(){return this._parent},clone:function(){if("function"==typeof this.getFrames())throw new Error("Cloning custom effects is not supported.");var b=new KeyframeEffect(this.target,[],a.cloneTimingInput(this._timingInput),this._id);return b._normalizedKeyframes=this._normalizedKeyframes,b._keyframes=this._keyframes,b},remove:function(){b.removeMulti([this])}};var g=Element.prototype.animate;Element.prototype.animate=function(a,c){var d="";return c&&c.id&&(d=c.id),b.timeline._play(new b.KeyframeEffect(this,a,c,d))};var h=document.createElementNS("http://www.w3.org/1999/xhtml","div");b.newUnderlyingAnimationForKeyframeEffect=function(a){if(a){var b=a.target||h,c=a._keyframes;"function"==typeof c&&(c=[]);var d=a._timingInput;d.id=a._id}else var b=h,c=[],d=0;return g.apply(b,[c,d])},b.bindAnimationForKeyframeEffect=function(a){a.effect&&"function"==typeof a.effect._normalizedKeyframes&&b.bindAnimationForCustomEffect(a)};var i=[];b.awaitStartTime=function(a){null===a.startTime&&a._isGroup&&(0==i.length&&requestAnimationFrame(e),i.push(a))};var j=window.getComputedStyle;Object.defineProperty(window,"getComputedStyle",{configurable:!0,enumerable:!0,value:function(){b.timeline._updateAnimationsPromises();var a=j.apply(this,arguments);return e()&&(a=j.apply(this,arguments)),b.timeline._updateAnimationsPromises(),a}}),window.KeyframeEffect=b.KeyframeEffect,window.Element.prototype.getAnimations=function(){return document.timeline.getAnimations().filter(function(a){return null!==a.effect&&a.effect.target==this}.bind(this))}}(c,e),function(a,b,c){function d(a){a._registered||(a._registered=!0,g.push(a),h||(h=!0,requestAnimationFrame(e)))}function e(a){var b=g;g=[],b.sort(function(a,b){return a._sequenceNumber-b._sequenceNumber}),b=b.filter(function(a){a();var b=a._animation?a._animation.playState:"idle";return"running"!=b&&"pending"!=b&&(a._registered=!1),a._registered}),g.push.apply(g,b),g.length?(h=!0,requestAnimationFrame(e)):h=!1}var f=(document.createElementNS("http://www.w3.org/1999/xhtml","div"),0);b.bindAnimationForCustomEffect=function(b){var c,e=b.effect.target,g="function"==typeof b.effect.getFrames();c=g?b.effect.getFrames():b.effect._onsample;var h=b.effect.timing,i=null;h=a.normalizeTimingInput(h);var j=function(){var d=j._animation?j._animation.currentTime:null;null!==d&&(d=a.calculateIterationProgress(a.calculateActiveDuration(h),d,h),isNaN(d)&&(d=null)),d!==i&&(g?c(d,e,b.effect):c(d,b.effect,b.effect._animation)),i=d};j._animation=b,j._registered=!1,j._sequenceNumber=f++,b._callback=j,d(j)};var g=[],h=!1;b.Animation.prototype._register=function(){this._callback&&d(this._callback)}}(c,e),function(a,b,c){function d(a){return a._timing.delay+a.activeDuration+a._timing.endDelay}function e(b,c,d){this._id=d,this._parent=null,this.children=b||[],this._reparent(this.children),c=a.numericTimingToObject(c),this._timingInput=a.cloneTimingInput(c),this._timing=a.normalizeTimingInput(c,!0),this.timing=a.makeTiming(c,!0,this),this.timing._effect=this,"auto"===this._timing.duration&&(this._timing.duration=this.activeDuration)}window.SequenceEffect=function(){e.apply(this,arguments)},window.GroupEffect=function(){e.apply(this,arguments)},e.prototype={_isAncestor:function(a){for(var b=this;null!==b;){if(b==a)return!0;b=b._parent}return!1},_rebuild:function(){for(var a=this;a;)"auto"===a.timing.duration&&(a._timing.duration=a.activeDuration),a=a._parent;this._animation&&this._animation._rebuildUnderlyingAnimation()},_reparent:function(a){b.removeMulti(a);for(var c=0;c<a.length;c++)a[c]._parent=this},_putChild:function(a,b){for(var c=b?"Cannot append an ancestor or self":"Cannot prepend an ancestor or self",d=0;d<a.length;d++)if(this._isAncestor(a[d]))throw{type:DOMException.HIERARCHY_REQUEST_ERR,name:"HierarchyRequestError",message:c};for(var d=0;d<a.length;d++)b?this.children.push(a[d]):this.children.unshift(a[d]);this._reparent(a),this._rebuild()},append:function(){this._putChild(arguments,!0)},prepend:function(){this._putChild(arguments,!1)},get parent(){return this._parent},get firstChild(){return this.children.length?this.children[0]:null},get lastChild(){return this.children.length?this.children[this.children.length-1]:null},clone:function(){for(var b=a.cloneTimingInput(this._timingInput),c=[],d=0;d<this.children.length;d++)c.push(this.children[d].clone());return this instanceof GroupEffect?new GroupEffect(c,b):new SequenceEffect(c,b)},remove:function(){b.removeMulti([this])}},window.SequenceEffect.prototype=Object.create(e.prototype),Object.defineProperty(window.SequenceEffect.prototype,"activeDuration",{get:function(){var a=0;return this.children.forEach(function(b){a+=d(b)}),Math.max(a,0)}}),window.GroupEffect.prototype=Object.create(e.prototype),Object.defineProperty(window.GroupEffect.prototype,"activeDuration",{get:function(){var a=0;return this.children.forEach(function(b){a=Math.max(a,d(b))}),a}}),b.newUnderlyingAnimationForGroup=function(c){var d,e=null,f=function(b){var c=d._wrapper;if(c&&"pending"!=c.playState&&c.effect)return null==b?void c._removeChildAnimations():0==b&&c.playbackRate<0&&(e||(e=a.normalizeTimingInput(c.effect.timing)),b=a.calculateIterationProgress(a.calculateActiveDuration(e),-1,e),isNaN(b)||null==b)?(c._forEachChild(function(a){a.currentTime=-1}),void c._removeChildAnimations()):void 0},g=new KeyframeEffect(null,[],c._timing,c._id);return g.onsample=f,d=b.timeline._play(g)},b.bindAnimationForGroup=function(a){a._animation._wrapper=a,a._isGroup=!0,b.awaitStartTime(a),a._constructChildAnimations(),a._setExternalAnimation(a)},b.groupChildDuration=d}(c,e),b.true=a}({},function(){return this}());
-//# sourceMappingURL=web-animations-next-lite.min.js.map
-Polymer({
-
-    is: 'fade-in-animation',
-
-    behaviors: [
-      Polymer.NeonAnimationBehavior
-    ],
-
-    configure: function(config) {
-      var node = config.node;
-      this._effect = new KeyframeEffect(node, [
-        {'opacity': '0'},
-        {'opacity': '1'}
-      ], this.timingFromConfig(config));
-      return this._effect;
-    }
-
-  });
-Polymer({
-
-    is: 'fade-out-animation',
-
-    behaviors: [
-      Polymer.NeonAnimationBehavior
-    ],
-
-    configure: function(config) {
-      var node = config.node;
-      this._effect = new KeyframeEffect(node, [
-        {'opacity': '1'},
-        {'opacity': '0'}
-      ], this.timingFromConfig(config));
-      return this._effect;
-    }
-
-  });
 Polymer({
 
     is: 'slide-up-animation',
@@ -20610,6 +23428,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 _tapAdd: function() {
                     thisRemoteList.$.btnMenu.style.visibility = 'hidden';
                     thisRemoteList.$.btnBack.style.display = 'block';
+                    thisRemoteList.toolbarTitle = `Add new in ${thisMainApp.choosenRoom}`;
                 },
 
 
@@ -20641,12 +23460,30 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'remote-add',
                 properties: {
-
+                    addSelected: {
+                        type: Number,
+                        value: 0
+                    }
                 },
 
                 ready: function() {
                     thisRemoteAdd = this;
-                }
+
+                    thisRemoteAdd.setupPosition();
+                    window.addEventListener('resize', function(event){
+                        thisRemoteAdd.setupPosition();
+                    });
+                },
+
+                setupPosition: function() {
+                    if (window.innerWidth > 640) {
+                        thisRemoteAdd.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
+                        // thisRoomAdd.$.toast.style.marginLeft = 268 + 'px';
+                    } else {
+                        thisRemoteAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                        // thisRoomAdd.$.toast.style.marginLeft = 12 + 'px';
+                    }
+                },
 
             });
         })();

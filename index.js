@@ -20262,10 +20262,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                             thisMainAuth.photoUrl = firebaseUser.photoURL;
                             thisMainAuth.mainView = 1;
                             thisMainAuth.$.ajax.generateRequest();
-
-                            console.log(thisMainAuth.displayName);
-                            console.log(thisMainAuth.email);
-                            console.log(thisMainAuth.photoUrl);
                         }
                         else {
                             thisMainAuth.mainView = 0;
@@ -20352,7 +20348,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                     auth.onAuthStateChanged(firebaseUser => {
                         if (firebaseUser) {
-                            thisMainData.uid = firebaseUser.uid;
                             thisMainData.loadData();
                             console.log("main-data: firebaseUser detected");
                         }
@@ -20366,6 +20361,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 loadData: function() {
                     console.log("main-data: loadData");
+                    thisMainData.uid = thisMainAuth.uid;
                     thisMainData.$.ajax.generateRequest();
                 },
 
@@ -20472,7 +20468,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                             if (room.remotes != null) {
                                 remotes.forEach(remote => {
-                                    console.log(remote);
+                                    // console.log(remote);
                                     thisRemoteList.push('remotes', remote);
                                 }) 
                             }
@@ -20481,6 +20477,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
 
+
+                getIcon: function(remote) {
+                    var type = remote.substring(0, 2).toLowerCase();
+                    if (type == 'ac') return "hardware:toys";
+                    else if (type == 'tv') return "hardware:tv";
+                },
 
                 getType: function(remote) {
                     return remote.substring(0, 2);
@@ -20531,10 +20533,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _tapRemote: function(e) {
                     thisRemoteList.pilihanRemote = e.target.title;
-
                     thisRemoteList.$.btnMenu.style.visibility = 'hidden';
                     thisRemoteList.$.btnBack.style.display = 'block';
-
                     thisRemoteList.toolbarTitle = thisMainApp.choosenRoom + ' ' + thisRemoteList.pilihanRemote;
                 }
             });
@@ -20601,7 +20601,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAC.brand = thisRemoteAC.remote.substring(3).toLowerCase();
 
                     if (jenis == "AC") {
-                        console.log(thisRemoteAC.brand)
+                        // console.log(thisRemoteAC.brand)
                     }
                 },
 
@@ -20672,7 +20672,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 _tapSend: function() {
-                    thisRemoteAC.uid = thisMainData.uid;
+                    thisRemoteAC.uid = thisMainAuth.uid;
                     thisRemoteAC.roomID = thisRemoteList.roomID;
                     thisRemoteAC.command = thisRemoteAC.brand + "-" + thisRemoteAC.mode + thisRemoteAC.fan + thisRemoteAC.temp;
 
@@ -20682,7 +20682,14 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _handleResponse: function() {
-                    console.log(`Sending command ${thisRemoteAC.command}: ${thisRemoteAC.response}`);
+                    var response = thisRemoteAC.response;
+                    if (response == 'OK') {
+                        thisRemoteAC.$.toast.show({text: 'Command sent.', duration: 500});
+                    } else if (response == 'NO_DEVICE') {
+                        thisRemoteAC.$.toast.show({text: 'No device is assigned for this room.', duration: 3000}); 
+                    } else {
+                        thisRemoteAC.$.toast.show({text: 'Unknown error.', duration: 1000});  
+                    }
                 },
 
 
@@ -20772,7 +20779,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     if (command == null) {
                         command = e.target.title
                         if (command == "") {
-                            console.log("ANJING!");
+                            thisRemoteTV.$.toast.show({text: 'Please try another button.', duration: 1000}); 
                             return;
                         }
                     }
@@ -20787,15 +20794,24 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRemoteTV.switchOn = !thisRemoteTV.switchOn;
                     }
 
-                    thisRemoteTV.uid = thisMainData.uid;
+                    thisRemoteTV.uid = thisMainAuth.uid;
                     thisRemoteTV.roomID = thisRemoteList.roomID;
                     thisRemoteTV.command = thisRemoteTV.codeset + command;
 
                     thisRemoteTV.$.ajax.generateRequest();
                 },
 
+
+
                 _handleResponse: function() {
-                    console.log(`Sending command ${thisRemoteTV.command}: ${thisRemoteTV.response}`);
+                    var response = thisRemoteTV.response;
+                    if (response == 'OK') {
+                        console.log(`Sending command ${thisRemoteTV.command}: ${thisRemoteTV.response}`);
+                    } else if (response == 'NO_DEVICE') {
+                        thisRemoteTV.$.toast.show({text: 'No device is assigned for this room.', duration: 3000}); 
+                    } else {
+                        thisRemoteTV.$.toast.show({text: 'Unknown error.', duration: 1000});  
+                    }
                 }
             });
         })();

@@ -3537,6 +3537,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 text-align: left;
             }
 
+            paper-fab {
+                --paper-fab-background: var(--app-primary-color);
+                --paper-fab-keyboard-focus-background: var(--app-primary-color);
+                color: #fff;
+                position: fixed;
+                bottom: 5%;
+                right: 5%;
+            }
+
             paper-item {
                 background-color: #fff;
                 margin: 0 20px 10px;
@@ -3584,6 +3593,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             </iron-selector>
         </iron-pages>
 
+        <paper-fab id="fab" icon="add"></paper-fab>
         <paper-toast id="toast"></paper-toast>
     </template>
 

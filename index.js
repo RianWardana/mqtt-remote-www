@@ -20311,9 +20311,14 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 setupTitle: function() {
                     var host = window.location.hostname;
+                    
                     if (host == "pociremote.com") thisMainAuth.host = "POCI Remote";
-                    else if (host == "app.replus.co") thisMainAuth.host = "Replus";
+                    else if (host == "app.replus.co") {
+                        thisMainAuth.host = "Replus";
+                        document.querySelector("link[rel*='icon']").href = "replus.ico";
+                    }
                     else thisMainAuth.host = "MQTT Remote";
+                    
                     document.title = thisMainAuth.host;
                 },
 

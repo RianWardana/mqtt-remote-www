@@ -32,7 +32,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <link rel="manifest" href="manifest.json">
     </head>
 
-<body><div hidden="" by-vulcanize=""><style>
+<body><div hidden="" by-vulcanize="">
+
+
+<style>
   /* IE 10 support for HTML5 hidden attr */
   [hidden] {
     display: none !important;
@@ -4412,90 +4415,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 
 
-    </dom-module><dom-module id="remote-add" assetpath="src/">
-    <template>
-        <style include="iron-flex iron-flex-alignment">
-            :host {
-                display: block;
-                --paper-tabs-selection-bar-color: #83ADCF; /*200*/
-                --paper-tab-ink: #043F71;
-            }
-
-            paper-button {
-                margin: 0;
-                width: 100%;
-            }
-
-            paper-tabs {
-                margin-top: -20px;
-                background: var(--app-primary-color);
-                color: #fff;
-            }
-
-            .page {
-                height: 100%;
-                position: fixed;
-                top: 120px;
-                left: 0;
-            }
-
-            #btnAdd {
-                background: #2B5788;
-                color: white;
-                margin-top: 25px;
-            }
-
-            #container {
-                margin-top: 10px;
-                width: 280px;
-            }
-
-            #dropdownBrand {
-                width: 75%;
-            }
-
-            #dropdownType {
-                width: 25%;
-                margin-right: 10px;
-            }
-        </style>
-            
-        <app-header shadow="">
-            <paper-tabs selected="{{addSelected}}">
-                <paper-tab>Remote</paper-tab>
-                <paper-tab>Device</paper-tab>
-                <paper-tab>Schedule</paper-tab>
-            </paper-tabs>
-        </app-header>
-
-        <iron-swipeable-pages on-selected-changed="" selected="{{addSelected}}" no-cycle="">
-            <div class="page">
-                <div id="container" class="vertical layout">
-                    <div class="horizontal layout">
-                        <paper-dropdown-menu id="dropdownType" label="Type">
-                            <paper-listbox class="dropdown-content" selected="{{type}}">
-                                <paper-item>AC</paper-item>
-                                <paper-item>TV</paper-item>
-                            </paper-listbox>
-                        </paper-dropdown-menu>
-                        <paper-dropdown-menu id="dropdownBrand" label="Brand">
-                            <paper-listbox class="dropdown-content" selected="{{brand}}">
-                                <paper-item>Dast</paper-item>
-                                <paper-item>Samsung</paper-item>
-                            </paper-listbox>
-                        </paper-dropdown-menu>
-                    </div>
-                    <paper-button id="btnAdd" raised="" on-tap="">Add remote</paper-button>
-                </div>
-            </div>
-
-            <div class="page">Page 2</div>
-            <div class="page">Page 3</div>
-        </iron-swipeable-pages>
-    </template>
-
-    
-
     </dom-module><dom-module id="remote-ac" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
@@ -4719,6 +4638,107 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <paper-toast id="toast"></paper-toast>
     </template>
+
+    </dom-module><dom-module id="remote-add" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            :host {
+                display: block;
+                --paper-tabs-selection-bar-color: #83ADCF; /*200*/
+                --paper-tab-ink: #043F71;
+            }
+
+            paper-tabs {
+                margin-top: -20px;
+                background: var(--app-primary-color);
+                color: #fff;
+            }
+
+            .page {
+                height: 100%;
+                position: fixed;
+                top: 120px;
+                left: 0;
+            }
+        </style>
+            
+        <app-header shadow="">
+            <paper-tabs selected="{{addSelected}}">
+                <paper-tab>Remote</paper-tab>
+                <paper-tab>Device</paper-tab>
+                <paper-tab>Schedule</paper-tab>
+            </paper-tabs>
+        </app-header>
+
+        <iron-swipeable-pages on-selected-changed="" selected="{{addSelected}}" no-cycle="">
+            <div class="page">
+                <remote-add-remote></remote-add-remote>
+            </div>
+
+            <div class="page">Page 2</div>
+            <div class="page">Page 3</div>
+        </iron-swipeable-pages>
+    </template>
+
+    
+
+    </dom-module><dom-module id="remote-add-remote" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            :host {
+                display: block;
+            }
+
+            paper-button {
+                background: #2B5788;
+                margin: 0;
+                width: 100%;
+            }
+
+            #btnAdd {
+                color: white;
+                margin-top: 25px;
+            }
+
+            #container {
+                margin-top: 10px;
+                width: 280px;
+            }
+
+            #dropdownBrand {
+                width: 75%;
+            }
+
+            #dropdownType {
+                width: 25%;
+                margin-right: 10px;
+            }
+        </style>
+        
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-remote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        </iron-ajax>
+
+        <div id="container" class="vertical layout">
+            <div class="horizontal layout">
+                <paper-dropdown-menu id="dropdownType" label="Type">
+                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenType}}" on-selected-changed="_changeType">
+                        <paper-item name="AC">AC</paper-item>
+                        <paper-item name="TV">TV</paper-item>
+                    </paper-listbox>
+                </paper-dropdown-menu>
+                <paper-dropdown-menu id="dropdownBrand" label="Brand">
+                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenBrand}}" on-selected-changed="_changeBrand">
+                        <template is="dom-repeat" items="{{brands}}" as="brand">
+                            <paper-item name="{{brand}}">{{brand}}</paper-item>
+                        </template>
+                    </paper-listbox>
+                </paper-dropdown-menu>
+            </div>
+            <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add remote</paper-button>
+        </div>
+    </template>
+
+    
 
     </dom-module><dom-module id="main-app" assetpath="src/">
     <template>

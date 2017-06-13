@@ -23377,7 +23377,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                             if (room.remotes != null) {
                                 remotes.forEach(remote => {
-                                    // console.log(remote);
                                     thisRemoteList.push('remotes', remote);
                                 }) 
                             }
@@ -23454,37 +23453,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteList.$.btnBack.style.display = 'block';
                     thisRemoteList.toolbarTitle = thisMainApp.choosenRoom + ' ' + thisRemoteList.pilihanRemote;
                 }
-            });
-        })();
-(function() {
-            Polymer({
-                is: 'remote-add',
-                properties: {
-                    addSelected: {
-                        type: Number,
-                        value: 0
-                    }
-                },
-
-                ready: function() {
-                    thisRemoteAdd = this;
-
-                    thisRemoteAdd.setupPosition();
-                    window.addEventListener('resize', function(event){
-                        thisRemoteAdd.setupPosition();
-                    });
-                },
-
-                setupPosition: function() {
-                    if (window.innerWidth > 640) {
-                        thisRemoteAdd.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
-                        // thisRoomAdd.$.toast.style.marginLeft = 268 + 'px';
-                    } else {
-                        thisRemoteAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                        // thisRoomAdd.$.toast.style.marginLeft = 12 + 'px';
-                    }
-                },
-
             });
         })();
 (function() {
@@ -23629,6 +23597,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAC.$.btnSend.disabled = "true";
                 },
 
+
+
                 _handleResponse: function() {
                     var response = thisRemoteAC.response;
                     if (response == 'OK') {
@@ -23638,12 +23608,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     } else {
                         thisRemoteAC.$.toast.show({text: 'Unknown error.', duration: 1000});  
                     }
-                },
-
-
-
-                _devicesChanged: function() {
-                    // console.log(thisRemoteAC.devices)
                 }
 
             });
@@ -23761,6 +23725,113 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRemoteTV.$.toast.show({text: 'Unknown error.', duration: 1000});  
                     }
                 }
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'remote-add',
+                properties: {
+                    addSelected: {
+                        type: Number,
+                        value: 0
+                    }
+                },
+
+                ready: function() {
+                    thisRemoteAdd = this;
+                }
+
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'remote-add-remote',
+                properties: {
+                    brandAC: {
+                        type: Array,
+                        value: ["Dast", "LG", "Mitsubishi", "Panasonic", "Samsung"]
+                    },
+
+                    brandTV: {
+                        type: Array,
+                        value: ["LG", "Panasonic", "Samsung", "Sharp", "Sony"]
+                    }
+                },
+
+                ready: function() {
+                    thisRemoteAddRemote = this;
+                    thisRemoteAddRemote.stateInitial();
+                    thisRemoteAddRemote.setupPosition();
+                    window.addEventListener('resize', function(event){
+                        thisRemoteAddRemote.setupPosition();
+                    });
+                },
+
+
+
+                stateInitial: function() {
+                    thisRemoteAddRemote.choosenType = "";
+                    thisRemoteAddRemote.choosenBrand = "";
+                    setTimeout(() => {
+                        thisRemoteAddRemote.$.dropdownBrand.setAttribute("disabled", "true");
+                        thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true"); 
+                    }, 100);
+                },
+
+                stateChangedType: function() {
+                    thisRemoteAddRemote.choosenBrand = "";
+                    thisRemoteAddRemote.$.dropdownBrand.removeAttribute("disabled");
+                    thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true");
+                },
+
+                stateChangedBrand: function() {
+                    thisRemoteAddRemote.$.btnAdd.removeAttribute("disabled");
+                },
+
+
+
+                setupPosition: function() {
+                    if (window.innerWidth > 640) {
+                        thisRemoteAddRemote.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
+                        // thisRoomAdd.$.toast.style.marginLeft = 268 + 'px';
+                    } else {
+                        thisRemoteAddRemote.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                        // thisRoomAdd.$.toast.style.marginLeft = 12 + 'px';
+                    }
+                },
+
+
+
+                _changeBrand: function() {
+                    thisRemoteAddRemote.stateChangedBrand();  
+                },
+
+
+
+                _changeType: function() {
+                    setTimeout(() => {
+                        thisRemoteAddRemote.stateChangedType();
+                        if (thisRemoteAddRemote.choosenType == "AC") thisRemoteAddRemote.brands = thisRemoteAddRemote.brandAC;
+                        else if (thisRemoteAddRemote.choosenType == "TV") thisRemoteAddRemote.brands = thisRemoteAddRemote.brandTV;
+                    }, 100);
+                },
+
+
+
+                _handleResponse: function() {
+                    thisRemoteAddRemote.$.toast.show({text: `${thisRemoteAddRemote.choosenRemote} added to ${thisMainApp.choosenRoom}`, duration: 3000});
+                    thisRemoteAddRemote.stateInitial();
+                },
+
+
+
+                _tapAdd: function() {
+                    thisRemoteAddRemote.uid = thisMainAuth.uid;
+                    thisRemoteAddRemote.roomID = thisRemoteList.roomID;
+                    thisRemoteAddRemote.choosenRemote = `${thisRemoteAddRemote.choosenType} ${thisRemoteAddRemote.choosenBrand}`;
+                    thisRemoteAddRemote.$.ajax.generateRequest();
+                }
+
             });
         })();
 Polymer({

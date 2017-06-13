@@ -4713,6 +4713,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 25%;
                 margin-right: 10px;
             }
+
+            #spinner {
+                --paper-spinner-layer-1-color: var(--app-primary-color);
+                --paper-spinner-layer-3-color: var(--app-primary-color);
+                --paper-spinner-layer-2-color: #3498db;
+                --paper-spinner-layer-4-color: #3498db;
+                margin-top: -35px;
+            }
         </style>
         
         <iron-ajax id="ajax" url="https://core.replus.co/edit/new-remote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
@@ -4735,7 +4743,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 </paper-dropdown-menu>
             </div>
             <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add remote</paper-button>
+            <div class="horizontal layout center-justified">
+                <paper-spinner id="spinner" active=""></paper-spinner>
+            </div>
         </div>
+
+        <paper-toast id="toast"></paper-toast>
     </template>
 
     

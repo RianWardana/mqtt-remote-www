@@ -23268,8 +23268,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
 
-                loadData: function() {
+                loadData: function(redirectToRoom = true) {
                     console.log("main-data: loadData");
+                    thisMainData.redirect = redirectToRoom;
                     thisMainData.uid = thisMainAuth.uid;
                     thisMainData.$.ajax.generateRequest();
                 },
@@ -23282,8 +23283,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         console.log("main-data: roomsData loaded");
                         var rooms = thisMainData.response["rooms"];
                         thisMainData.roomsData = rooms;
-                        var lastRoomName = rooms[rooms.length-1]["name"];
-                        thisMainApp._tapRoom(lastRoomName);
+                        if (thisMainData.redirect) {
+                            var lastRoomName = rooms[rooms.length-1]["name"];
+                            thisMainApp._tapRoom(lastRoomName);
+                        }
                     } else {
                         console.log("main-data: roomsData empty");
                         thisMainApp.roomView = "Add room";
@@ -23366,7 +23369,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
 
-                getRoomDevicesAndRemotes: function() {
+                getRoomRemotes: function() {
                     var roomsData = thisMainApp.roomsData;
 
                     thisRemoteList.remotes = [];
@@ -23376,9 +23379,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                             var remotes = room.remotes;
 
                             if (room.remotes != null) {
-                                remotes.forEach(remote => {
-                                    thisRemoteList.push('remotes', remote);
-                                }) 
+                                for (var remoteID in remotes) {
+                                    if (remotes.hasOwnProperty(remoteID)) {
+                                        var remote = remotes[remoteID];
+                                        thisRemoteList.push('remotes', remote);
+                                    }
+                                }
                             }
                         }
                     });
@@ -23768,24 +23774,51 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
 
-
+                //state consists of: dropdownType, dropdownBrand, btnAdd, spinner
+                //each of them consists of: disability, visibility (for btnAdd), display (for spinner)
                 stateInitial: function() {
                     thisRemoteAddRemote.choosenType = "";
                     thisRemoteAddRemote.choosenBrand = "";
                     setTimeout(() => {
+                        thisRemoteAddRemote.$.dropdownType.removeAttribute("disabled");
                         thisRemoteAddRemote.$.dropdownBrand.setAttribute("disabled", "true");
-                        thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true"); 
+                        thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true");
+                        thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
+                        thisRemoteAddRemote.$.spinner.style.display = 'none';
                     }, 100);
                 },
 
                 stateChangedType: function() {
                     thisRemoteAddRemote.choosenBrand = "";
+                    thisRemoteAddRemote.$.dropdownType.removeAttribute("disabled");
                     thisRemoteAddRemote.$.dropdownBrand.removeAttribute("disabled");
                     thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true");
+                    thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
+                    thisRemoteAddRemote.$.spinner.style.display = 'none';
                 },
 
                 stateChangedBrand: function() {
+                    thisRemoteAddRemote.$.dropdownType.removeAttribute("disabled");
+                    thisRemoteAddRemote.$.dropdownBrand.removeAttribute("disabled");
                     thisRemoteAddRemote.$.btnAdd.removeAttribute("disabled");
+                    thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
+                    thisRemoteAddRemote.$.spinner.style.display = 'none';
+                },
+
+                stateWaitResponse: function() {
+                    thisRemoteAddRemote.$.dropdownType.setAttribute("disabled", "true");
+                    thisRemoteAddRemote.$.dropdownBrand.setAttribute("disabled", "true");
+                    thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true");
+                    thisRemoteAddRemote.$.btnAdd.style.visibility = 'hidden';
+                    thisRemoteAddRemote.$.spinner.style.display = 'block';
+                },
+
+                stateResponseError: function() {
+                    thisRemoteAddRemote.$.dropdownType.removeAttribute("disabled");
+                    thisRemoteAddRemote.$.dropdownBrand.removeAttribute("disabled");
+                    thisRemoteAddRemote.$.btnAdd.removeAttribute("disabled");
+                    thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
+                    thisRemoteAddRemote.$.spinner.style.display = 'none';
                 },
 
 
@@ -23819,8 +23852,15 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 _handleResponse: function() {
-                    thisRemoteAddRemote.$.toast.show({text: `${thisRemoteAddRemote.choosenRemote} added to ${thisMainApp.choosenRoom}`, duration: 3000});
-                    thisRemoteAddRemote.stateInitial();
+                    var response = thisRemoteAddRemote.response;
+                    if (response == 'OK') {
+                        thisRemoteAddRemote.$.toast.show({text: `${thisRemoteAddRemote.choosenRemote} added to ${thisMainApp.choosenRoom}.`, duration: 3000});
+                        thisRemoteAddRemote.stateInitial();
+                        setTimeout(() => {thisMainData.loadData(false);}, 100);
+                        setTimeout(() => {thisRemoteList.getRoomRemotes();}, 500);
+                    } else {
+                        thisRemoteAddRemote.$.toast.show({text: "Unknown error occured.", duration: 3000});
+                    }
                 },
 
 
@@ -23830,6 +23870,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddRemote.roomID = thisRemoteList.roomID;
                     thisRemoteAddRemote.choosenRemote = `${thisRemoteAddRemote.choosenType} ${thisRemoteAddRemote.choosenBrand}`;
                     thisRemoteAddRemote.$.ajax.generateRequest();
+                    thisRemoteAddRemote.stateWaitResponse();
                 }
 
             });
@@ -23884,7 +23925,7 @@ Polymer({
                 thisMainApp.choosenRoom = (e.target != null ? e.target.title : e);
                 thisMainApp.roomName = thisMainApp.choosenRoom;
                 thisMainApp.roomView = thisMainApp.choosenRoom;
-                thisRemoteList.getRoomDevicesAndRemotes();
+                thisRemoteList.getRoomRemotes();
             },
 
 

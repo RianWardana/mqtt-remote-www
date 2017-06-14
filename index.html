@@ -89,7 +89,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       -webkit-flex-wrap: wrap;
       flex-wrap: wrap;
     };
-
+    
     --layout-no-wrap: {
       -ms-flex-wrap: nowrap;
       -webkit-flex-wrap: nowrap;
@@ -2578,7 +2578,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </dom-module>
 
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700|Roboto:400,300,300italic,400italic,500,500italic,700,700italic" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,300italic,400italic,500,500italic,700,700italic">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700">
 <style is="custom-style">
 
   :root {
@@ -3007,20 +3008,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         @apply(--paper-input-container-input);
       }
 
-      .input-content.focused ::content input,
-      .input-content.focused ::content textarea,
-      .input-content.focused ::content iron-autogrow-textarea,
-      .input-content.focused ::content .paper-input-input {
-        @apply(--paper-input-container-input-focus);
-      }
-
-      .input-content.is-invalid ::content input,
-      .input-content.is-invalid ::content textarea,
-      .input-content.is-invalid ::content iron-autogrow-textarea,
-      .input-content.is-invalid ::content .paper-input-input {
-        @apply(--paper-input-container-input-invalid);
-      }
-
       .input-content ::content input::-webkit-outer-spin-button,
       .input-content ::content input::-webkit-inner-spin-button {
         @apply(--paper-input-container-input-webkit-spinner);
@@ -3127,15 +3114,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         display: none !important;
       }
 
-      input::-webkit-outer-spin-button,                                                                                                     
-      input::-webkit-inner-spin-button {                                                                                                    
-        @apply(--paper-input-container-input-webkit-spinner);                                                                                                                                                                                      
-      }
-      
-      input::-webkit-clear-button {
-        @apply(--paper-input-container-input-webkit-clear);  
-      }
-
       input::-webkit-input-placeholder {
         color: var(--paper-input-container-color, --secondary-text-color);
       }
@@ -3146,10 +3124,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       input::-moz-placeholder {
         color: var(--paper-input-container-color, --secondary-text-color);
-      }
-
-      input::-ms-clear {
-        @apply(--paper-input-container-ms-clear);
       }
 
       input:-ms-input-placeholder {
@@ -3521,9 +3495,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <style>
       :host([animated]) {
         @apply(--shadow-transition);
-      }
-      :host {
-        @apply(--paper-material);
       }
     </style>
 
@@ -4783,19 +4754,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-device" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-device" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;deviceID={{deviceID}}&amp;deviceCode={{deviceCode}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
             <paper-dropdown-menu id="dropdownType" label="Device type">
                 <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{deviceType}}" on-selected-changed="_changeType">
                     <paper-item name="POCI Remote">POCI Remote</paper-item>
-                    <paper-item name="Lamp">Replus Lamp</paper-item>
-                    <paper-item name="Socket">Replus Socket</paper-item>
+                    
                 </paper-listbox>
             </paper-dropdown-menu>
             <paper-input id="inputID" label="Device ID" value="{{deviceID}}" maxlength="4"></paper-input>
-            <paper-input id="inputCode" label="Activation code" value="{{deviceCode}}" maxlength="5"></paper-input>
+            <paper-input id="inputCode" label="Activation code" value="{{deviceCode}}" maxlength="6"></paper-input>
             <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add device</paper-button>
             <div class="horizontal layout center-justified">
                 <paper-spinner id="spinner" active=""></paper-spinner>

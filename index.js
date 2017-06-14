@@ -23772,6 +23772,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         setTimeout(() => {thisRemoteList.getRoomRemotes();}, 500);
                     } else {
                         thisRemoteAddRemote.$.toast.show({text: "Unknown error occured.", duration: 3000});
+                        thisRemoteAddRemote.stateResponseError();
                     }
                 },
 
@@ -23843,6 +23844,15 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddDevice.$.btnAdd.style.visibility = 'hidden';
                 },
 
+                stateResponseError: function() {
+                    thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
+                    thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
+                    thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
+                    thisRemoteAddDevice.$.spinner.style.display = 'none';
+                    thisRemoteAddDevice.$.btnAdd.removeAttribute('disabled');
+                    thisRemoteAddDevice.$.btnAdd.style.visibility = 'visible';
+                },
+
                 _changeType: function() {
                     thisRemoteAddDevice.stateChangedType();
                 },
@@ -23852,10 +23862,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     if (response == 'OK') {
                         thisRemoteAddDevice.$.toast.show({text: `${thisRemoteAddDevice.deviceType} added to ${thisMainApp.choosenRoom}.`, duration: 3000});
                         thisRemoteAddDevice.stateInitial();
-                        setTimeout(() => {thisMainData.loadData(false);}, 100);
-                        setTimeout(() => {thisRemoteList.getRoomRemotes();}, 500);
+                    } else if (response == 'NO_CODE') {
+                        thisRemoteAddDevice.$.toast.show({text: "Device is not recognized.", duration: 3000});
+                        thisRemoteAddDevice.stateResponseError();
                     } else {
                         thisRemoteAddDevice.$.toast.show({text: "Unknown error occured.", duration: 3000});
+                        thisRemoteAddDevice.stateResponseError();
                     }
                 },
 

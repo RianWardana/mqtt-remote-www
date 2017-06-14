@@ -23443,8 +23443,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteList.$.btnBack.style.display = 'none';
                     thisRemoteList.$.btnMenu.style.visibility = 'visible';
                     thisRemoteList.toolbarTitle = thisMainApp.choosenRoom;
-                    thisRemoteAddRemote.stateInitial();
-                    thisRemoteAddDevice.stateInitial();
+                    thisRemoteAdd.stateInitial();
                 },
 
 
@@ -23747,6 +23746,13 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 ready: function() {
                     thisRemoteAdd = this;
+                },
+
+                stateInitial: function() {
+                    thisRemoteAdd.addSelected = 0;
+                    thisRemoteAddRemote.stateInitial();
+                    thisRemoteAddDevice.stateInitial();
+                    thisRemoteAddSchedule.stateInitial();
                 }
 
             });
@@ -23928,6 +23934,49 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _handleResponse: function() {
                     var response = thisRemoteAddDevice.response;
+                },
+
+                _tapAdd: function() {
+
+                }
+
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'remote-add-schedule',
+                properties: {
+                    
+                },
+
+                ready: function() {
+                    thisRemoteAddSchedule = this;
+                    thisRemoteAddSchedule.stateInitial();
+                    thisRemoteAddSchedule.setupPosition();
+                    window.addEventListener('resize', function(event){
+                        thisRemoteAddSchedule.setupPosition();
+                    });
+                },
+
+                setupPosition: function() {
+                    if (window.innerWidth > 640) {
+                        thisRemoteAddSchedule.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
+                        thisRemoteAddSchedule.$.toast.style.marginLeft = 268 + 'px';
+                    } else {
+                        thisRemoteAddSchedule.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                        thisRemoteAddSchedule.$.toast.style.marginLeft = 12 + 'px';
+                    }
+                },
+
+                stateInitial: function() {
+                    thisRemoteAddSchedule.choosenAppliance = '';
+                    thisRemoteAddSchedule.$.dropdownAppliance.removeAttribute('disabled');
+                    thisRemoteAddSchedule.$.spinner.style.display = 'none';
+                    thisRemoteAddSchedule.$.btnAdd.setAttribute('disabled', 'true');
+                },
+
+                _handleResponse: function() {
+                    var response = thisRemoteAddSchedule.response;
                 },
 
                 _tapAdd: function() {

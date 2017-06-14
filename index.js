@@ -23443,6 +23443,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteList.$.btnBack.style.display = 'none';
                     thisRemoteList.$.btnMenu.style.visibility = 'visible';
                     thisRemoteList.toolbarTitle = thisMainApp.choosenRoom;
+                    thisRemoteAddRemote.stateInitial();
+                    thisRemoteAddDevice.stateInitial();
                 },
 
 
@@ -23504,7 +23506,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 setupPosition: function() {
                     thisRemoteAC.$.remoteContainer.style.marginTop = (window.innerHeight - 550) - 20 + 'px';
 
-                    if (window.innerWidth > 330) {
+                    if (window.innerWidth > 350) {
                         thisRemoteAC.$.mainContainer.style.width = '330px';
                         thisRemoteAC.$.mainContainer.style.marginLeft = (window.innerWidth - 330)/2 + 'px';
                         if (window.innerWidth > 640) {
@@ -23826,10 +23828,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 setupPosition: function() {
                     if (window.innerWidth > 640) {
                         thisRemoteAddRemote.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
-                        // thisRoomAdd.$.toast.style.marginLeft = 268 + 'px';
+                        thisRemoteAddRemote.$.toast.style.marginLeft = 268 + 'px';
                     } else {
                         thisRemoteAddRemote.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                        // thisRoomAdd.$.toast.style.marginLeft = 12 + 'px';
+                        thisRemoteAddRemote.$.toast.style.marginLeft = 12 + 'px';
                     }
                 },
 
@@ -23871,6 +23873,65 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddRemote.choosenRemote = `${thisRemoteAddRemote.choosenType} ${thisRemoteAddRemote.choosenBrand}`;
                     thisRemoteAddRemote.$.ajax.generateRequest();
                     thisRemoteAddRemote.stateWaitResponse();
+                }
+
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'remote-add-device',
+                properties: {
+                    
+                },
+
+                ready: function() {
+                    thisRemoteAddDevice = this;
+                    thisRemoteAddDevice.stateInitial();
+                    thisRemoteAddDevice.setupPosition();
+                    window.addEventListener('resize', function(event){
+                        thisRemoteAddDevice.setupPosition();
+                    });
+                },
+
+                setupPosition: function() {
+                    if (window.innerWidth > 640) {
+                        thisRemoteAddDevice.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
+                        thisRemoteAddDevice.$.toast.style.marginLeft = 268 + 'px';
+                    } else {
+                        thisRemoteAddDevice.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                        thisRemoteAddDevice.$.toast.style.marginLeft = 12 + 'px';
+                    }
+                },
+
+                stateInitial: function() {
+                    thisRemoteAddDevice.deviceType = '';
+                    thisRemoteAddDevice.deviceID = '';
+                    thisRemoteAddDevice.deviceCode = '';
+                    thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
+                    thisRemoteAddDevice.$.inputID.setAttribute('disabled', 'true');
+                    thisRemoteAddDevice.$.inputCode.setAttribute('disabled', 'true');
+                    thisRemoteAddDevice.$.spinner.style.display = 'none';
+                    thisRemoteAddDevice.$.btnAdd.setAttribute('disabled', 'true');
+                },
+
+                stateChangedType: function() {
+                    thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
+                    thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
+                    thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
+                    thisRemoteAddDevice.$.spinner.style.display = 'none';
+                    thisRemoteAddDevice.$.btnAdd.removeAttribute('disabled');
+                },
+
+                _changeType: function() {
+                    thisRemoteAddDevice.stateChangedType();
+                },
+
+                _handleResponse: function() {
+                    var response = thisRemoteAddDevice.response;
+                },
+
+                _tapAdd: function() {
+
                 }
 
             });

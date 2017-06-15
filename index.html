@@ -4120,6 +4120,153 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </dom-module>
 
 
+<dom-module id="paper-toggle-button" assetpath="bower_components/paper-toggle-button/">
+  <template strip-whitespace="">
+
+    <style>
+      :host {
+        display: inline-block;
+        @apply(--layout-horizontal);
+        @apply(--layout-center);
+        @apply(--paper-font-common-base);
+      }
+
+      :host([disabled]) {
+        pointer-events: none;
+      }
+
+      :host(:focus) {
+        outline:none;
+      }
+
+      .toggle-bar {
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        border-radius: 8px;
+        pointer-events: none;
+        opacity: 0.4;
+        transition: background-color linear .08s;
+        background-color: var(--paper-toggle-button-unchecked-bar-color, #000000);
+
+        @apply(--paper-toggle-button-unchecked-bar);
+      }
+
+      .toggle-button {
+        position: absolute;
+        top: -3px;
+        left: 0;
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.6);
+        transition: -webkit-transform linear .08s, background-color linear .08s;
+        transition: transform linear .08s, background-color linear .08s;
+        will-change: transform;
+        background-color: var(--paper-toggle-button-unchecked-button-color, --paper-grey-50);
+
+        @apply(--paper-toggle-button-unchecked-button);
+      }
+
+      .toggle-button.dragging {
+        -webkit-transition: none;
+        transition: none;
+      }
+
+      :host([checked]:not([disabled])) .toggle-bar {
+        opacity: 0.5;
+        background-color: var(--paper-toggle-button-checked-bar-color, --primary-color);
+
+        @apply(--paper-toggle-button-checked-bar);
+      }
+
+      :host([disabled]) .toggle-bar {
+        background-color: #000;
+        opacity: 0.12;
+      }
+
+      :host([checked]) .toggle-button {
+        -webkit-transform: translate(16px, 0);
+        transform: translate(16px, 0);
+      }
+
+      :host([checked]:not([disabled])) .toggle-button {
+        background-color: var(--paper-toggle-button-checked-button-color, --primary-color);
+
+        @apply(--paper-toggle-button-checked-button);
+      }
+
+      :host([disabled]) .toggle-button {
+        background-color: #bdbdbd;
+        opacity: 1;
+      }
+
+      .toggle-ink {
+        position: absolute;
+        top: -14px;
+        left: -14px;
+        right: auto;
+        bottom: auto;
+        width: 48px;
+        height: 48px;
+        opacity: 0.5;
+        pointer-events: none;
+        color: var(--paper-toggle-button-unchecked-ink-color, --primary-text-color);
+
+        @apply(--paper-toggle-button-unchecked-ink);
+      }
+
+      :host([checked]) .toggle-ink {
+        color: var(--paper-toggle-button-checked-ink-color, --primary-color);
+
+        @apply(--paper-toggle-button-checked-ink);
+      }
+
+      .toggle-container {
+        display: inline-block;
+        position: relative;
+        width: 36px;
+        height: 14px;
+        /* The toggle button has an absolute position of -3px; The extra 1px
+        /* accounts for the toggle button shadow box. */
+        margin: 4px 1px;
+      }
+
+      .toggle-label {
+        position: relative;
+        display: inline-block;
+        vertical-align: middle;
+        padding-left: var(--paper-toggle-button-label-spacing, 8px);
+        pointer-events: none;
+        color: var(--paper-toggle-button-label-color, --primary-text-color);
+      }
+
+      /* invalid state */
+      :host([invalid]) .toggle-bar {
+        background-color: var(--paper-toggle-button-invalid-bar-color, --error-color);
+      }
+
+      :host([invalid]) .toggle-button {
+        background-color: var(--paper-toggle-button-invalid-button-color, --error-color);
+      }
+
+      :host([invalid]) .toggle-ink {
+        color: var(--paper-toggle-button-invalid-ink-color, --error-color);
+      }
+    </style>
+
+    <div class="toggle-container">
+      <div id="toggleBar" class="toggle-bar"></div>
+      <div id="toggleButton" class="toggle-button"></div>
+    </div>
+
+    <div class="toggle-label"><content></content></div>
+
+  </template>
+
+  </dom-module>
+
+
 <dom-module id="neon-animated-pages" assetpath="bower_components/neon-animation/">
   <template>
     <style>
@@ -4365,7 +4512,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
             <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
-            <remote-add remote-view="add"></remote-add>
+            <remote-add remote-view="add" remotes="{{remotes}}"></remote-add>
 
             <iron-selector id="selectorRemote" class="vertical layout" remote-view="list" attr-for-selected="remote-view" selected="{{remoteView}}">
                     <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
@@ -4641,7 +4788,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-swipeable-pages on-selected-changed="" selected="{{addSelected}}" no-cycle="" threshold="0.1">
             <remote-add-remote class="page"></remote-add-remote>
             <remote-add-device class="page"></remote-add-device>
-            <remote-add-schedule class="page"></remote-add-schedule>
+            <remote-add-schedule class="page" remotes="{{remotes}}"></remote-add-schedule>
         </iron-swipeable-pages>
     </template>
 
@@ -4790,6 +4937,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 100%;
             }
 
+            paper-toggle-button {
+
+            }
+
             #btnAdd {
                 color: white;
                 margin-top: 25px;
@@ -4811,18 +4962,34 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 --paper-spinner-layer-4-color: #3498db;
                 margin-top: -35px;
             }
+
+            #toggleSchedule {
+                --paper-toggle-button-unchecked-bar-color:  var(--primary-color);
+                --paper-toggle-button-unchecked-button-color:  var(--primary-color);
+                --paper-toggle-button-unchecked-ink-color: var(--primary-color);
+            }
         </style>
         
         <iron-ajax id="ajax" url="https://core.replus.co/edit/new-schedule" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
+            <div class="horizontal layout justified">
+                <p>One time</p>
+                <paper-toggle-button id="toggleSchedule"></paper-toggle-button>
+                <p>Repeated</p>
+            </div>
             <paper-dropdown-menu id="dropdownAppliance" label="Appliance to schedule">
-                <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenAppliance}}" on-selected-changed="_changeType">
-                    <paper-item name="POCI Remote">AC Samsung</paper-item>
-                    <paper-item name="Lamp">TV Sony</paper-item>
+                <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenAppliance}}" on-selected-changed="_changeAppliance">
+                    <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
+                        <paper-item name="{{remote}}">{{remote}}</paper-item>
+                    </template>
                 </paper-listbox>
             </paper-dropdown-menu>
+            <div class="horizontal layout justified">
+                <p id="textON">Turn appliance ON</p>
+                <paper-toggle-button id="toggleON"></paper-toggle-button>
+            </div>
             <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add schedule</paper-button>
             <div class="horizontal layout center-justified">
                 <paper-spinner id="spinner" active=""></paper-spinner>
@@ -4839,6 +5006,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <style include="iron-flex iron-flex-alignment">
             :host {
                 display: block;
+                --primary-color: #2B5788;
                 --app-primary-color: #2B5788;
                 --app-secondary-color: black;
 

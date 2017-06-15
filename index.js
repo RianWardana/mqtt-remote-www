@@ -21974,6 +21974,230 @@ Polymer({
          */
       });
     })();
+/**
+   * Use `Polymer.IronCheckedElementBehavior` to implement a custom element
+   * that has a `checked` property, which can be used for validation if the
+   * element is also `required`. Element instances implementing this behavior
+   * will also be registered for use in an `iron-form` element.
+   *
+   * @demo demo/index.html
+   * @polymerBehavior Polymer.IronCheckedElementBehavior
+   */
+  Polymer.IronCheckedElementBehaviorImpl = {
+
+    properties: {
+      /**
+       * Fired when the checked state changes.
+       *
+       * @event iron-change
+       */
+
+      /**
+       * Gets or sets the state, `true` is checked and `false` is unchecked.
+       */
+      checked: {
+        type: Boolean,
+        value: false,
+        reflectToAttribute: true,
+        notify: true,
+        observer: '_checkedChanged'
+      },
+
+      /**
+       * If true, the button toggles the active state with each tap or press
+       * of the spacebar.
+       */
+      toggles: {
+        type: Boolean,
+        value: true,
+        reflectToAttribute: true
+      },
+
+      /* Overriden from Polymer.IronFormElementBehavior */
+      value: {
+        type: String,
+        value: 'on',
+        observer: '_valueChanged'
+      }
+    },
+
+    observers: [
+      '_requiredChanged(required)'
+    ],
+
+    created: function() {
+      // Used by `iron-form` to handle the case that an element with this behavior
+      // doesn't have a role of 'checkbox' or 'radio', but should still only be
+      // included when the form is serialized if `this.checked === true`.
+      this._hasIronCheckedElementBehavior = true;
+    },
+
+    /**
+     * Returns false if the element is required and not checked, and true otherwise.
+     * @param {*=} _value Ignored.
+     * @return {boolean} true if `required` is false or if `checked` is true.
+     */
+    _getValidity: function(_value) {
+      return this.disabled || !this.required || this.checked;
+    },
+
+    /**
+     * Update the aria-required label when `required` is changed.
+     */
+    _requiredChanged: function() {
+      if (this.required) {
+        this.setAttribute('aria-required', 'true');
+      } else {
+        this.removeAttribute('aria-required');
+      }
+    },
+
+    /**
+     * Fire `iron-changed` when the checked state changes.
+     */
+    _checkedChanged: function() {
+      this.active = this.checked;
+      this.fire('iron-change');
+    },
+
+    /**
+     * Reset value to 'on' if it is set to `undefined`.
+     */
+    _valueChanged: function() {
+      if (this.value === undefined || this.value === null) {
+        this.value = 'on';
+      }
+    }
+  };
+
+  /** @polymerBehavior Polymer.IronCheckedElementBehavior */
+  Polymer.IronCheckedElementBehavior = [
+    Polymer.IronFormElementBehavior,
+    Polymer.IronValidatableBehavior,
+    Polymer.IronCheckedElementBehaviorImpl
+  ];
+/**
+   * Use `Polymer.PaperCheckedElementBehavior` to implement a custom element
+   * that has a `checked` property similar to `Polymer.IronCheckedElementBehavior`
+   * and is compatible with having a ripple effect.
+   * @polymerBehavior Polymer.PaperCheckedElementBehavior
+   */
+  Polymer.PaperCheckedElementBehaviorImpl = {
+    /**
+     * Synchronizes the element's checked state with its ripple effect.
+     */
+    _checkedChanged: function() {
+      Polymer.IronCheckedElementBehaviorImpl._checkedChanged.call(this);
+      if (this.hasRipple()) {
+        if (this.checked) {
+          this._ripple.setAttribute('checked', '');
+        } else {
+          this._ripple.removeAttribute('checked');
+        }
+      }
+    },
+
+    /**
+     * Synchronizes the element's `active` and `checked` state.
+     */
+    _buttonStateChanged: function() {
+      Polymer.PaperRippleBehavior._buttonStateChanged.call(this);
+      if (this.disabled) {
+        return;
+      }
+      if (this.isAttached) {
+        this.checked = this.active;
+      }
+    }
+  };
+
+  /** @polymerBehavior Polymer.PaperCheckedElementBehavior */
+  Polymer.PaperCheckedElementBehavior = [
+    Polymer.PaperInkyFocusBehavior,
+    Polymer.IronCheckedElementBehavior,
+    Polymer.PaperCheckedElementBehaviorImpl
+  ];
+Polymer({
+      is: 'paper-toggle-button',
+
+      behaviors: [
+        Polymer.PaperCheckedElementBehavior
+      ],
+
+      hostAttributes: {
+        role: 'button',
+        'aria-pressed': 'false',
+        tabindex: 0
+      },
+
+      properties: {
+        /**
+         * Fired when the checked state changes due to user interaction.
+         *
+         * @event change
+         */
+        /**
+         * Fired when the checked state changes.
+         *
+         * @event iron-change
+         */
+      },
+
+      listeners: {
+        track: '_ontrack'
+      },
+
+      attached: function() {
+        Polymer.RenderStatus.afterNextRender(this, function() {
+          this.setScrollDirection('y');
+        });
+      },
+
+      _ontrack: function(event) {
+        var track = event.detail;
+        if (track.state === 'start') {
+          this._trackStart(track);
+        } else if (track.state === 'track') {
+          this._trackMove(track);
+        } else if (track.state === 'end') {
+          this._trackEnd(track);
+        }
+      },
+
+      _trackStart: function(track) {
+        this._width = this.$.toggleBar.offsetWidth / 2;
+        /*
+         * keep an track-only check state to keep the dragging behavior smooth
+         * while toggling activations
+         */
+        this._trackChecked = this.checked;
+        this.$.toggleButton.classList.add('dragging');
+      },
+
+      _trackMove: function(track) {
+        var dx = track.dx;
+        this._x = Math.min(this._width,
+            Math.max(0, this._trackChecked ? this._width + dx : dx));
+        this.translate3d(this._x + 'px', 0, 0, this.$.toggleButton);
+        this._userActivate(this._x > (this._width / 2));
+      },
+
+      _trackEnd: function(track) {
+        this.$.toggleButton.classList.remove('dragging');
+        this.transform('', this.$.toggleButton);
+      },
+
+      // customize the element's ripple
+      _createRipple: function() {
+        this._rippleContainer = this.$.toggleButton;
+        var ripple = Polymer.PaperRippleBehavior._createRipple();
+        ripple.id = 'ink';
+        ripple.setAttribute('recenters', '');
+        ripple.classList.add('circle', 'toggle-ink');
+        return ripple;
+      }
+
+    });
 Polymer({
 
     is: 'slide-up-animation',
@@ -23686,51 +23910,51 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
 
-                //state consists of: dropdownType, dropdownBrand, btnAdd, spinner
-                //each of them consists of: disability, visibility (for btnAdd), display (for spinner)
+
+                setButtonAddState: function(state) {
+                    if (state == 'enabled') {
+                        thisRemoteAddRemote.$.spinner.style.display = 'none';
+                        thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
+                        thisRemoteAddRemote.$.btnAdd.removeAttribute('disabled');
+                    } else if (state == 'disabled') {
+                        thisRemoteAddRemote.$.spinner.style.display = 'none';
+                        thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
+                        thisRemoteAddRemote.$.btnAdd.setAttribute('disabled', 'true');
+                    } else if (state == 'spinner') {
+                        thisRemoteAddRemote.$.spinner.style.display = 'block';
+                        thisRemoteAddRemote.$.btnAdd.style.visibility = 'hidden';
+                        thisRemoteAddRemote.$.btnAdd.setAttribute('disabled', 'true');
+                    }
+                },
                 stateInitial: function() {
                     thisRemoteAddRemote.choosenType = "";
                     thisRemoteAddRemote.choosenBrand = "";
                     setTimeout(() => {
                         thisRemoteAddRemote.$.dropdownType.removeAttribute("disabled");
                         thisRemoteAddRemote.$.dropdownBrand.setAttribute("disabled", "true");
-                        thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true");
-                        thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
-                        thisRemoteAddRemote.$.spinner.style.display = 'none';
+                        thisRemoteAddRemote.setButtonAddState('disabled');
                     }, 100);
                 },
-
                 stateChangedType: function() {
                     thisRemoteAddRemote.choosenBrand = "";
                     thisRemoteAddRemote.$.dropdownType.removeAttribute("disabled");
                     thisRemoteAddRemote.$.dropdownBrand.removeAttribute("disabled");
-                    thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true");
-                    thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
-                    thisRemoteAddRemote.$.spinner.style.display = 'none';
+                    thisRemoteAddRemote.setButtonAddState('disabled');
                 },
-
                 stateChangedBrand: function() {
                     thisRemoteAddRemote.$.dropdownType.removeAttribute("disabled");
                     thisRemoteAddRemote.$.dropdownBrand.removeAttribute("disabled");
-                    thisRemoteAddRemote.$.btnAdd.removeAttribute("disabled");
-                    thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
-                    thisRemoteAddRemote.$.spinner.style.display = 'none';
+                    thisRemoteAddRemote.setButtonAddState('enabled');
                 },
-
                 stateWaitResponse: function() {
                     thisRemoteAddRemote.$.dropdownType.setAttribute("disabled", "true");
                     thisRemoteAddRemote.$.dropdownBrand.setAttribute("disabled", "true");
-                    thisRemoteAddRemote.$.btnAdd.setAttribute("disabled", "true");
-                    thisRemoteAddRemote.$.btnAdd.style.visibility = 'hidden';
-                    thisRemoteAddRemote.$.spinner.style.display = 'block';
+                    thisRemoteAddRemote.setButtonAddState('spinner');
                 },
-
                 stateResponseError: function() {
                     thisRemoteAddRemote.$.dropdownType.removeAttribute("disabled");
                     thisRemoteAddRemote.$.dropdownBrand.removeAttribute("disabled");
-                    thisRemoteAddRemote.$.btnAdd.removeAttribute("disabled");
-                    thisRemoteAddRemote.$.btnAdd.style.visibility = 'visible';
-                    thisRemoteAddRemote.$.spinner.style.display = 'none';
+                    thisRemoteAddRemote.setButtonAddState('enabled');
                 },
 
 
@@ -23751,8 +23975,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddRemote.stateChangedBrand();  
                 },
 
-
-
                 _changeType: function() {
                     setTimeout(() => {
                         thisRemoteAddRemote.stateChangedType();
@@ -23760,8 +23982,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         else if (thisRemoteAddRemote.choosenType == "TV") thisRemoteAddRemote.brands = thisRemoteAddRemote.brandTV;
                     }, 100);
                 },
-
-
 
                 _handleResponse: function() {
                     var response = thisRemoteAddRemote.response;
@@ -23775,8 +23995,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRemoteAddRemote.stateResponseError();
                     }
                 },
-
-
 
                 _tapAdd: function() {
                     thisRemoteAddRemote.uid = thisMainAuth.uid;
@@ -23814,6 +24032,23 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     }
                 },
 
+
+
+                setButtonAddState: function(state) {
+                    if (state == 'enabled') {
+                        thisRemoteAddDevice.$.spinner.style.display = 'none';
+                        thisRemoteAddDevice.$.btnAdd.style.visibility = 'visible';
+                        thisRemoteAddDevice.$.btnAdd.removeAttribute('disabled');
+                    } else if (state == 'disabled') {
+                        thisRemoteAddDevice.$.spinner.style.display = 'none';
+                        thisRemoteAddDevice.$.btnAdd.style.visibility = 'visible';
+                        thisRemoteAddDevice.$.btnAdd.setAttribute('disabled', 'true');
+                    } else if (state == 'spinner') {
+                        thisRemoteAddDevice.$.spinner.style.display = 'block';
+                        thisRemoteAddDevice.$.btnAdd.style.visibility = 'hidden';
+                        thisRemoteAddDevice.$.btnAdd.setAttribute('disabled', 'true');
+                    }
+                },
                 stateInitial: function() {
                     thisRemoteAddDevice.deviceType = '';
                     thisRemoteAddDevice.deviceID = '';
@@ -23821,37 +24056,28 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
                     thisRemoteAddDevice.$.inputID.setAttribute('disabled', 'true');
                     thisRemoteAddDevice.$.inputCode.setAttribute('disabled', 'true');
-                    thisRemoteAddDevice.$.spinner.style.display = 'none';
-                    thisRemoteAddDevice.$.btnAdd.setAttribute('disabled', 'true');
-                    thisRemoteAddDevice.$.btnAdd.style.visibility = 'visible';
+                    thisRemoteAddDevice.setButtonAddState('disabled');
                 },
-
                 stateChangedType: function() {
                     thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
                     thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
                     thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.spinner.style.display = 'none';
-                    thisRemoteAddDevice.$.btnAdd.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.btnAdd.style.visibility = 'visible';
+                    thisRemoteAddDevice.setButtonAddState('enabled');
                 },
-
                 stateWaitResponse: function() {
                     thisRemoteAddDevice.$.dropdownType.setAttribute('disabled', true);
                     thisRemoteAddDevice.$.inputID.setAttribute('disabled', true);
                     thisRemoteAddDevice.$.inputCode.setAttribute('disabled', true);
-                    thisRemoteAddDevice.$.spinner.style.display = 'block';
-                    thisRemoteAddDevice.$.btnAdd.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.btnAdd.style.visibility = 'hidden';
+                    thisRemoteAddDevice.setButtonAddState('spinner');
                 },
-
                 stateResponseError: function() {
                     thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
                     thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
                     thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.spinner.style.display = 'none';
-                    thisRemoteAddDevice.$.btnAdd.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.btnAdd.style.visibility = 'visible';
+                    thisRemoteAddDevice.setButtonAddState('enabled');
                 },
+
+
 
                 _changeType: function() {
                     thisRemoteAddDevice.stateChangedType();
@@ -23906,18 +24132,55 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     }
                 },
 
+                setButtonState: function(state) {
+                    if (state == 'enabled') {
+                        thisRemoteAddSchedule.$.spinner.style.display = 'none';
+                        thisRemoteAddSchedule.$.btnAdd.style.visibility = 'visible';
+                        thisRemoteAddSchedule.$.btnAdd.removeAttribute('disabled');
+                    } else if (state == 'disabled') {
+                        thisRemoteAddSchedule.$.spinner.style.display = 'none';
+                        thisRemoteAddSchedule.$.btnAdd.style.visibility = 'visible';
+                        thisRemoteAddSchedule.$.btnAdd.setAttribute('disabled', 'true');
+                    } else if (state == 'spinner') {
+                        thisRemoteAddSchedule.$.spinner.style.display = 'block';
+                        thisRemoteAddSchedule.$.btnAdd.style.visibility = 'hidden';
+                        thisRemoteAddSchedule.$.btnAdd.setAttribute('disabled', 'true');
+                    }
+                },
+
+                setToggleONState: function(state) {
+                    if (state == 'enabled') {
+                        thisRemoteAddSchedule.$.textON.style.color = '#000';
+                        thisRemoteAddSchedule.$.toggleON.removeAttribute('disabled');
+                    } else if (state == 'disabled') {
+                        thisRemoteAddSchedule.$.textON.style.color = '#bdbdbd';
+                        thisRemoteAddSchedule.$.toggleON.setAttribute('disabled', 'true'); 
+                    }  
+                },
+
                 stateInitial: function() {
                     thisRemoteAddSchedule.choosenAppliance = '';
                     thisRemoteAddSchedule.$.dropdownAppliance.removeAttribute('disabled');
-                    thisRemoteAddSchedule.$.spinner.style.display = 'none';
-                    thisRemoteAddSchedule.$.btnAdd.setAttribute('disabled', 'true');
+                    thisRemoteAddSchedule.setToggleONState('disabled');
+                    thisRemoteAddSchedule.setButtonState('disabled');
+                },
+
+                _changeAppliance: function() {
+                    thisRemoteAddSchedule.$.dropdownAppliance.removeAttribute('disabled');
+                    thisRemoteAddSchedule.setToggleONState('enabled');
+                    thisRemoteAddSchedule.setButtonState('enabled');
                 },
 
                 _handleResponse: function() {
                     var response = thisRemoteAddSchedule.response;
                 },
 
+                _sort: function(a, b) {
+                    thisRemoteList._sort(a, b);
+                },
+
                 _tapAdd: function() {
+                    console.log(thisRemoteAddSchedule.remotes)
 
                 }
 

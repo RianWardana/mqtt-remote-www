@@ -17171,6 +17171,459 @@ Polymer({
       Event param: {{node: Object}} detail Contains the animated node.
       */
     });
+/**
+   * Singleton IronMeta instance.
+   */
+  Polymer.IronValidatableBehaviorMeta = null;
+
+  /**
+   * `Use Polymer.IronValidatableBehavior` to implement an element that validates user input.
+   * Use the related `Polymer.IronValidatorBehavior` to add custom validation logic to an iron-input.
+   *
+   * By default, an `<iron-form>` element validates its fields when the user presses the submit button.
+   * To validate a form imperatively, call the form's `validate()` method, which in turn will
+   * call `validate()` on all its children. By using `Polymer.IronValidatableBehavior`, your
+   * custom element will get a public `validate()`, which
+   * will return the validity of the element, and a corresponding `invalid` attribute,
+   * which can be used for styling.
+   *
+   * To implement the custom validation logic of your element, you must override
+   * the protected `_getValidity()` method of this behaviour, rather than `validate()`.
+   * See [this](https://github.com/PolymerElements/iron-form/blob/master/demo/simple-element.html)
+   * for an example.
+   *
+   * ### Accessibility
+   *
+   * Changing the `invalid` property, either manually or by calling `validate()` will update the
+   * `aria-invalid` attribute.
+   *
+   * @demo demo/index.html
+   * @polymerBehavior
+   */
+  Polymer.IronValidatableBehavior = {
+
+    properties: {
+
+      /**
+       * Name of the validator to use.
+       */
+      validator: {
+        type: String
+      },
+
+      /**
+       * True if the last call to `validate` is invalid.
+       */
+      invalid: {
+        notify: true,
+        reflectToAttribute: true,
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * This property is deprecated and should not be used. Use the global
+       * validator meta singleton, `Polymer.IronValidatableBehaviorMeta` instead.
+       */
+      _validatorMeta: {
+        type: Object
+      },
+
+      /**
+       * Namespace for this validator. This property is deprecated and should
+       * not be used. For all intents and purposes, please consider it a
+       * read-only, config-time property.
+       */
+      validatorType: {
+        type: String,
+        value: 'validator'
+      },
+
+      _validator: {
+        type: Object,
+        computed: '__computeValidator(validator)'
+      }
+    },
+
+    observers: [
+      '_invalidChanged(invalid)'
+    ],
+
+    registered: function() {
+      Polymer.IronValidatableBehaviorMeta = new Polymer.IronMeta({type: 'validator'});
+    },
+
+    _invalidChanged: function() {
+      if (this.invalid) {
+        this.setAttribute('aria-invalid', 'true');
+      } else {
+        this.removeAttribute('aria-invalid');
+      }
+    },
+
+    /**
+     * @return {boolean} True if the validator `validator` exists.
+     */
+    hasValidator: function() {
+      return this._validator != null;
+    },
+
+    /**
+     * Returns true if the `value` is valid, and updates `invalid`. If you want
+     * your element to have custom validation logic, do not override this method;
+     * override `_getValidity(value)` instead.
+
+     * @param {Object} value The value to be validated. By default, it is passed
+     * to the validator's `validate()` function, if a validator is set.
+     * @return {boolean} True if `value` is valid.
+     */
+    validate: function(value) {
+      this.invalid = !this._getValidity(value);
+      return !this.invalid;
+    },
+
+    /**
+     * Returns true if `value` is valid.  By default, it is passed
+     * to the validator's `validate()` function, if a validator is set. You
+     * should override this method if you want to implement custom validity
+     * logic for your element.
+     *
+     * @param {Object} value The value to be validated.
+     * @return {boolean} True if `value` is valid.
+     */
+
+    _getValidity: function(value) {
+      if (this.hasValidator()) {
+        return this._validator.validate(value);
+      }
+      return true;
+    },
+
+    __computeValidator: function() {
+      return Polymer.IronValidatableBehaviorMeta &&
+          Polymer.IronValidatableBehaviorMeta.byKey(this.validator);
+    }
+  };
+/**
+  Polymer.IronFormElementBehavior enables a custom element to be included
+  in an `iron-form`.
+
+  @demo demo/index.html
+  @polymerBehavior
+  */
+  Polymer.IronFormElementBehavior = {
+
+    properties: {
+      /**
+       * Fired when the element is added to an `iron-form`.
+       *
+       * @event iron-form-element-register
+       */
+
+      /**
+       * Fired when the element is removed from an `iron-form`.
+       *
+       * @event iron-form-element-unregister
+       */
+
+      /**
+       * The name of this element.
+       */
+      name: {
+        type: String
+      },
+
+      /**
+       * The value for this element.
+       */
+      value: {
+        notify: true,
+        type: String
+      },
+
+      /**
+       * Set to true to mark the input as required. If used in a form, a
+       * custom element that uses this behavior should also use
+       * Polymer.IronValidatableBehavior and define a custom validation method.
+       * Otherwise, a `required` element will always be considered valid.
+       * It's also strongly recommended to provide a visual style for the element
+       * when its value is invalid.
+       */
+      required: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * The form that the element is registered to.
+       */
+      _parentForm: {
+        type: Object
+      }
+    },
+
+    attached: function() {
+      // Note: the iron-form that this element belongs to will set this
+      // element's _parentForm property when handling this event.
+      this.fire('iron-form-element-register');
+    },
+
+    detached: function() {
+      if (this._parentForm) {
+        this._parentForm.fire('iron-form-element-unregister', {target: this});
+      }
+    }
+
+  };
+/**
+   * Use `Polymer.IronCheckedElementBehavior` to implement a custom element
+   * that has a `checked` property, which can be used for validation if the
+   * element is also `required`. Element instances implementing this behavior
+   * will also be registered for use in an `iron-form` element.
+   *
+   * @demo demo/index.html
+   * @polymerBehavior Polymer.IronCheckedElementBehavior
+   */
+  Polymer.IronCheckedElementBehaviorImpl = {
+
+    properties: {
+      /**
+       * Fired when the checked state changes.
+       *
+       * @event iron-change
+       */
+
+      /**
+       * Gets or sets the state, `true` is checked and `false` is unchecked.
+       */
+      checked: {
+        type: Boolean,
+        value: false,
+        reflectToAttribute: true,
+        notify: true,
+        observer: '_checkedChanged'
+      },
+
+      /**
+       * If true, the button toggles the active state with each tap or press
+       * of the spacebar.
+       */
+      toggles: {
+        type: Boolean,
+        value: true,
+        reflectToAttribute: true
+      },
+
+      /* Overriden from Polymer.IronFormElementBehavior */
+      value: {
+        type: String,
+        value: 'on',
+        observer: '_valueChanged'
+      }
+    },
+
+    observers: [
+      '_requiredChanged(required)'
+    ],
+
+    created: function() {
+      // Used by `iron-form` to handle the case that an element with this behavior
+      // doesn't have a role of 'checkbox' or 'radio', but should still only be
+      // included when the form is serialized if `this.checked === true`.
+      this._hasIronCheckedElementBehavior = true;
+    },
+
+    /**
+     * Returns false if the element is required and not checked, and true otherwise.
+     * @param {*=} _value Ignored.
+     * @return {boolean} true if `required` is false or if `checked` is true.
+     */
+    _getValidity: function(_value) {
+      return this.disabled || !this.required || this.checked;
+    },
+
+    /**
+     * Update the aria-required label when `required` is changed.
+     */
+    _requiredChanged: function() {
+      if (this.required) {
+        this.setAttribute('aria-required', 'true');
+      } else {
+        this.removeAttribute('aria-required');
+      }
+    },
+
+    /**
+     * Fire `iron-changed` when the checked state changes.
+     */
+    _checkedChanged: function() {
+      this.active = this.checked;
+      this.fire('iron-change');
+    },
+
+    /**
+     * Reset value to 'on' if it is set to `undefined`.
+     */
+    _valueChanged: function() {
+      if (this.value === undefined || this.value === null) {
+        this.value = 'on';
+      }
+    }
+  };
+
+  /** @polymerBehavior Polymer.IronCheckedElementBehavior */
+  Polymer.IronCheckedElementBehavior = [
+    Polymer.IronFormElementBehavior,
+    Polymer.IronValidatableBehavior,
+    Polymer.IronCheckedElementBehaviorImpl
+  ];
+/**
+   * `Polymer.PaperInkyFocusBehavior` implements a ripple when the element has keyboard focus.
+   *
+   * @polymerBehavior Polymer.PaperInkyFocusBehavior
+   */
+  Polymer.PaperInkyFocusBehaviorImpl = {
+    observers: [
+      '_focusedChanged(receivedFocusFromKeyboard)'
+    ],
+
+    _focusedChanged: function(receivedFocusFromKeyboard) {
+      if (receivedFocusFromKeyboard) {
+        this.ensureRipple();
+      }
+      if (this.hasRipple()) {
+        this._ripple.holdDown = receivedFocusFromKeyboard;
+      }
+    },
+
+    _createRipple: function() {
+      var ripple = Polymer.PaperRippleBehavior._createRipple();
+      ripple.id = 'ink';
+      ripple.setAttribute('center', '');
+      ripple.classList.add('circle');
+      return ripple;
+    }
+  };
+
+  /** @polymerBehavior Polymer.PaperInkyFocusBehavior */
+  Polymer.PaperInkyFocusBehavior = [
+    Polymer.IronButtonState,
+    Polymer.IronControlState,
+    Polymer.PaperRippleBehavior,
+    Polymer.PaperInkyFocusBehaviorImpl
+  ];
+/**
+   * Use `Polymer.PaperCheckedElementBehavior` to implement a custom element
+   * that has a `checked` property similar to `Polymer.IronCheckedElementBehavior`
+   * and is compatible with having a ripple effect.
+   * @polymerBehavior Polymer.PaperCheckedElementBehavior
+   */
+  Polymer.PaperCheckedElementBehaviorImpl = {
+    /**
+     * Synchronizes the element's checked state with its ripple effect.
+     */
+    _checkedChanged: function() {
+      Polymer.IronCheckedElementBehaviorImpl._checkedChanged.call(this);
+      if (this.hasRipple()) {
+        if (this.checked) {
+          this._ripple.setAttribute('checked', '');
+        } else {
+          this._ripple.removeAttribute('checked');
+        }
+      }
+    },
+
+    /**
+     * Synchronizes the element's `active` and `checked` state.
+     */
+    _buttonStateChanged: function() {
+      Polymer.PaperRippleBehavior._buttonStateChanged.call(this);
+      if (this.disabled) {
+        return;
+      }
+      if (this.isAttached) {
+        this.checked = this.active;
+      }
+    }
+  };
+
+  /** @polymerBehavior Polymer.PaperCheckedElementBehavior */
+  Polymer.PaperCheckedElementBehavior = [
+    Polymer.PaperInkyFocusBehavior,
+    Polymer.IronCheckedElementBehavior,
+    Polymer.PaperCheckedElementBehaviorImpl
+  ];
+Polymer({
+      is: 'paper-checkbox',
+
+      behaviors: [
+        Polymer.PaperCheckedElementBehavior
+      ],
+
+      hostAttributes: {
+        role: 'checkbox',
+        'aria-checked': false,
+        tabindex: 0
+      },
+
+      properties: {
+        /**
+         * Fired when the checked state changes due to user interaction.
+         *
+         * @event change
+         */
+
+        /**
+         * Fired when the checked state changes.
+         *
+         * @event iron-change
+         */
+        ariaActiveAttribute: {
+          type: String,
+          value: 'aria-checked'
+        }
+      },
+
+      attached: function() {
+        var inkSize = this.getComputedStyleValue('--calculated-paper-checkbox-ink-size').trim();
+        // If unset, compute and set the default `--paper-checkbox-ink-size`.
+        if (inkSize === '-1px') {
+          var checkboxSize = parseFloat(this.getComputedStyleValue('--calculated-paper-checkbox-size').trim());
+          var defaultInkSize = Math.floor((8 / 3) * checkboxSize);
+
+          // The checkbox and ripple need to have the same parity so that their
+          // centers align.
+          if (defaultInkSize % 2 !== checkboxSize % 2) {
+            defaultInkSize++;
+          }
+
+          this.customStyle['--paper-checkbox-ink-size'] = defaultInkSize + 'px';
+          this.updateStyles();
+        }
+      },
+
+      _computeCheckboxClass: function(checked, invalid) {
+        var className = '';
+        if (checked) {
+          className += 'checked ';
+        }
+        if (invalid) {
+          className += 'invalid';
+        }
+        return className;
+      },
+
+      _computeCheckmarkClass: function(checked) {
+        return checked ? '' : 'hidden';
+      },
+
+      // create ripple inside the checkboxContainer
+      _createRipple: function() {
+        this._rippleContainer = this.$.checkboxContainer;
+        return Polymer.PaperInkyFocusBehaviorImpl._createRipple.call(this);
+      }
+
+    });
 Polymer({
       is: 'paper-fab',
 
@@ -17631,210 +18084,6 @@ It will also ensure that focus remains in the dialog.
   });
 
 })();
-/**
-  Polymer.IronFormElementBehavior enables a custom element to be included
-  in an `iron-form`.
-
-  @demo demo/index.html
-  @polymerBehavior
-  */
-  Polymer.IronFormElementBehavior = {
-
-    properties: {
-      /**
-       * Fired when the element is added to an `iron-form`.
-       *
-       * @event iron-form-element-register
-       */
-
-      /**
-       * Fired when the element is removed from an `iron-form`.
-       *
-       * @event iron-form-element-unregister
-       */
-
-      /**
-       * The name of this element.
-       */
-      name: {
-        type: String
-      },
-
-      /**
-       * The value for this element.
-       */
-      value: {
-        notify: true,
-        type: String
-      },
-
-      /**
-       * Set to true to mark the input as required. If used in a form, a
-       * custom element that uses this behavior should also use
-       * Polymer.IronValidatableBehavior and define a custom validation method.
-       * Otherwise, a `required` element will always be considered valid.
-       * It's also strongly recommended to provide a visual style for the element
-       * when its value is invalid.
-       */
-      required: {
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * The form that the element is registered to.
-       */
-      _parentForm: {
-        type: Object
-      }
-    },
-
-    attached: function() {
-      // Note: the iron-form that this element belongs to will set this
-      // element's _parentForm property when handling this event.
-      this.fire('iron-form-element-register');
-    },
-
-    detached: function() {
-      if (this._parentForm) {
-        this._parentForm.fire('iron-form-element-unregister', {target: this});
-      }
-    }
-
-  };
-/**
-   * Singleton IronMeta instance.
-   */
-  Polymer.IronValidatableBehaviorMeta = null;
-
-  /**
-   * `Use Polymer.IronValidatableBehavior` to implement an element that validates user input.
-   * Use the related `Polymer.IronValidatorBehavior` to add custom validation logic to an iron-input.
-   *
-   * By default, an `<iron-form>` element validates its fields when the user presses the submit button.
-   * To validate a form imperatively, call the form's `validate()` method, which in turn will
-   * call `validate()` on all its children. By using `Polymer.IronValidatableBehavior`, your
-   * custom element will get a public `validate()`, which
-   * will return the validity of the element, and a corresponding `invalid` attribute,
-   * which can be used for styling.
-   *
-   * To implement the custom validation logic of your element, you must override
-   * the protected `_getValidity()` method of this behaviour, rather than `validate()`.
-   * See [this](https://github.com/PolymerElements/iron-form/blob/master/demo/simple-element.html)
-   * for an example.
-   *
-   * ### Accessibility
-   *
-   * Changing the `invalid` property, either manually or by calling `validate()` will update the
-   * `aria-invalid` attribute.
-   *
-   * @demo demo/index.html
-   * @polymerBehavior
-   */
-  Polymer.IronValidatableBehavior = {
-
-    properties: {
-
-      /**
-       * Name of the validator to use.
-       */
-      validator: {
-        type: String
-      },
-
-      /**
-       * True if the last call to `validate` is invalid.
-       */
-      invalid: {
-        notify: true,
-        reflectToAttribute: true,
-        type: Boolean,
-        value: false
-      },
-
-      /**
-       * This property is deprecated and should not be used. Use the global
-       * validator meta singleton, `Polymer.IronValidatableBehaviorMeta` instead.
-       */
-      _validatorMeta: {
-        type: Object
-      },
-
-      /**
-       * Namespace for this validator. This property is deprecated and should
-       * not be used. For all intents and purposes, please consider it a
-       * read-only, config-time property.
-       */
-      validatorType: {
-        type: String,
-        value: 'validator'
-      },
-
-      _validator: {
-        type: Object,
-        computed: '__computeValidator(validator)'
-      }
-    },
-
-    observers: [
-      '_invalidChanged(invalid)'
-    ],
-
-    registered: function() {
-      Polymer.IronValidatableBehaviorMeta = new Polymer.IronMeta({type: 'validator'});
-    },
-
-    _invalidChanged: function() {
-      if (this.invalid) {
-        this.setAttribute('aria-invalid', 'true');
-      } else {
-        this.removeAttribute('aria-invalid');
-      }
-    },
-
-    /**
-     * @return {boolean} True if the validator `validator` exists.
-     */
-    hasValidator: function() {
-      return this._validator != null;
-    },
-
-    /**
-     * Returns true if the `value` is valid, and updates `invalid`. If you want
-     * your element to have custom validation logic, do not override this method;
-     * override `_getValidity(value)` instead.
-
-     * @param {Object} value The value to be validated. By default, it is passed
-     * to the validator's `validate()` function, if a validator is set.
-     * @return {boolean} True if `value` is valid.
-     */
-    validate: function(value) {
-      this.invalid = !this._getValidity(value);
-      return !this.invalid;
-    },
-
-    /**
-     * Returns true if `value` is valid.  By default, it is passed
-     * to the validator's `validate()` function, if a validator is set. You
-     * should override this method if you want to implement custom validity
-     * logic for your element.
-     *
-     * @param {Object} value The value to be validated.
-     * @return {boolean} True if `value` is valid.
-     */
-
-    _getValidity: function(value) {
-      if (this.hasValidator()) {
-        return this._validator.validate(value);
-      }
-      return true;
-    },
-
-    __computeValidator: function() {
-      return Polymer.IronValidatableBehaviorMeta &&
-          Polymer.IronValidatableBehaviorMeta.byKey(this.validator);
-    }
-  };
 (function() {
       'use strict';
 
@@ -20621,41 +20870,6 @@ Polymer({
         }
       });
     })();
-/**
-   * `Polymer.PaperInkyFocusBehavior` implements a ripple when the element has keyboard focus.
-   *
-   * @polymerBehavior Polymer.PaperInkyFocusBehavior
-   */
-  Polymer.PaperInkyFocusBehaviorImpl = {
-    observers: [
-      '_focusedChanged(receivedFocusFromKeyboard)'
-    ],
-
-    _focusedChanged: function(receivedFocusFromKeyboard) {
-      if (receivedFocusFromKeyboard) {
-        this.ensureRipple();
-      }
-      if (this.hasRipple()) {
-        this._ripple.holdDown = receivedFocusFromKeyboard;
-      }
-    },
-
-    _createRipple: function() {
-      var ripple = Polymer.PaperRippleBehavior._createRipple();
-      ripple.id = 'ink';
-      ripple.setAttribute('center', '');
-      ripple.classList.add('circle');
-      return ripple;
-    }
-  };
-
-  /** @polymerBehavior Polymer.PaperInkyFocusBehavior */
-  Polymer.PaperInkyFocusBehavior = [
-    Polymer.IronButtonState,
-    Polymer.IronControlState,
-    Polymer.PaperRippleBehavior,
-    Polymer.PaperInkyFocusBehaviorImpl
-  ];
 Polymer({
       is: 'paper-icon-button',
 
@@ -21974,149 +22188,6 @@ Polymer({
          */
       });
     })();
-/**
-   * Use `Polymer.IronCheckedElementBehavior` to implement a custom element
-   * that has a `checked` property, which can be used for validation if the
-   * element is also `required`. Element instances implementing this behavior
-   * will also be registered for use in an `iron-form` element.
-   *
-   * @demo demo/index.html
-   * @polymerBehavior Polymer.IronCheckedElementBehavior
-   */
-  Polymer.IronCheckedElementBehaviorImpl = {
-
-    properties: {
-      /**
-       * Fired when the checked state changes.
-       *
-       * @event iron-change
-       */
-
-      /**
-       * Gets or sets the state, `true` is checked and `false` is unchecked.
-       */
-      checked: {
-        type: Boolean,
-        value: false,
-        reflectToAttribute: true,
-        notify: true,
-        observer: '_checkedChanged'
-      },
-
-      /**
-       * If true, the button toggles the active state with each tap or press
-       * of the spacebar.
-       */
-      toggles: {
-        type: Boolean,
-        value: true,
-        reflectToAttribute: true
-      },
-
-      /* Overriden from Polymer.IronFormElementBehavior */
-      value: {
-        type: String,
-        value: 'on',
-        observer: '_valueChanged'
-      }
-    },
-
-    observers: [
-      '_requiredChanged(required)'
-    ],
-
-    created: function() {
-      // Used by `iron-form` to handle the case that an element with this behavior
-      // doesn't have a role of 'checkbox' or 'radio', but should still only be
-      // included when the form is serialized if `this.checked === true`.
-      this._hasIronCheckedElementBehavior = true;
-    },
-
-    /**
-     * Returns false if the element is required and not checked, and true otherwise.
-     * @param {*=} _value Ignored.
-     * @return {boolean} true if `required` is false or if `checked` is true.
-     */
-    _getValidity: function(_value) {
-      return this.disabled || !this.required || this.checked;
-    },
-
-    /**
-     * Update the aria-required label when `required` is changed.
-     */
-    _requiredChanged: function() {
-      if (this.required) {
-        this.setAttribute('aria-required', 'true');
-      } else {
-        this.removeAttribute('aria-required');
-      }
-    },
-
-    /**
-     * Fire `iron-changed` when the checked state changes.
-     */
-    _checkedChanged: function() {
-      this.active = this.checked;
-      this.fire('iron-change');
-    },
-
-    /**
-     * Reset value to 'on' if it is set to `undefined`.
-     */
-    _valueChanged: function() {
-      if (this.value === undefined || this.value === null) {
-        this.value = 'on';
-      }
-    }
-  };
-
-  /** @polymerBehavior Polymer.IronCheckedElementBehavior */
-  Polymer.IronCheckedElementBehavior = [
-    Polymer.IronFormElementBehavior,
-    Polymer.IronValidatableBehavior,
-    Polymer.IronCheckedElementBehaviorImpl
-  ];
-/**
-   * Use `Polymer.PaperCheckedElementBehavior` to implement a custom element
-   * that has a `checked` property similar to `Polymer.IronCheckedElementBehavior`
-   * and is compatible with having a ripple effect.
-   * @polymerBehavior Polymer.PaperCheckedElementBehavior
-   */
-  Polymer.PaperCheckedElementBehaviorImpl = {
-    /**
-     * Synchronizes the element's checked state with its ripple effect.
-     */
-    _checkedChanged: function() {
-      Polymer.IronCheckedElementBehaviorImpl._checkedChanged.call(this);
-      if (this.hasRipple()) {
-        if (this.checked) {
-          this._ripple.setAttribute('checked', '');
-        } else {
-          this._ripple.removeAttribute('checked');
-        }
-      }
-    },
-
-    /**
-     * Synchronizes the element's `active` and `checked` state.
-     */
-    _buttonStateChanged: function() {
-      Polymer.PaperRippleBehavior._buttonStateChanged.call(this);
-      if (this.disabled) {
-        return;
-      }
-      if (this.isAttached) {
-        this.checked = this.active;
-      }
-    }
-  };
-
-  /** @polymerBehavior Polymer.PaperCheckedElementBehavior */
-  Polymer.PaperCheckedElementBehavior = [
-    Polymer.PaperInkyFocusBehavior,
-    Polymer.IronCheckedElementBehavior,
-    Polymer.PaperCheckedElementBehaviorImpl
-  ];
 Polymer({
       is: 'paper-toggle-button',
 
@@ -24110,7 +24181,34 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'remote-add-schedule',
                 properties: {
-                    
+                    choosenYear: {
+                        type: Number,
+                        value: 2017
+                    },
+
+                    dates: {
+                        type: Array,
+                        value: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "24", "25", "26", "27", "28", "29", "30", "31"]
+                    },
+
+                    hours: {
+                        type: Array,
+                        value: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
+                    },
+
+                    minutes: {
+                        type: Array,
+                        value: ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"]
+                    },
+
+                    months: {
+                        type: Array,
+                        value: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                    },
+
+                    isRepeated: {
+                        type: Boolean
+                    }
                 },
 
                 ready: function() {
@@ -24158,8 +24256,20 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     }  
                 },
 
-                stateInitial: function() {
+                clearAll: function() {
+                    thisRemoteAddSchedule.choosenHour = '';
+                    thisRemoteAddSchedule.choosenMinute = '';
+                    thisRemoteAddSchedule.choosenPeriod = '';
+                    thisRemoteAddSchedule.choosenMonth = '';
+                    thisRemoteAddSchedule.choosenDate = '';
+                    thisRemoteAddSchedule.choosenYear = '';
                     thisRemoteAddSchedule.choosenAppliance = '';
+                },
+
+                stateInitial: function() {
+                    thisRemoteAddSchedule.clearAll();
+                    thisRemoteAddSchedule.isRepeated = false;
+                    thisRemoteAddSchedule.isON = false;
                     thisRemoteAddSchedule.$.dropdownAppliance.removeAttribute('disabled');
                     thisRemoteAddSchedule.setToggleONState('disabled');
                     thisRemoteAddSchedule.setButtonState('disabled');
@@ -24169,6 +24279,22 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddSchedule.$.dropdownAppliance.removeAttribute('disabled');
                     thisRemoteAddSchedule.setToggleONState('enabled');
                     thisRemoteAddSchedule.setButtonState('enabled');
+                },
+
+                _changeIsRepeated: function() {
+                    setTimeout(() => {
+                        if (thisRemoteAddSchedule.isRepeated) {
+                            thisRemoteAddSchedule.$.containerDate.style.visibility = 'hidden';
+                            thisRemoteAddSchedule.$.containerDay.style.visibility = 'visible';
+                        } else {
+                            thisRemoteAddSchedule.$.containerDate.style.visibility = 'visible';
+                            thisRemoteAddSchedule.$.containerDay.style.visibility = 'hidden';
+                        }
+                    }, 100);
+                },
+
+                _closeTime: function() {
+                    console.log(thisRemoteAddSchedule.time);
                 },
 
                 _handleResponse: function() {
@@ -24182,6 +24308,15 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 _tapAdd: function() {
                     console.log(thisRemoteAddSchedule.remotes)
 
+                },
+
+                _tapDate: function() {
+                    console.log("tap date");
+                },
+
+                _tapTime: function() {
+                    console.log("tap time");
+                    thisRemoteAddSchedule.$.dialogTime.open();
                 }
 
             });

@@ -23482,6 +23482,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         console.log("main-data: roomsData loaded");
                         var rooms = thisMainData.response["rooms"];
                         thisMainData.roomsData = rooms;
+                        thisRemoteList.getRoomRemotes();
                         if (thisMainData.redirect) {
                             var lastRoomName = rooms[rooms.length-1]["name"];
                             thisMainApp._tapRoom(lastRoomName);
@@ -23502,7 +23503,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 ready: function() {
                     thisRoomAdd = this;
-
+                    thisRoomAdd.stateInitial();
                     thisRoomAdd.setupPosition();
                     window.addEventListener('resize', function(event){
                         thisRoomAdd.setupPosition();
@@ -23519,16 +23520,41 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     }
                 },
 
+                setButtonAddState: function(state) {
+                    if (state == 'enabled') {
+                        thisRoomAdd.$.spinner.style.display = 'none';
+                        thisRoomAdd.$.btnAdd.style.visibility = 'visible';
+                        thisRoomAdd.$.btnAdd.removeAttribute('disabled');
+                    } else if (state == 'disabled') {
+                        thisRoomAdd.$.spinner.style.display = 'none';
+                        thisRoomAdd.$.btnAdd.style.visibility = 'visible';
+                        thisRoomAdd.$.btnAdd.setAttribute('disabled', 'true');
+                    } else if (state == 'spinner') {
+                        thisRoomAdd.$.spinner.style.display = 'block';
+                        thisRoomAdd.$.btnAdd.style.visibility = 'hidden';
+                        thisRoomAdd.$.btnAdd.setAttribute('disabled', 'true');
+                    }
+                },
+                stateInitial: function() {
+                	thisRoomAdd.roomName = "";
+                	thisRoomAdd.setButtonAddState('enabled');
+                },
+                stateWaitResponse: function() {
+                	thisRoomAdd.setButtonAddState('spinner');
+                },
+
                 _handleResponse: function() {
                     console.log(`room-add: POST edit/new-room ${thisRoomAdd.response}`);
                     setTimeout(() => {thisMainData.loadData();}, 1000);
-                    thisRoomAdd.roomName = "";
+                    
+                    thisRoomAdd.stateInitial();
                 },
 
                 _tapAdd: function() {
                     if (thisRoomAdd.roomName != "") {
                         thisRoomAdd.uid = thisMainAuth.uid;
                         thisRoomAdd.$.ajax.generateRequest();
+                        thisRoomAdd.stateWaitResponse();
                     } else {
                         thisRoomAdd.$.toast.show({text: 'Room name can not be empty.', duration: 3000});
                     }
@@ -23576,6 +23602,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         if (thisMainApp.choosenRoom == room.name) {
                             thisRemoteList.roomID = room.id;
                             var remotes = room.remotes;
+                            thisRemoteList.remotesID = remotes;
 
                             if (room.remotes != null) {
                                 for (var remoteID in remotes) {
@@ -23599,6 +23626,29 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 getType: function(remote) {
                     return remote.substring(0, 2);
+                },
+
+
+
+                setToolbar: function(state, text) {
+                	thisRemoteList.toolbarTitle = text;
+
+                	if (state == 'list') {
+                		thisRemoteList.$.btnBack.style.display = 'none';
+                    	thisRemoteList.$.btnMenu.style.visibility = 'visible';
+                    	thisRemoteList.$.btnRename.style.display = 'block';
+                    	thisRemoteList.$.btnDelete.style.display = 'block';
+                	} else if (state == 'add') {
+                		thisRemoteList.$.btnBack.style.display = 'block';
+                    	thisRemoteList.$.btnMenu.style.visibility = 'hidden';
+                    	thisRemoteList.$.btnRename.style.display = 'none';
+                    	thisRemoteList.$.btnDelete.style.display = 'none';
+                	} else if (state == 'remote') {
+                		thisRemoteList.$.btnBack.style.display = 'block';
+                    	thisRemoteList.$.btnMenu.style.visibility = 'hidden';
+                    	thisRemoteList.$.btnRename.style.display = 'none';
+                    	thisRemoteList.$.btnDelete.style.display = 'block';
+                	}
                 },
 
 
@@ -23628,21 +23678,46 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
 
+                _handleResponseDeleteRemote: function() {
+                	setTimeout(() => {thisMainData.loadData(false); thisRemoteList._tapBack();}, 500);
+                },
+                _handleResponseDeleteRoom: function() {
+                	setTimeout(() => {thisMainData.loadData();}, 500);
+                },
+
+
 
                 _tapAdd: function() {
-                    thisRemoteList.$.btnMenu.style.visibility = 'hidden';
-                    thisRemoteList.$.btnBack.style.display = 'block';
-                    thisRemoteList.toolbarTitle = `Add new in ${thisMainApp.choosenRoom}`;
+                    thisRemoteList.setToolbar('add', `Add new in ${thisMainApp.choosenRoom}`);
                 },
 
 
 
                 _tapBack: function() {
                     thisRemoteList.remoteView = 'list';
-                    thisRemoteList.$.btnBack.style.display = 'none';
-                    thisRemoteList.$.btnMenu.style.visibility = 'visible';
-                    thisRemoteList.toolbarTitle = thisMainApp.choosenRoom;
                     thisRemoteAdd.stateInitial();
+                    thisRemoteList.setToolbar('list', thisMainApp.choosenRoom);
+                },
+
+
+
+                _tapDelete: function() {
+                	thisRemoteList.$.toastDelete.show({text: `Delete ${thisRemoteList.toolbarTitle}?`, duration: 3000});
+                },
+                _tapConfirmDelete: function() {
+                	thisRemoteList.uid = thisMainAuth.uid;
+                	if (thisRemoteList.remoteView == 'list') {
+                		thisRemoteList.$.ajaxDeleteRoom.generateRequest();
+                	} else {
+                		var remotes = thisRemoteList.remotesID;
+                		for (var remoteID in remotes) {
+                			if (remotes.hasOwnProperty(remoteID)) {
+                				if (remotes[remoteID] == thisRemoteList.pilihanRemote) thisRemoteList.remoteID = remoteID;
+                			}
+                		} 
+                		console.log(thisRemoteList.remoteID)
+                		thisRemoteList.$.ajaxDeleteRemote.generateRequest();
+                	}
                 },
 
 
@@ -23655,9 +23730,13 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _tapRemote: function(e) {
                     thisRemoteList.pilihanRemote = e.target.title;
-                    thisRemoteList.$.btnMenu.style.visibility = 'hidden';
-                    thisRemoteList.$.btnBack.style.display = 'block';
-                    thisRemoteList.toolbarTitle = thisMainApp.choosenRoom + ' ' + thisRemoteList.pilihanRemote;
+                    thisRemoteList.setToolbar('remote', thisMainApp.choosenRoom + ' ' + thisRemoteList.pilihanRemote);
+                },
+
+
+
+                _tapRenameRoom: function() {
+
                 }
             });
         })();
@@ -23702,7 +23781,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 setupPosition: function() {
-                    thisRemoteAC.$.remoteContainer.style.marginTop = (window.innerHeight - 550) - 20 + 'px';
+                	if (window.innerHeight > 570) thisRemoteAC.$.remoteContainer.style.marginTop = (window.innerHeight - 550) - 20 + 'px';
+                	else thisRemoteAC.$.remoteContainer.style.marginTop = '20px';
 
                     if (window.innerWidth > 350) {
                         thisRemoteAC.$.mainContainer.style.width = '330px';
@@ -23843,7 +23923,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 setupPosition: function() {
-                    thisRemoteTV.$.menubuttons.style.marginTop = (window.innerHeight - 550) - 20 + 'px';
+                    if (window.innerHeight > 570) thisRemoteTV.$.menubuttons.style.marginTop = (window.innerHeight - 550) - 20 + 'px';
+                    else thisRemoteTV.$.menubuttons.style.marginTop = '20px';
 
                     if (window.innerWidth > 375) {
                         thisRemoteTV.$.remoteContainer.style.width = '350px';
@@ -24059,8 +24140,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     if (response == 'OK') {
                         thisRemoteAddRemote.$.toast.show({text: `${thisRemoteAddRemote.choosenRemote} added to ${thisMainApp.choosenRoom}.`, duration: 3000});
                         thisRemoteAddRemote.stateInitial();
-                        setTimeout(() => {thisMainData.loadData(false);}, 100);
-                        setTimeout(() => {thisRemoteList.getRoomRemotes();}, 500);
+                        setTimeout(() => {thisMainData.loadData(false);}, 500);
+                        setTimeout(() => {thisRemoteList.getRoomRemotes();}, 600);
                     } else {
                         thisRemoteAddRemote.$.toast.show({text: "Unknown error occured.", duration: 3000});
                         thisRemoteAddRemote.stateResponseError();

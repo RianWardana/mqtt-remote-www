@@ -22271,32 +22271,6 @@ Polymer({
     });
 Polymer({
 
-    is: 'slide-up-animation',
-
-    behaviors: [
-      Polymer.NeonAnimationBehavior
-    ],
-
-    configure: function(config) {
-      var node = config.node;
-
-      this._effect = new KeyframeEffect(node, [
-        {'transform': 'translate(0)'},
-        {'transform': 'translateY(-100%)'}
-      ], this.timingFromConfig(config));
-
-      if (config.transformOrigin) {
-        this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
-      } else {
-        this.setPrefixedProperty(node, 'transformOrigin', '50% 0');
-      }
-
-      return this._effect;
-    }
-
-  });
-Polymer({
-
     is: 'slide-from-bottom-animation',
 
     behaviors: [
@@ -22323,7 +22297,7 @@ Polymer({
   });
 Polymer({
 
-    is: 'scale-up-animation',
+    is: 'slide-from-top-animation',
 
     behaviors: [
       Polymer.NeonAnimationBehavior
@@ -22332,20 +22306,15 @@ Polymer({
     configure: function(config) {
       var node = config.node;
 
-      var scaleProperty = 'scale(0)';
-      if (config.axis === 'x') {
-        scaleProperty = 'scale(0, 1)';
-      } else if (config.axis === 'y') {
-        scaleProperty = 'scale(1, 0)';
-      }
-
       this._effect = new KeyframeEffect(node, [
-        {'transform': scaleProperty},
-        {'transform': 'scale(1, 1)'}
+        {'transform': 'translateY(-100%)'},
+        {'transform': 'translateY(0%)'}
       ], this.timingFromConfig(config));
 
       if (config.transformOrigin) {
         this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
+      } else {
+        this.setPrefixedProperty(node, 'transformOrigin', '50% 0');
       }
 
       return this._effect;
@@ -23309,11 +23278,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'main-auth',
                 properties: {
-                    mainView: {
-                        type: Number,
-                        notify: true
-                    },
-
                     displayName: {
                         type: String,
                         notify: true
@@ -23321,6 +23285,11 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                     email: {
                         type: String,
+                        notify: true
+                    },
+
+                    mainView: {
+                        type: Number,
                         notify: true
                     },
 
@@ -23332,6 +23301,11 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     trigger: {
                         type: Number,
                         observer: '_triggerLogout'
+                    },
+
+                    uid: {
+                    	type: String,
+                    	notify: true
                     }
                 },
 
@@ -23571,6 +23545,68 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
         })();
 (function() {
             Polymer({
+                is: 'room-edit',
+                properties: {
+                    trigger: {
+                        type: Number,
+                        observer: '_triggerEdit'
+                    }
+                },
+
+                ready: function() {
+                    thisRoomEdit = this;
+                    thisRoomEdit.stateInitial();
+                },
+
+
+                stateInitial: function() {
+                    thisRoomEdit.$.inputRoomName.style.visibility = 'visible';
+                    thisRoomEdit.$.spinner.style.display = 'none';
+                    thisRoomEdit.$.btnSave.removeAttribute('disabled')
+                },
+                stateWaitResponse: function() {
+                    thisRoomEdit.$.inputRoomName.style.visibility = 'hidden';
+                    thisRoomEdit.$.spinner.style.display = 'block';
+                    thisRoomEdit.$.btnSave.setAttribute('disabled', true);
+                },
+
+                _closedDialog: function() {
+                    thisRemoteList.$.btnRename.removeAttribute('disabled');
+                },
+
+                _handleResponse: function() {
+                    if (thisRoomEdit.response == 'OK') {
+                        thisRoomEdit.$.dialog.close();
+                        thisRoomEdit.stateInitial();  
+                        setTimeout(() => {thisMainData.loadData(false);}, 500);
+                        setTimeout(() => {thisMainApp._tapRoom(thisRoomEdit.newRoomName);}, 600);
+                        thisRoomEdit.$.toast.show({text: 'Room renamed.', duration: 3000});
+                    } else {
+                        thisRoomEdit.$.toast.show({text: 'Unknown error occured.', duration: 3000});  
+                    }
+                },
+
+                _tapSave: function() {
+                    if (thisRoomEdit.newRoomName != '') {
+                        thisRoomEdit.roomID = thisRemoteList.roomID;
+                        thisRoomEdit.stateWaitResponse();
+                        thisRoomEdit.$.ajax.generateRequest();
+                    } else {
+                        thisRoomEdit.$.toast.show({text: 'Room name can not be empty.', duration: 3000});
+                    }
+                },
+
+                _triggerEdit: function() {
+                    thisRoomEdit.$.dialog.open();
+                    thisRoomEdit.newRoomName = thisRemoteList.toolbarTitle;
+                    thisRemoteList.$.btnRename.setAttribute('disabled', true);
+                }
+
+
+            });
+        })();
+(function() {
+            Polymer({
                 is: 'remote-list',
                 properties: {
                     remoteView: {
@@ -23680,9 +23716,11 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _handleResponseDeleteRemote: function() {
                 	setTimeout(() => {thisMainData.loadData(false); thisRemoteList._tapBack();}, 500);
+                	thisRemoteList.$.toast.show({text: `Remote deleted.`, duration: 3000});
                 },
                 _handleResponseDeleteRoom: function() {
                 	setTimeout(() => {thisMainData.loadData();}, 500);
+                	thisRemoteList.$.toast.show({text: `Room deleted.`, duration: 3000});
                 },
 
 
@@ -23705,7 +23743,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 	thisRemoteList.$.toastDelete.show({text: `Delete ${thisRemoteList.toolbarTitle}?`, duration: 3000});
                 },
                 _tapConfirmDelete: function() {
-                	thisRemoteList.uid = thisMainAuth.uid;
                 	if (thisRemoteList.remoteView == 'list') {
                 		thisRemoteList.$.ajaxDeleteRoom.generateRequest();
                 	} else {
@@ -23735,8 +23772,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
 
-                _tapRenameRoom: function() {
-
+                _tapRename: function() {
+                	thisRemoteList.triggerEdit = Math.random();
                 }
             });
         })();
@@ -24434,7 +24471,7 @@ Polymer({
             },
 
             _swInstalled: function() {
-                console.log("SW Installed")
+                console.log("SW Installed");
             },
 
 
@@ -24444,7 +24481,7 @@ Polymer({
 
 
             _tapLogOut: function() {
-                thisMainApp.triggerLogout = Math.random()
+                thisMainApp.triggerLogout = Math.random();
             },
 
 

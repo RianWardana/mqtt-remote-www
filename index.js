@@ -23812,6 +23812,18 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     window.addEventListener('resize', function(event){
                         thisRemoteAC.setupPosition();
                     });
+
+                    thisRemoteAC.parseManifest();
+                },
+
+                parseManifest: function() {
+                	thisRemoteAC.manifestModes = [];
+                	var manifest = thisRemoteAC.manifest;
+                	for (var mode in manifest) {
+                		if (manifest.hasOwnProperty(mode)) {
+                			thisRemoteAC.push('manifestModes', parseInt(mode));
+                		}
+                	}
                 },
 
 
@@ -23839,7 +23851,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAC.brand = thisRemoteAC.remote.substring(3).toLowerCase();
 
                     if (jenis == "AC") {
-                        // console.log(thisRemoteAC.brand)
+                        thisRemoteAC.$.ajaxManifest.generateRequest();
                     }
                 },
 
@@ -23858,10 +23870,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRemoteAC.$.btnTempDown.disabled = "true";
                         thisRemoteAC.$.btnSend.disabled = "true";
                         thisRemoteAC._tapSend();
+                        setTimeout(() => {thisRemoteAC.temp = "18";}, 100);
                     } else {
-                        thisRemoteAC.mode = "1";
-                        thisRemoteAC.fan = "0";
-                        thisRemoteAC.temp = "18";
+                        thisRemoteAC._tapMode();
                         thisRemoteAC.$.displayContainer.style.visibility = "visible";
                         thisRemoteAC.$.btnPower.setAttribute("icon", "close");
                         thisRemoteAC.$.displayMode.innerHTML = thisRemoteAC.modes[thisRemoteAC.mode];
@@ -23878,32 +23889,58 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 _tapMode: function() {
-                    if (thisRemoteAC.mode < 3) thisRemoteAC.mode++;
-                    else thisRemoteAC.mode = 0;
+                	if (thisRemoteAC.modeIndex < thisRemoteAC.manifestModes.length - 1) thisRemoteAC.modeIndex++;
+                	else thisRemoteAC.modeIndex = 0;
+                	thisRemoteAC.mode = thisRemoteAC.manifestModes[thisRemoteAC.modeIndex];
+
                     thisRemoteAC.$.displayMode.innerHTML = thisRemoteAC.modes[thisRemoteAC.mode];
                     thisRemoteAC.$.btnSend.removeAttribute('disabled');
+
+                    thisRemoteAC.manifestFans = [];
+                    var mode = thisRemoteAC.manifest[thisRemoteAC.mode];
+                    for (var fan in mode) {
+                    	if (mode.hasOwnProperty(fan)) {
+                    		thisRemoteAC.push('manifestFans', parseInt(fan));
+                    	}
+                    }
+                    thisRemoteAC._tapFan();
                 },
 
 
 
                 _tapFan: function() {
-                    if (thisRemoteAC.fan < 3) thisRemoteAC.fan++;
-                    else thisRemoteAC.fan = 0;
+                	if (thisRemoteAC.fanIndex < thisRemoteAC.manifestFans.length - 1) thisRemoteAC.fanIndex++;
+                	else thisRemoteAC.fanIndex = 0;
+                	thisRemoteAC.fan = thisRemoteAC.manifestFans[thisRemoteAC.fanIndex];
+
                     thisRemoteAC.$.displayFan.innerHTML = thisRemoteAC.fans[thisRemoteAC.fan];
                     thisRemoteAC.$.btnSend.removeAttribute('disabled');
+
+                    thisRemoteAC.manifestTemps = thisRemoteAC.manifest[thisRemoteAC.mode][thisRemoteAC.fan];
+
+                    if (typeof thisRemoteAC.manifestTemps[thisRemoteAC.tempIndex] == 'undefined') {
+                    	thisRemoteAC.tempIndex = 0;
+                    	thisRemoteAC._tapDown();
+                    }
                 },
 
 
 
                 _tapUp: function() {
-                    if (Number(thisRemoteAC.temp) < 30) thisRemoteAC.temp = Number(thisRemoteAC.temp) + 1;
+                	if (thisRemoteAC.tempIndex < thisRemoteAC.manifestTemps.length - 1) thisRemoteAC.tempIndex++;
+                	else thisRemoteAC.tempIndex = thisRemoteAC.manifestTemps.length - 1;
+                	thisRemoteAC.temp = thisRemoteAC.manifestTemps[thisRemoteAC.tempIndex];
+
                     thisRemoteAC.$.btnSend.removeAttribute('disabled');
                 },
 
 
 
                 _tapDown: function() {
-                    if (Number(thisRemoteAC.temp) > 18) thisRemoteAC.temp = Number(thisRemoteAC.temp) - 1;
+                	if (thisRemoteAC.tempIndex > 0) thisRemoteAC.tempIndex--;
+                	else thisRemoteAC.tempIndex = 0;
+                	thisRemoteAC.temp = thisRemoteAC.manifestTemps[thisRemoteAC.tempIndex];
+
                     thisRemoteAC.$.btnSend.removeAttribute('disabled');
                 },
 
@@ -23913,9 +23950,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAC.uid = thisMainAuth.uid;
                     thisRemoteAC.roomID = thisRemoteList.roomID;
                     thisRemoteAC.command = thisRemoteAC.brand + "-" + thisRemoteAC.mode + thisRemoteAC.fan + thisRemoteAC.temp;
-
                     thisRemoteAC.$.ajax.generateRequest();
-
                     thisRemoteAC.$.btnSend.disabled = "true";
                 },
 
@@ -24079,7 +24114,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 properties: {
                     brandAC: {
                         type: Array,
-                        value: ["Dast", "LG", "Mitsubishi", "Panasonic", "Samsung"]
+                        value: ["Dast", "LG", "Mitsubishi", "Samsung"]
                     },
 
                     brandTV: {
@@ -24563,6 +24598,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _tapAdd: function() {
+                    thisRemoteAddSchedule.roomID = thisRemoteList.roomID;
                     if (thisRemoteAddSchedule.isRepeated) {
                         var days = [];
                         var choosenDay = thisRemoteAddSchedule.choosenDay;

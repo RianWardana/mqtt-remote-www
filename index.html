@@ -4770,7 +4770,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
             <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
-            <remote-add remote-view="add" remotes="{{remotes}}"></remote-add>
+            <remote-add remote-view="add" remotes="{{remotes}}" uid="[[uid]]" roomid="[[roomID]]"></remote-add>
 
             <iron-selector id="selectorRemote" class="vertical layout" remote-view="list" attr-for-selected="remote-view" selected="{{remoteView}}">
                     <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
@@ -4870,6 +4870,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 }
             }
         </style>
+
+		<iron-ajax id="ajaxManifest" url="http://core.replus.co/ir/{{brand}}/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
+        </iron-ajax>
 
         <iron-ajax id="ajax" url="https://core.replus.co/post/pociremote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;command={{command}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
@@ -5063,7 +5066,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-swipeable-pages on-selected-changed="" selected="{{addSelected}}" no-cycle="" threshold="0.1">
             <remote-add-remote class="page"></remote-add-remote>
             <remote-add-device class="page"></remote-add-device>
-            <remote-add-schedule class="page" remotes="{{remotes}}"></remote-add-schedule>
+            <remote-add-schedule class="page" remotes="{{remotes}}" uid="[[uid]]" roomid="[[roomID]]"></remote-add-schedule>
         </iron-swipeable-pages>
     </template>
 

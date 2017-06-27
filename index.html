@@ -4767,7 +4767,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             </app-toolbar>
         </app-header>
 
-        <neon-animated-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
+        <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
             <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
             <remote-add remote-view="add" remotes="{{remotes}}"></remote-add>
@@ -4781,7 +4781,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                     </template>
                     <paper-fab remote-view="add" id="fab" icon="add" on-tap="_tapAdd"></paper-fab>
             </iron-selector>
-        </neon-animated-pages>
+        </iron-pages>
         
         <paper-toast id="toast"></paper-toast>
         <paper-toast id="toastDelete">

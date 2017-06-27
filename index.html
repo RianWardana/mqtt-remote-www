@@ -4649,6 +4649,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 --paper-spinner-layer-4-color: #3498db;
                 margin-top: -60px;
             }
+
+            @media (min-width: 640px) {
+                #toast {
+                    margin-left: 268px;
+                }
+            }
         </style>
 
         <iron-ajax id="ajax" url="https://core.replus.co/edit/room" method="POST" body="uid=[[uid]]&amp;room=[[roomID]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
@@ -4734,7 +4740,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             @media (max-width: 640px) {
                #btnBack {
                     margin-left: -40px;
-                } 
+                }
+            }
+
+            @media (min-width: 640px) {
+                #toast, #toastDelete {
+                	margin-left: 268px;
+                }
             }
         </style>
         
@@ -4755,7 +4767,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             </app-toolbar>
         </app-header>
 
-        <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
+        <neon-animated-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
             <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
             <remote-add remote-view="add" remotes="{{remotes}}"></remote-add>
@@ -4769,7 +4781,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                     </template>
                     <paper-fab remote-view="add" id="fab" icon="add" on-tap="_tapAdd"></paper-fab>
             </iron-selector>
-        </iron-pages>
+        </neon-animated-pages>
         
         <paper-toast id="toast"></paper-toast>
         <paper-toast id="toastDelete">
@@ -4850,6 +4862,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
             #textTemp {
                 margin-top: 25px;
+            }
+
+            @media (min-width: 640px) {
+                #toast {
+                	margin-left: 268px;
+                }
             }
         </style>
 
@@ -4940,6 +4958,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             #remoteContainer {
                 margin-left: 35px;
                 margin-right: 35px;
+            }
+
+            @media (min-width: 640px) {
+                #toast {
+                	margin-left: 268px;
+                }
             }
         </style>
         
@@ -5188,21 +5212,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 100%;
             }
 
-            paper-toggle-button {
-
-            }
-
             #btnAdd {
                 color: white;
                 font-weight: normal;
                 margin-top: 25px;
-            }
-
-            #btnTime, #btnDate {
-                background: #d4e2f1;
-                color: #000;
-                font-weight: normal;
-                margin-bottom: 10px;
             }
 
             #container {
@@ -5233,8 +5246,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 100%;
             }
 
-            #dropdownYear {
+            #inputYear {
                 width: 25%;
+            }
+
+            #materialNote {
+                background: #fff;
+                color: #777;
+                padding: 10px;
             }
 
             #spinner {
@@ -5262,60 +5281,60 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 <p>Repeated</p>
             </div>
 
+
             <div id="containerTime" class="horizontal layout">
                 <paper-dropdown-menu id="dropdownHour" label="Hour">
-                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenHour}}">
+                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenHour}}" on-selected-changed="_changeTime">
                         <template is="dom-repeat" items="{{hours}}" as="hour">
                             <paper-item name="{{hour}}">{{hour}}</paper-item>
                         </template>
                     </paper-listbox>
                 </paper-dropdown-menu>
                 <paper-dropdown-menu id="dropdownMinute" label="Minute">
-                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenMinute}}">
+                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenMinute}}" on-selected-changed="_changeTime">
                         <template is="dom-repeat" items="{{minutes}}" as="minute">
                             <paper-item name="{{minute}}">{{minute}}</paper-item>
                         </template>
                     </paper-listbox>
                 </paper-dropdown-menu>
                 <paper-dropdown-menu id="dropdownPeriod" label="AM/PM">
-                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenPeriod}}">
+                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenPeriod}}" on-selected-changed="_changeTime">
                         <paper-item name="AM">AM</paper-item>
                         <paper-item name="PM">PM</paper-item>
                     </paper-listbox>
                 </paper-dropdown-menu>
             </div>
 
+
             <div id="containerDate" class="horizontal layout">
                 <paper-dropdown-menu id="dropdownMonth" label="Month">
-                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenMonth}}">
+                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenMonth}}" on-selected-changed="calculateYear">
                         <template is="dom-repeat" items="{{months}}" as="month">
                             <paper-item name="{{month}}">{{month}}</paper-item>
                         </template>
                     </paper-listbox>
                 </paper-dropdown-menu>
                 <paper-dropdown-menu id="dropdownDate" label="Date">
-                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenDate}}">
+                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenDate}}" on-selected-changed="calculateYear">
                         <template is="dom-repeat" items="{{dates}}" as="date">
                             <paper-item name="{{date}}">{{date}}</paper-item>
                         </template>
                     </paper-listbox>
                 </paper-dropdown-menu>
-                <paper-dropdown-menu id="dropdownDate" label="Year" disabled="">
-                    <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenYear}}">
-                        <paper-item name="{{choosenYear}}">{{choosenYear}}</paper-item>
-                    </paper-listbox>
-                </paper-dropdown-menu>
+                <paper-input disabled="" id="inputYear" label="Year" value="{{calculatedYear}}"></paper-input>
             </div>
 
+
             <div id="containerDay" class="horizontal layout justified">
-                <div class="vertical layout"><paper-checkbox></paper-checkbox>Mon</div>
-                <div class="vertical layout"><paper-checkbox></paper-checkbox>Tue</div>
-                <div class="vertical layout"><paper-checkbox></paper-checkbox>Wed</div>
-                <div class="vertical layout"><paper-checkbox></paper-checkbox>Thu</div>
-                <div class="vertical layout"><paper-checkbox></paper-checkbox>Fri</div>
-                <div class="vertical layout"><paper-checkbox></paper-checkbox>Sat</div>
-                <div class="vertical layout"><paper-checkbox></paper-checkbox>Sun</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox2" name="2" on-active-changed="_changeDay"></paper-checkbox>Mon</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox3" name="3" on-active-changed="_changeDay"></paper-checkbox>Tue</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox4" name="4" on-active-changed="_changeDay"></paper-checkbox>Wed</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox5" name="5" on-active-changed="_changeDay"></paper-checkbox>Thu</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox6" name="6" on-active-changed="_changeDay"></paper-checkbox>Fri</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox7" name="7" on-active-changed="_changeDay"></paper-checkbox>Sat</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox1" name="1" on-active-changed="_changeDay"></paper-checkbox>Sun</div>
             </div>
+
 
             <paper-dropdown-menu id="dropdownAppliance" label="Appliance to schedule">
                 <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenAppliance}}" on-selected-changed="_changeAppliance">
@@ -5324,10 +5343,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                     </template>
                 </paper-listbox>
             </paper-dropdown-menu>
+
+
             <div class="horizontal layout justified">
-                <p id="textON">Turn appliance ON</p>
-                <paper-toggle-button id="toggleON" checked="{{isON}}"></paper-toggle-button>
+                <p id="textON">Turn appliance OFF</p>
+                <paper-toggle-button id="toggleON" checked="{{isON}}" on-active-changed="_changeIsON"></paper-toggle-button>
             </div>
+
+
+            <paper-material id="materialNote">
+                <p>All schedule is (currently) set to GMT+7 timezone.</p>
+            </paper-material>
+
             <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add schedule</paper-button>
             <div class="horizontal layout center-justified">
                 <paper-spinner id="spinner" active=""></paper-spinner>

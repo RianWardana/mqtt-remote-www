@@ -4623,7 +4623,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </app-header>
 
         <div id="container" class="vertical layout">
-            <paper-input label="Type a name for your room" value="{{roomName}}" maxlength="16"></paper-input>
+            <paper-input id="inputName" label="Type a name for your room" value="{{roomName}}" maxlength="16"></paper-input>
             <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add room</paper-button>
             <div class="horizontal layout center-justified">
                 <paper-spinner id="spinner" active=""></paper-spinner>
@@ -5235,14 +5235,28 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 25%;
             }
 
+            #dropdownFan {
+                margin-right: 5px;
+                width: 40%;
+            }
+
             #dropdownMinute {
                 margin-left: 5px;
                 margin-right: 5px;
             }
 
+            #dropdownMode {
+                margin-right: 5px;
+                width: 30%;
+            }
+
             #dropdownMonth {
                 margin-right: 5px;
                 width: 50%;
+            }
+
+            #dropdownTemp {
+                width: 30%;
             }
 
             #dropdownType {
@@ -5274,6 +5288,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
+        <iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/{{choosenBrand}}/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
+        </iron-ajax>
+
         <iron-ajax id="ajax" url="https://core.replus.co/edit/new-schedule" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
@@ -5354,6 +5371,31 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             </div>
 
 
+
+            <div id="containerAC" class="horizontal layout justified">
+                <paper-dropdown-menu id="dropdownMode" label="Mode">
+                    <paper-listbox class="dropdown-content" attr-for-selected="mode" selected="{{choosenMode}}" on-selected-changed="_changeMode">
+                        <template is="dom-repeat" items="{{manifestModes}}" as="mode">
+                            <paper-item mode="{{mode}}">{{getMode(mode)}}</paper-item>
+                        </template>
+                    </paper-listbox>
+                </paper-dropdown-menu>
+                <paper-dropdown-menu id="dropdownFan" label="Fan speed">
+                    <paper-listbox class="dropdown-content" attr-for-selected="fan" selected="{{choosenFan}}" on-selected-changed="">
+                        <template is="dom-repeat" items="{{manifestFans}}" as="fan">
+                            <paper-item fan="{{fan}}">{{getFan(fan)}}</paper-item>
+                        </template>
+                    </paper-listbox>
+                </paper-dropdown-menu>
+                <paper-dropdown-menu id="dropdownTemp" label="Temperature">
+                    <paper-listbox class="dropdown-content" attr-for-selected="temp" selected="{{choosenTemp}}" on-selected-changed="">
+                        <template is="dom-repeat" items="{{temps}}" as="temp">
+                            <paper-item temp="{{temp}}">{{temp}}</paper-item>
+                        </template>
+                    </paper-listbox>
+                </paper-dropdown-menu>
+            </div>
+
             <paper-material id="materialNote">
                 <p>All schedule is (currently) set to GMT+7 timezone.</p>
             </paper-material>
@@ -5396,6 +5438,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 background: linear-gradient(#2B5788, #346aa6);
                 padding: 16px 0 16px;
             }
+
+			hr {
+			    border: 0;
+			    height: 1px;
+			    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0));
+			}
 
             @media (min-width: 640px) {
                center#userInfoContainer {
@@ -5441,6 +5489,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                                 <iron-icon icon="add"></iron-icon>
                                 Add room
                             </paper-item>
+                            <hr>
+                            <paper-item on-tap="_tapManageDevice" disabled="">
+                                <iron-icon icon="settings-remote"></iron-icon>
+                                Manage device
+                            </paper-item>
+                            <hr>
                             <paper-item on-tap="_tapLogOut">
                                 <iron-icon icon="exit-to-app"></iron-icon>
                                 Log out

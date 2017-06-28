@@ -23496,6 +23496,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 setButtonAddState: function(state) {
                     if (state == 'enabled') {
+                    	thisRoomAdd.$.inputName.removeAttribute('disabled');
                         thisRoomAdd.$.spinner.style.display = 'none';
                         thisRoomAdd.$.btnAdd.style.visibility = 'visible';
                         thisRoomAdd.$.btnAdd.removeAttribute('disabled');
@@ -23504,6 +23505,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRoomAdd.$.btnAdd.style.visibility = 'visible';
                         thisRoomAdd.$.btnAdd.setAttribute('disabled', 'true');
                     } else if (state == 'spinner') {
+                    	thisRoomAdd.$.inputName.setAttribute('disabled', true);
                         thisRoomAdd.$.spinner.style.display = 'block';
                         thisRoomAdd.$.btnAdd.style.visibility = 'hidden';
                         thisRoomAdd.$.btnAdd.setAttribute('disabled', 'true');
@@ -23870,7 +23872,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRemoteAC.$.btnTempDown.disabled = "true";
                         thisRemoteAC.$.btnSend.disabled = "true";
                         thisRemoteAC._tapSend();
-                        setTimeout(() => {thisRemoteAC.temp = "18";}, 100);
+                        setTimeout(() => {thisRemoteAC.temp = "18"; thisRemoteAC.modeIndex = -1;}, 100);
                     } else {
                         thisRemoteAC._tapMode();
                         thisRemoteAC.$.displayContainer.style.visibility = "visible";
@@ -24321,14 +24323,15 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _tapAdd: function() {
-                    if ((thisRemoteAddDevice.deviceID != '') && (thisRemoteAddDevice.deviceCode != '')) {
-                        thisRemoteAddDevice.uid = thisMainAuth.uid;
-                        thisRemoteAddDevice.roomID = thisRemoteList.roomID;
-                        thisRemoteAddDevice.$.ajax.generateRequest();
-                        thisRemoteAddDevice.stateWaitResponse(); 
-                    } else {
-                        thisRemoteAddDevice.$.toast.show({text: 'Device ID and Code can not be empty.'})
-                    }
+                    // if ((thisRemoteAddDevice.deviceID != '') && (thisRemoteAddDevice.deviceCode != '')) {
+                    //     thisRemoteAddDevice.uid = thisMainAuth.uid;
+                    //     thisRemoteAddDevice.roomID = thisRemoteList.roomID;
+                    //     thisRemoteAddDevice.$.ajax.generateRequest();
+                    //     thisRemoteAddDevice.stateWaitResponse(); 
+                    // } else {
+                    //     thisRemoteAddDevice.$.toast.show({text: 'Device ID and Code can not be empty.'});
+                    // }
+                    thisRemoteAddDevice.$.toast.show({text: 'This feature is temporarily disabled.'});
                 }
 
             });
@@ -24344,26 +24347,26 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         }
                     },
 
-                    choosenYear: {
-                        type: Number,
-                        value: 2017
-                    },
-
                     dates: {
                         type: Array,
                         value: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "24", "25", "26", "27", "28", "29", "30", "31"]
                     },
-
+                    fans: {
+                        type: Array,
+                        value: ["Auto", "Low", "Medium", "High"]
+                    },
                     hours: {
                         type: Array,
                         value: ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]
                     },
-
                     minutes: {
                         type: Array,
                         value: ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"]
                     },
-
+                    modes: {
+                        type: Array,
+                        value: ["Auto", "Cool", "Dry", "Heat"]
+                    },
                     months: {
                         type: Array,
                         value: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
@@ -24405,6 +24408,25 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                             thisRemoteAddSchedule.$.dropdownAppliance.removeAttribute('disabled');
                         }
                     }, 100);
+                },
+
+                getMode: function(mode) {
+                    return thisRemoteAddSchedule.modes[mode];
+                },
+                getFan: function(fan) {
+                    return thisRemoteAddSchedule.fans[fan];
+                },
+
+                parseManifest: function() {
+                    thisRemoteAddSchedule.manifestModes = [];
+                    var manifest = thisRemoteAddSchedule.manifest;
+                    for (var mode in manifest) {
+                        if (manifest.hasOwnProperty(mode)) {
+                            thisRemoteAddSchedule.push('manifestModes', parseInt(mode));
+                        }
+                    }
+
+                    thisRemoteAddSchedule.choosenMode = thisRemoteAddSchedule.manifestModes[0];
                 },
 
                 
@@ -24475,7 +24497,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddSchedule.choosenPeriod = '';
                     thisRemoteAddSchedule.choosenMonth = '';
                     thisRemoteAddSchedule.choosenDate = '';
-                    thisRemoteAddSchedule.choosenYear = '';
+                    thisRemoteAddSchedule.calculatedYear = '';
                     thisRemoteAddSchedule.$.checkbox1.active = false;
                     thisRemoteAddSchedule.$.checkbox2.active = false;
                     thisRemoteAddSchedule.$.checkbox3.active = false;
@@ -24485,6 +24507,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddSchedule.$.checkbox7.active = false;
                     thisRemoteAddSchedule.choosenAppliance = '';
                     thisRemoteAddSchedule.isON = false;
+                    thisRemoteAddSchedule.manifestModes = [];
+                    thisRemoteAddSchedule.manifestFans = [];
+                    thisRemoteAddSchedule.temps = [];
+                    thisRemoteAddSchedule.choosenMode = '';
+                    thisRemoteAddSchedule.choosenFan = '';
+                    thisRemoteAddSchedule.choosenTemp = '';
                 },
                 stateInitial: function() {
                     thisRemoteAddSchedule.clearAll();
@@ -24500,11 +24528,27 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddSchedule.OKappliance = true;
                     thisRemoteAddSchedule.setToggleONState('enabled');
                     thisRemoteAddSchedule.setButtonState('enabled');
+                    setTimeout(() => {
+                        var type = thisRemoteAddSchedule.choosenAppliance.substring(0, 2);
+                        var brand = thisRemoteAddSchedule.choosenAppliance.substring(3).toLowerCase();
+                        thisRemoteAddSchedule.choosenType = type;
+                        thisRemoteAddSchedule.choosenBrand = brand;
+                    }, 100);
+                },
 
-                    // untuk menentukan langkah selanjutnya tergantung dari jenis appliance
-                    // setTimeout(() => {
-                    //     console.log(thisRemoteAddSchedule.choosenAppliance.substring(0, 2));
-                    // }, 100);
+                _changeMode: function() {
+                    setTimeout(() => {
+                        thisRemoteAddSchedule.manifestFans = [];
+                        var mode = thisRemoteAddSchedule.manifest[thisRemoteAddSchedule.choosenMode];
+                        for (var fan in mode) {
+                            if (mode.hasOwnProperty(fan)) {
+                                thisRemoteAddSchedule.push('manifestFans', parseInt(fan));
+                            }
+                        }
+                        thisRemoteAddSchedule.choosenFan = thisRemoteAddSchedule.manifestFans[0];
+                        thisRemoteAddSchedule.temps = thisRemoteAddSchedule.manifest[thisRemoteAddSchedule.choosenMode][thisRemoteAddSchedule.choosenFan];
+                        thisRemoteAddSchedule.choosenTemp = thisRemoteAddSchedule.temps[0];
+                    }, 100);
                 },
 
                 _changeTime: function() {
@@ -24540,6 +24584,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     setTimeout(() => {
                         if (thisRemoteAddSchedule.isON) {
                             thisRemoteAddSchedule.$.textON.innerHTML = 'Turn appliance ON';
+                            if (thisRemoteAddSchedule.choosenType == 'AC') thisRemoteAddSchedule.$.ajaxManifest.generateRequest();
                         } else {
                             thisRemoteAddSchedule.$.textON.innerHTML = 'Turn appliance OFF';
                         }

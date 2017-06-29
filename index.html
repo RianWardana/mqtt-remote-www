@@ -32,9 +32,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <link rel="manifest" href="manifest.json">
     </head>
 
-<body><div hidden="" by-vulcanize="">
-
-<style>
+<body><div hidden="" by-vulcanize=""><style>
   /* IE 10 support for HTML5 hidden attr */
   [hidden] {
     display: none !important;
@@ -2128,6 +2126,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 
 
+<dom-module id="paper-material" assetpath="bower_components/paper-material/">
+  <template>
+    <style include="paper-material-shared-styles"></style>
+    <style>
+      :host([animated]) {
+        @apply(--shadow-transition);
+      }
+    </style>
+
+    <content></content>
+  </template>
+</dom-module>
 <style is="custom-style">
 
   :root {
@@ -2504,7 +2514,87 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
   }
 
-</style><dom-module id="paper-checkbox" assetpath="bower_components/paper-checkbox/">
+</style><dom-module id="paper-card" assetpath="bower_components/paper-card/">
+  <template>
+    <style include="paper-material">
+      :host {
+        display: inline-block;
+        position: relative;
+        box-sizing: border-box;
+        background-color: var(--paper-card-background-color, --primary-background-color);
+        border-radius: 2px;
+
+        @apply(--paper-font-common-base);
+        @apply(--paper-card);
+      }
+
+      /* IE 10 support for HTML5 hidden attr */
+      [hidden] {
+        display: none !important;
+      }
+
+      .header {
+        position: relative;
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+        overflow: hidden;
+
+        @apply(--paper-card-header);
+      }
+
+      .header iron-image {
+        display: block;
+        width: 100%;
+        --iron-image-width: 100%;
+        pointer-events: none;
+
+        @apply(--paper-card-header-image);
+      }
+
+      .header .title-text {
+        padding: 16px;
+        font-size: 24px;
+        font-weight: 400;
+        color: var(--paper-card-header-color, #000);
+
+        @apply(--paper-card-header-text);
+      }
+
+      .header .title-text.over-image {
+        position: absolute;
+        bottom: 0px;
+
+        @apply(--paper-card-header-image-text);
+      }
+
+      :host ::content .card-content {
+        padding: 16px;
+        position:relative;
+
+        @apply(--paper-card-content);
+      }
+
+      :host ::content .card-actions {
+        border-top: 1px solid #e8e8e8;
+        padding: 5px 16px;
+        position:relative;
+
+        @apply(--paper-card-actions);
+      }
+    </style>
+
+    <div class="header">
+      <iron-image hidden$="[[!image]]" aria-hidden$="[[_isHidden(image)]]" src="[[image]]" alt="[[alt]]" placeholder="[[placeholderImage]]" preload="[[preloadImage]]" fade="[[fadeImage]]"></iron-image>
+      <div hidden$="[[!heading]]" class$="title-text [[_computeHeadingClass(image)]]">[[heading]]</div>
+    </div>
+
+    <content></content>
+  </template>
+
+  </dom-module>
+
+
+<dom-module id="paper-checkbox" assetpath="bower_components/paper-checkbox/">
   <template strip-whitespace="">
     <style>
       :host {
@@ -3673,18 +3763,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </dom-module>
 
 
-<dom-module id="paper-material" assetpath="bower_components/paper-material/">
-  <template>
-    <style include="paper-material-shared-styles"></style>
-    <style>
-      :host([animated]) {
-        @apply(--shadow-transition);
-      }
-    </style>
-
-    <content></content>
-  </template>
-</dom-module>
 <dom-module id="paper-spinner-styles" assetpath="bower_components/paper-spinner/">
   <template>
     <style>
@@ -4572,6 +4650,139 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </iron-ajax>
     </template>
 
+    </dom-module><dom-module id="devices-main" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            app-header {
+                background-color: var(--app-primary-color);
+                color: #fff;
+            }
+
+            #toolbarTitle {
+                margin-left: 10px;
+            }
+        </style>
+
+        <app-header shadow="">
+            <app-toolbar>
+                <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
+                
+                <div id="toolbarTitle" main-title="">Devices</div>
+            </app-toolbar>
+        </app-header>
+        
+        <iron-pages attr-for-selected="page" selected="{{pageSelected}}">
+            <devices-list page="list" uid="[[uid]]" rooms="[[rooms]]" devices-unassigned="{{devicesUnassigned}}" intent="{{intent}}" page-selected="{{pageSelected}}" selected-device="{{device}}" selected-vendor="{{vendor}}"></devices-list>
+            <devices-add page="add" uid="[[uid]]"></devices-add>
+            <devices-setup page="setup" uid="[[uid]]"></devices-setup>
+        </iron-pages>
+    </template>
+
+
+
+    </dom-module><dom-module id="devices-list" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            paper-button#btnDelete {
+                background: #fff;
+                color: #c0392b;
+                font-weight: normal;
+            }
+
+            paper-button#btnWifi {
+                background: #fff;
+                color: var(--primary-color);
+                font-weight: normal;
+            }
+
+            paper-card {
+                margin: 20px 20px 0;
+            }
+
+            paper-fab {
+                --paper-fab-background: var(--app-primary-color);
+                --paper-fab-keyboard-focus-background: var(--app-primary-color);
+
+                --paper-fab: {
+                    color: #2B5788;
+                    height: 56dp;
+                    width: 56dp;
+                };
+
+                color: #fff;
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .card-heading {
+                @apply(--paper-font-headline);
+                color: #777;
+            }
+            .card-id {
+                background: var(--paper-grey-400);
+                border-radius: 10px;
+                color: #fff;
+                padding: 5px;
+                text-align: center;
+                width: 70px;
+            }
+        </style>
+
+        <iron-ajax id="ajaxLoadList" url="https://core.replus.co/get/devices" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{devices}}" on-response="_handleResponseLoadList">
+        </iron-ajax>
+        
+        <div class="vertical layout justified">
+            <template is="dom-repeat" items="[[devices]]" as="device">
+                <paper-card>
+                    <div class="card-content">
+                        <div class="horizontal layout justified">
+                            <div class="card-heading">[[device.type]]</div>
+                            <div class="card-id">[[device.id]]</div>
+                        </div>
+                        <div class="card-room">[[getRoom(device.room)]]</div>
+                    </div>
+                    <div class="card-actions horizontal layout end-justified">
+                        <template is="dom-if" if="[[isDeletable(device.room)]]">
+                            <paper-button name="[[device.id]]" id="btnDelete" on-tap="_tapDelete">Delete</paper-button>
+                        </template>
+                        <paper-button name="[[device.id]]" title="[[device.type]]" id="btnWifi" on-tap="_tapWifi">Setup Wi-Fi</paper-button>
+                    </div>
+                </paper-card>
+            </template>
+        </div>
+
+        <paper-fab id="fab" icon="add" on-tap="_tapAdd" disabled=""></paper-fab>
+    </template>
+
+
+
+    </dom-module><dom-module id="devices-add" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            
+        </style>
+
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/register-device" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{response}}" on-response="_handleResponse">
+        </iron-ajax>
+        
+    </template>
+
+
+
+    </dom-module><dom-module id="devices-setup" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            
+        </style>
+
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/register-device" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{response}}" on-response="_handleResponse">
+        </iron-ajax>
+        
+    </template>
+
+
+
     </dom-module><dom-module id="room-add" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
@@ -4770,7 +4981,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
             <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
-            <remote-add remote-view="add" remotes="{{remotes}}" uid="[[uid]]" roomid="[[roomID]]"></remote-add>
+            <remote-add remote-view="add" remotes="{{remotes}}" uid="[[uid]]" roomid="[[roomID]]" devices-unassigned="[[devicesUnassigned]]"></remote-add>
 
             <iron-selector id="selectorRemote" class="vertical layout" remote-view="list" attr-for-selected="remote-view" selected="{{remoteView}}">
                     <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
@@ -4819,11 +5030,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-top: 20px;
                 width: 100vw;
             }
-
-            /*.btnTemp {
-                height: 70px;
-                width: 105px;
-            }*/
 
             #btnPower {
                 color: #c0392b;
@@ -4928,11 +5134,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
 
             paper-dialog paper-button {
-                background: #f7f7f7;
-                color: #2B5788;
-                font-weight: 500;
-                margin-bottom: 0px;
-                width: 100px;
+            	--paper-button: {
+					background: #f7f7f7;
+	                color: #2B5788;
+	                font-weight: 500;
+	                margin-bottom: 0px;
+	                width: 100px;
+                }; 
             }
 
             paper-dialog {
@@ -4952,10 +5160,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
 
             #menubuttons paper-button {
-                color: #2B5788;
-                font-weight: 500;
-                margin: 0;
-                padding: 0;
+                --paper-button: {
+					color: #2B5788;
+	                font-weight: 500;
+	                margin: 0;
+	                padding: 0;
+                };
             }
 
             #remoteContainer {
@@ -5065,7 +5275,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <iron-swipeable-pages on-selected-changed="" selected="{{addSelected}}" no-cycle="" threshold="0.1">
             <remote-add-remote class="page"></remote-add-remote>
-            <remote-add-device class="page"></remote-add-device>
+            <remote-add-device class="page" devices-unassigned="{{devicesUnassigned}}"></remote-add-device>
             <remote-add-schedule class="page" remotes="{{remotes}}" uid="[[uid]]" roomid="[[roomID]]"></remote-add-schedule>
         </iron-swipeable-pages>
     </template>
@@ -5079,14 +5289,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 display: block;
             }
 
-            paper-button {
+            /*paper-button {
                 background: #2B5788;
                 margin: 0;
                 width: 100%;
-            }
+            }*/
 
             #btnAdd {
-                color: white;
+                /*color: white;*/
                 margin-top: 25px;
             }
 
@@ -5150,14 +5360,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 display: block;
             }
 
-            paper-button {
-                background: #2B5788;
-                margin: 0;
-                width: 100%;
-            }
+            /*paper-button {
+                --paper-button: {
+                    background: #2B5788;
+                    margin: 0;
+                    width: 100%;
+                };
+            }*/
 
             #btnAdd {
-                color: white;
+                /*color: white;*/
+                /*font-weight: normal;*/
                 margin-top: 25px;
             }
 
@@ -5168,6 +5381,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
             #dropdownType {
                 width: 100%;
+            }
+
+            #materialNote {
+                background: #fff;
+                color: #777;
+                margin-bottom: 20px;
+            }
+            #materialNote p {
+                margin: 16px;
+            }
+            #materialNote span {
+                color: var(--primary-color);
             }
 
             #spinner {
@@ -5183,14 +5408,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </iron-ajax>
 
         <div id="container" class="vertical layout">
-            <paper-dropdown-menu id="dropdownType" label="Device type">
-                <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{deviceType}}" on-selected-changed="_changeType">
-                    <paper-item name="POCI Remote">POCI Remote</paper-item>
+            <paper-material id="materialNote">
+                <p>This page is for assigning devices only.<br><br>For registering newly purchased device, navigate to <span>Devices</span> page.</p>
+            </paper-material>
+
+            <paper-dropdown-menu id="dropdownType" label="Device to assign">
+                <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{deviceID}}" on-selected-changed="_changeDevice">
+                    <template is="dom-repeat" items="[[devicesUnassigned]]" as="device">
+                        <paper-item name="[[device.id]]">[[device.type]] [[device.id]]</paper-item> 
+                    </template>
+                    
                     
                 </paper-listbox>
             </paper-dropdown-menu>
-            <paper-input id="inputID" label="Device ID" value="{{deviceID}}" maxlength="4"></paper-input>
-            <paper-input id="inputCode" label="Device activation code" value="{{deviceCode}}" maxlength="6"></paper-input>
+            
             <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add device</paper-button>
             <div class="horizontal layout center-justified">
                 <paper-spinner id="spinner" active=""></paper-spinner>
@@ -5207,17 +5438,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <style include="iron-flex iron-flex-alignment">
             :host {
                 display: block;
+                overflow: auto;
             }
 
-            paper-button {
+            /*paper-button {
                 background: #2B5788;
                 margin: 0;
                 width: 100%;
-            }
+            }*/
 
             #btnAdd {
-                color: white;
-                font-weight: normal;
+                /*color: white;*/
+                /*font-weight: normal;*/
                 margin-top: 25px;
             }
 
@@ -5420,6 +5652,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 --app-primary-color: #2B5788;
                 --app-secondary-color: black;
 
+				--paper-button: {
+                    background: #2B5788;
+                    color: #fff;
+                    font-weight: normal !important;
+                    margin: 0;
+                    width: 100%;
+                };
+
                 --paper-fab-background: #f7f7f7;
                 --paper-fab-keyboard-focus-background: #f7f7f7;
 
@@ -5490,9 +5730,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                                 Add room
                             </paper-item>
                             <hr>
-                            <paper-item on-tap="_tapManageDevice" disabled="">
+                            <paper-item on-tap="_tapDevices" name="Devices">
                                 <iron-icon icon="settings-remote"></iron-icon>
-                                Manage device
+                                Devices
                             </paper-item>
                             <hr>
                             <paper-item on-tap="_tapLogOut">
@@ -5506,9 +5746,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 <app-header-layout>
                     <iron-pages attr-for-selected="name" selected="{{roomView}}">
                         <div name="{{roomName}}">
-                            <remote-list uid="[[uid]]" toolbar-title="{{choosenRoom}}"></remote-list> 
+                            <remote-list uid="[[uid]]" toolbar-title="{{choosenRoom}}" devices-unassigned="[[devicesUnassigned]]"></remote-list> 
                         </div>
                         <room-add name="Add room"></room-add>
+                        <devices-main name="Devices" uid="[[uid]]" rooms="[[roomsData]]" devices-unassigned="{{devicesUnassigned}}"></devices-main>
                     </iron-pages>
                 </app-header-layout>
             </app-drawer-layout>

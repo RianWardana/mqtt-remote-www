@@ -17171,6 +17171,146 @@ Polymer({
       Event param: {{node: Object}} detail Contains the animated node.
       */
     });
+Polymer({
+    is: 'paper-material',
+
+    properties: {
+      /**
+       * The z-depth of this element, from 0-5. Setting to 0 will remove the
+       * shadow, and each increasing number greater than 0 will be "deeper"
+       * than the last.
+       *
+       * @attribute elevation
+       * @type number
+       * @default 1
+       */
+      elevation: {
+        type: Number,
+        reflectToAttribute: true,
+        value: 1
+      },
+
+      /**
+       * Set this to true to animate the shadow when setting a new
+       * `elevation` value.
+       *
+       * @attribute animated
+       * @type boolean
+       * @default false
+       */
+      animated: {
+        type: Boolean,
+        reflectToAttribute: true,
+        value: false
+      }
+    }
+  });
+Polymer({
+      is: 'paper-card',
+
+      properties: {
+        /**
+         * The title of the card.
+         */
+        heading: {
+          type: String,
+          value: '',
+          observer: '_headingChanged'
+        },
+
+        /**
+         * The url of the title image of the card.
+         */
+        image: {
+          type: String,
+          value: ''
+        },
+
+        /**
+         * The text alternative of the card's title image.
+         */
+        alt: {
+          type: String
+        },
+
+        /**
+         * When `true`, any change to the image url property will cause the
+         * `placeholder` image to be shown until the image is fully rendered.
+         */
+        preloadImage: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * When `preloadImage` is true, setting `fadeImage` to true will cause the
+         * image to fade into place.
+         */
+        fadeImage: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * This image will be used as a background/placeholder until the src image has
+         * loaded. Use of a data-URI for placeholder is encouraged for instant rendering.
+         */
+        placeholderImage: {
+          type: String,
+          value: null
+        },
+
+        /**
+         * The z-depth of the card, from 0-5.
+         */
+        elevation: {
+          type: Number,
+          value: 1,
+          reflectToAttribute: true
+        },
+
+        /**
+         * Set this to true to animate the card shadow when setting a new
+         * `z` value.
+         */
+        animatedShadow: {
+          type: Boolean,
+          value: false
+        },
+
+        /**
+         * Read-only property used to pass down the `animatedShadow` value to
+         * the underlying paper-material style (since they have different names).
+         */
+        animated: {
+          type: Boolean,
+          reflectToAttribute: true,
+          readOnly: true,
+          computed: '_computeAnimated(animatedShadow)'
+        }
+      },
+      
+      /**
+       * Format function for aria-hidden. Use the ! operator results in the
+       * empty string when given a falsy value.
+       */
+      _isHidden: function(image) {
+        return image ? 'false' : 'true';
+      },
+
+      _headingChanged: function(heading) {
+        var label = this.getAttribute('aria-label');
+        this.setAttribute('aria-label', heading);
+      },
+
+      _computeHeadingClass: function(image) {
+        return image ? ' over-image' : '';
+      },
+
+      _computeAnimated: function(animatedShadow) {
+        return animatedShadow;
+      }
+    });
 /**
    * Singleton IronMeta instance.
    */
@@ -21310,40 +21450,6 @@ Polymer({
         }
       });
     })();
-Polymer({
-    is: 'paper-material',
-
-    properties: {
-      /**
-       * The z-depth of this element, from 0-5. Setting to 0 will remove the
-       * shadow, and each increasing number greater than 0 will be "deeper"
-       * than the last.
-       *
-       * @attribute elevation
-       * @type number
-       * @default 1
-       */
-      elevation: {
-        type: Number,
-        reflectToAttribute: true,
-        value: 1
-      },
-
-      /**
-       * Set this to true to animate the shadow when setting a new
-       * `elevation` value.
-       *
-       * @attribute animated
-       * @type boolean
-       * @default false
-       */
-      animated: {
-        type: Boolean,
-        reflectToAttribute: true,
-        value: false
-      }
-    }
-  });
 /** @polymerBehavior */
   Polymer.PaperSpinnerBehavior = {
 
@@ -23349,7 +23455,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 loadFirebaseUI: function() {
-                    console.log("main-auth: loadFirebaseUI");
+                    // console.log("main-auth: loadFirebaseUI");
                     firebaseUIConfig = {
                         signInOptions: [
                             firebase.auth.GoogleAuthProvider.PROVIDER_ID,
@@ -23360,7 +23466,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                                 return false;
                             },
                             uiShown: function() {
-                                console.log("main-auth: FirebaseUI ready");
+                                // console.log("main-auth: FirebaseUI ready");
                                 thisMainAuth.$.firebaseuiauthcontainer.style.display = 'block';
                                 thisMainAuth.$.spinner.style.display = 'none';
                             }
@@ -23402,7 +23508,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 _handleResponse: function() {
-                    console.log(`main-auth: POST request ${thisMainAuth.response}`)
+                    // console.log(`main-auth: POST request ${thisMainAuth.response}`)
                 },
 
 
@@ -23466,6 +23572,171 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisMainApp.roomView = "Add room";
                     }
                 }
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'devices-main',
+                properties: {
+                    device: {
+                        type: String,
+                        observer: '_changedDevice'
+                    },
+
+                    devicesUnassigned: {
+                        type: Array,
+                        notify: true
+                    },
+
+                    pageSelected: {
+                        type: String,
+                        value: 'list'
+                    }
+                },
+
+                ready: function() {
+                    thisDevicesMain = this;
+                },
+
+                _changedDevice: function(device) {
+                    if (device != '') {
+                        setTimeout(() => {
+                            if (thisDevicesMain.intent == 'setup') {
+
+                            } else {
+
+                            }
+                        }, 100);
+                        thisDevicesMain.device = '';    
+                    }
+                },
+
+                _tapMenu: function() {
+                    thisMainApp.$.appDrawer.open();
+                }
+
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'devices-list',
+                properties: {
+                    devicesUnassigned: {
+                        type: Array,
+                        notify: true
+                    },
+
+                    intent: {
+                        type: String,
+                        notify: true
+                    },
+
+                    pageSelected: {
+                        type: String,
+                        notify: true
+                    },
+
+                    selectedDevice: {
+                        type: String,
+                        notify: true
+                    },
+
+                    selectedVendor: {
+                        type: String,
+                        notify: true
+                    }
+                },
+
+                ready: function() {
+                    thisDevicesList = this;
+                },
+
+                isDeletable: function(room) {
+                    var deletable = (room == '' ? true : false);
+                    return deletable;
+                },
+
+                getRoom: function(roomID) {
+                    var rooms = thisDevicesList.rooms;
+                    var name = "Not assigned to any rooms"
+                    rooms.forEach(room => {
+                        if (room.id == roomID) {
+                            name = room.name;
+                        }
+                    });
+                    return name;
+                },
+
+                _handleResponseLoadList: function() {
+                    thisDevicesList.devicesUnassigned = [];
+                    var devices = thisDevicesList.devices;
+                    devices.forEach(device => {
+                        if (device.room == '') thisDevicesList.push('devicesUnassigned', device);
+                    });
+                },
+
+                _tapAdd: function() {
+                    console.log('hehe')
+                    thisDevicesList.pageSelected = 'add';
+                },
+
+                _tapDelete: function(e) {
+                    var deviceID = e.target.name;
+                    thisDevicesList.intent = 'delete';
+                    thisDevicesList.selectedDevice = deviceID;
+                },
+
+                _tapWifi: function(e) {
+                    var deviceID = e.target.name;
+                    var deviceType = e.target.title;
+
+                    if (deviceType.startsWith('POCI')) var vendor = 'POCI';
+                    else if (deviceType.startsWith('Replus')) var vendor = 'Replus';
+                    else var vendor = 'MQTT';
+
+                    thisDevicesList.intent = 'setup';
+                    thisDevicesList.selectedDevice = deviceID;
+                    thisDevicesList.selectedVendor = vendor;
+                }
+
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'devices-add',
+                properties: {
+
+                },
+
+                ready: function() {
+                    thisDevicesAdd = this;
+                },
+
+                _handleResponse: function() {
+                    
+                }
+
+
+
+            });
+        })();
+(function() {
+            Polymer({
+                is: 'devices-setup',
+                properties: {
+
+                },
+
+                ready: function() {
+                    thisDevicesSetup = this;
+                },
+
+                _handleResponse: function() {
+                    
+                }
+
+
+
             });
         })();
 (function() {
@@ -24279,32 +24550,32 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddDevice.deviceID = '';
                     thisRemoteAddDevice.deviceCode = '';
                     thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.inputID.setAttribute('disabled', 'true');
-                    thisRemoteAddDevice.$.inputCode.setAttribute('disabled', 'true');
+                    // thisRemoteAddDevice.$.inputID.setAttribute('disabled', 'true');
+                    // thisRemoteAddDevice.$.inputCode.setAttribute('disabled', 'true');
                     thisRemoteAddDevice.setButtonAddState('disabled');
                 },
                 stateChangedType: function() {
                     thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
+                    // thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
+                    // thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
                     thisRemoteAddDevice.setButtonAddState('enabled');
                 },
                 stateWaitResponse: function() {
                     thisRemoteAddDevice.$.dropdownType.setAttribute('disabled', true);
-                    thisRemoteAddDevice.$.inputID.setAttribute('disabled', true);
-                    thisRemoteAddDevice.$.inputCode.setAttribute('disabled', true);
+                    // thisRemoteAddDevice.$.inputID.setAttribute('disabled', true);
+                    // thisRemoteAddDevice.$.inputCode.setAttribute('disabled', true);
                     thisRemoteAddDevice.setButtonAddState('spinner');
                 },
                 stateResponseError: function() {
                     thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
-                    thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
+                    // thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
+                    // thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
                     thisRemoteAddDevice.setButtonAddState('enabled');
                 },
 
 
 
-                _changeType: function() {
+                _changeDevice: function() {
                     thisRemoteAddDevice.stateChangedType();
                 },
 
@@ -24331,7 +24602,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     // } else {
                     //     thisRemoteAddDevice.$.toast.show({text: 'Device ID and Code can not be empty.'});
                     // }
+                    console.log(thisRemoteAddDevice.devicesUnassigned);
                     thisRemoteAddDevice.$.toast.show({text: 'This feature is temporarily disabled.'});
+                },
+
+                _tapDevice: function(e) {
+
                 }
 
             });
@@ -24695,8 +24971,8 @@ Polymer({
             },
 
 
-            _tapAddRoom: function() {
-                
+            _tapDevices: function() {
+                // thisDevicesList.$.ajaxLoadList.generateRequest();
             },
 
 
@@ -24706,6 +24982,7 @@ Polymer({
 
 
             _tapRoom: function(e) {
+            	thisDevicesList.$.ajaxLoadList.generateRequest();
                 thisMainApp.choosenRoom = (e.target != null ? e.target.title : e);
                 thisMainApp.roomName = thisMainApp.choosenRoom;
                 thisMainApp.roomView = thisMainApp.choosenRoom;

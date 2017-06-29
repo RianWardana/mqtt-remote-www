@@ -23848,9 +23848,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _handleResponse: function() {
+                    thisRoomEdit.stateInitial();  
                     if (thisRoomEdit.response == 'OK') {
                         thisRoomEdit.$.dialog.close();
-                        thisRoomEdit.stateInitial();  
                         setTimeout(() => {thisMainData.loadData(false);}, 500);
                         setTimeout(() => {thisMainApp._tapRoom(thisRoomEdit.newRoomName);}, 600);
                         thisRoomEdit.$.toast.show({text: 'Room renamed.', duration: 3000});
@@ -23861,7 +23861,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _tapSave: function() {
                     if (thisRoomEdit.newRoomName != '') {
-                        thisRoomEdit.roomID = thisRemoteList.roomID;
+                        // thisRoomEdit.roomID = thisRemoteList.roomID;
                         thisRoomEdit.stateWaitResponse();
                         thisRoomEdit.$.ajax.generateRequest();
                     } else {
@@ -24546,68 +24546,40 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     }
                 },
                 stateInitial: function() {
-                    thisRemoteAddDevice.deviceType = '';
                     thisRemoteAddDevice.deviceID = '';
-                    thisRemoteAddDevice.deviceCode = '';
                     thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
-                    // thisRemoteAddDevice.$.inputID.setAttribute('disabled', 'true');
-                    // thisRemoteAddDevice.$.inputCode.setAttribute('disabled', 'true');
                     thisRemoteAddDevice.setButtonAddState('disabled');
                 },
-                stateChangedType: function() {
+                stateChangedDevice: function() {
                     thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
-                    // thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
-                    // thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
                     thisRemoteAddDevice.setButtonAddState('enabled');
                 },
                 stateWaitResponse: function() {
                     thisRemoteAddDevice.$.dropdownType.setAttribute('disabled', true);
-                    // thisRemoteAddDevice.$.inputID.setAttribute('disabled', true);
-                    // thisRemoteAddDevice.$.inputCode.setAttribute('disabled', true);
                     thisRemoteAddDevice.setButtonAddState('spinner');
-                },
-                stateResponseError: function() {
-                    thisRemoteAddDevice.$.dropdownType.removeAttribute('disabled');
-                    // thisRemoteAddDevice.$.inputID.removeAttribute('disabled');
-                    // thisRemoteAddDevice.$.inputCode.removeAttribute('disabled');
-                    thisRemoteAddDevice.setButtonAddState('enabled');
                 },
 
 
 
                 _changeDevice: function() {
-                    thisRemoteAddDevice.stateChangedType();
+                    thisRemoteAddDevice.stateChangedDevice();
                 },
 
                 _handleResponse: function() {
                     var response = thisRemoteAddDevice.response;
                     if (response == 'OK') {
-                        thisRemoteAddDevice.$.toast.show({text: `${thisRemoteAddDevice.deviceType} added to ${thisMainApp.choosenRoom}.`, duration: 3000});
+                        thisDevicesList.$.ajaxLoadList.generateRequest();
+                        thisRemoteAddDevice.$.toast.show({text: `Device added to ${thisMainApp.choosenRoom}.`, duration: 3000});
                         thisRemoteAddDevice.stateInitial();
-                    } else if (response == 'NO_CODE') {
-                        thisRemoteAddDevice.$.toast.show({text: "Device is not recognized.", duration: 3000});
-                        thisRemoteAddDevice.stateResponseError();
                     } else {
                         thisRemoteAddDevice.$.toast.show({text: "Unknown error occured.", duration: 3000});
-                        thisRemoteAddDevice.stateResponseError();
+                        thisRemoteAddDevice.stateInitial();
                     }
                 },
 
                 _tapAdd: function() {
-                    // if ((thisRemoteAddDevice.deviceID != '') && (thisRemoteAddDevice.deviceCode != '')) {
-                    //     thisRemoteAddDevice.uid = thisMainAuth.uid;
-                    //     thisRemoteAddDevice.roomID = thisRemoteList.roomID;
-                    //     thisRemoteAddDevice.$.ajax.generateRequest();
-                    //     thisRemoteAddDevice.stateWaitResponse(); 
-                    // } else {
-                    //     thisRemoteAddDevice.$.toast.show({text: 'Device ID and Code can not be empty.'});
-                    // }
-                    console.log(thisRemoteAddDevice.devicesUnassigned);
-                    thisRemoteAddDevice.$.toast.show({text: 'This feature is temporarily disabled.'});
-                },
-
-                _tapDevice: function(e) {
-
+                    thisRemoteAddDevice.$.ajax.generateRequest();
+                    thisRemoteAddDevice.stateWaitResponse();
                 }
 
             });
@@ -24919,7 +24891,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _tapAdd: function() {
-                    thisRemoteAddSchedule.roomID = thisRemoteList.roomID;
+                    // thisRemoteAddSchedule.roomID = thisRemoteList.roomID;
                     if (thisRemoteAddSchedule.isRepeated) {
                         var days = [];
                         var choosenDay = thisRemoteAddSchedule.choosenDay;

@@ -4849,6 +4849,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="room-edit" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
+            paper-button {
+                background: #fff;
+                color: var(--primary-color);
+                font-weight: normal;
+            }
+
             paper-dialog {
                 width: 400px;
             }
@@ -4868,7 +4874,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/room" method="POST" body="uid=[[uid]]&amp;room=[[roomID]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/room" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <paper-dialog id="dialog" entry-animation="slide-from-top-animation" exit-animation="fade-out-animation" on-iron-overlay-closed="_closedDialog">
@@ -4981,7 +4987,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
             <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
-            <remote-add remote-view="add" remotes="{{remotes}}" uid="[[uid]]" roomid="[[roomID]]" devices-unassigned="[[devicesUnassigned]]"></remote-add>
+            <remote-add remote-view="add" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomID]]" devices-unassigned="[[devicesUnassigned]]"></remote-add>
 
             <iron-selector id="selectorRemote" class="vertical layout" remote-view="list" attr-for-selected="remote-view" selected="{{remoteView}}">
                     <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
@@ -4999,7 +5005,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         	<span role="button" on-tap="_tapConfirmDelete">DELETE</span>
         </paper-toast>
 
-        <room-edit uid="[[uid]]" roomid="[[roomID]]" roomname="[[toolbarTitle]]" trigger="[[triggerEdit]]"></room-edit>
+        <room-edit uid="[[uid]]" room-key="[[roomID]]" roomname="[[toolbarTitle]]" trigger="[[triggerEdit]]"></room-edit>
     </template>
 
 
@@ -5275,8 +5281,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <iron-swipeable-pages on-selected-changed="" selected="{{addSelected}}" no-cycle="" threshold="0.1">
             <remote-add-remote class="page"></remote-add-remote>
-            <remote-add-device class="page" devices-unassigned="{{devicesUnassigned}}"></remote-add-device>
-            <remote-add-schedule class="page" remotes="{{remotes}}" uid="[[uid]]" roomid="[[roomID]]"></remote-add-schedule>
+            <remote-add-device class="page" devices-unassigned="[[devicesUnassigned]]" uid="[[uid]]" room-key="[[roomKey]]"></remote-add-device>
+            <remote-add-schedule class="page" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomKey]]"></remote-add-schedule>
         </iron-swipeable-pages>
     </template>
 
@@ -5360,17 +5366,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 display: block;
             }
 
-            /*paper-button {
-                --paper-button: {
-                    background: #2B5788;
-                    margin: 0;
-                    width: 100%;
-                };
-            }*/
-
             #btnAdd {
-                /*color: white;*/
-                /*font-weight: normal;*/
                 margin-top: 25px;
             }
 
@@ -5404,7 +5400,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-device" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;deviceID={{deviceID}}&amp;deviceCode={{deviceCode}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/add-device" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
@@ -5417,11 +5413,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                     <template is="dom-repeat" items="[[devicesUnassigned]]" as="device">
                         <paper-item name="[[device.id]]">[[device.type]] [[device.id]]</paper-item> 
                     </template>
-                    
-                    
                 </paper-listbox>
             </paper-dropdown-menu>
-            
             <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add device</paper-button>
             <div class="horizontal layout center-justified">
                 <paper-spinner id="spinner" active=""></paper-spinner>
@@ -5523,7 +5516,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/{{choosenBrand}}/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
         </iron-ajax>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-schedule" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-schedule" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">

@@ -4683,7 +4683,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-list" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            paper-button#btnDelete {
+            paper-button#btnDelete, paper-button#btnUnassign {
                 background: #fff;
                 color: #c0392b;
                 font-weight: normal;
@@ -4732,6 +4732,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxLoadList" url="https://core.replus.co/get/devices" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{devices}}" on-response="_handleResponseLoadList">
         </iron-ajax>
         
+        <iron-ajax id="ajaxUnassign" url="https://core.replus.co/edit/delete-device" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{devices}}" on-response="_handleResponseUnassign">
+        </iron-ajax>
+
         <div class="vertical layout justified">
             <template is="dom-repeat" items="[[devices]]" as="device">
                 <paper-card>
@@ -4745,6 +4748,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                     <div class="card-actions horizontal layout end-justified">
                         <template is="dom-if" if="[[isDeletable(device.room)]]">
                             <paper-button name="[[device.id]]" id="btnDelete" on-tap="_tapDelete">Delete</paper-button>
+                        </template>
+                        <template is="dom-if" if="[[!isDeletable(device.room)]]">
+                            <paper-button name="[[device.id]]" title="[[device.room]]" id="btnUnassign" on-tap="_tapUnassign">Unassign</paper-button>
                         </template>
                         <paper-button name="[[device.id]]" title="[[device.type]]" id="btnWifi" on-tap="_tapWifi">Setup Wi-Fi</paper-button>
                     </div>
@@ -5375,7 +5381,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 280px;
             }
 
-            #dropdownType {
+            #dropdownDevice {
                 width: 100%;
             }
 
@@ -5408,14 +5414,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 <p>This page is for assigning devices only.<br><br>For registering newly purchased device, navigate to <span>Devices</span> page.</p>
             </paper-material>
 
-            <paper-dropdown-menu id="dropdownType" label="Device to assign">
-                <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{deviceID}}" on-selected-changed="_changeDevice">
+            <paper-dropdown-menu id="dropdownDevice" label="Device to assign">
+                <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{deviceID}}" on-selected-changed="stateChangedDevice">
                     <template is="dom-repeat" items="[[devicesUnassigned]]" as="device">
                         <paper-item name="[[device.id]]">[[device.type]] [[device.id]]</paper-item> 
                     </template>
                 </paper-listbox>
             </paper-dropdown-menu>
-            <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add device</paper-button>
+
+            <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add</paper-button>
             <div class="horizontal layout center-justified">
                 <paper-spinner id="spinner" active=""></paper-spinner>
             </div>

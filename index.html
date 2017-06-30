@@ -4653,27 +4653,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-main" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            app-header {
-                background-color: var(--app-primary-color);
-                color: #fff;
-            }
-
-            #toolbarTitle {
-                margin-left: 10px;
-            }
+            
         </style>
-
-        <app-header shadow="">
-            <app-toolbar>
-                <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
-                
-                <div id="toolbarTitle" main-title="">Devices</div>
-            </app-toolbar>
-        </app-header>
         
         <iron-pages attr-for-selected="page" selected="{{pageSelected}}">
-            <devices-list page="list" uid="[[uid]]" rooms="[[rooms]]" devices-unassigned="{{devicesUnassigned}}" intent="{{intent}}" page-selected="{{pageSelected}}" selected-device="{{device}}" selected-vendor="{{vendor}}"></devices-list>
-            <devices-add page="add" uid="[[uid]]"></devices-add>
+            <devices-list page="list" uid="[[uid]]" rooms="[[rooms]]" devices-unassigned="{{devicesUnassigned}}" page-selected="{{pageSelected}}" selected-device="{{device}}" selected-vendor="{{vendor}}" trigger-setup="{{triggerSetup}}"></devices-list>
+            <devices-add page="add" uid="[[uid]]" page-selected="{{pageSelected}}"></devices-add>
             <devices-setup page="setup" uid="[[uid]]"></devices-setup>
         </iron-pages>
     </template>
@@ -4683,6 +4668,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-list" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
+            app-header {
+                background-color: var(--app-primary-color);
+                color: #fff;
+            }
+
             paper-button#btnDelete, paper-button#btnUnassign {
                 background: #fff;
                 color: #c0392b;
@@ -4715,6 +4705,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 right: 20px;
             }
 
+            span[role="button"] { 
+                color: #7ba6d5; 
+                margin: 10px;
+                font-weight: bold;
+            }
+
             .card-heading {
                 @apply(--paper-font-headline);
                 color: #777;
@@ -4727,13 +4723,27 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 text-align: center;
                 width: 70px;
             }
+
+            #toolbarTitle {
+                margin-left: 10px;
+            }
         </style>
 
         <iron-ajax id="ajaxLoadList" url="https://core.replus.co/get/devices" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{devices}}" on-response="_handleResponseLoadList">
         </iron-ajax>
         
-        <iron-ajax id="ajaxUnassign" url="https://core.replus.co/edit/delete-device" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{devices}}" on-response="_handleResponseUnassign">
+        <iron-ajax id="ajaxUnassign" url="https://core.replus.co/edit/delete-device" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseUnassign">
         </iron-ajax>
+
+        <iron-ajax id="ajaxDelete" url="https://core.replus.co/edit/deregister-device" method="POST" body="uid={{uid}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseDelete">
+        </iron-ajax>
+
+        <app-header shadow="">
+            <app-toolbar>
+                <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
+                <div id="toolbarTitle" main-title="">Devices</div>
+            </app-toolbar>
+        </app-header>
 
         <div class="vertical layout justified">
             <template is="dom-repeat" items="[[devices]]" as="device">
@@ -4758,7 +4768,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             </template>
         </div>
 
-        <paper-fab id="fab" icon="add" on-tap="_tapAdd" disabled=""></paper-fab>
+        <paper-fab id="fab" icon="add" on-tap="_tapAdd"></paper-fab>
+        <paper-toast id="toast"></paper-toast>
+        <paper-toast id="toastDelete">
+            <span role="button" on-tap="_tapDeleteConfirm">DELETE</span>
+        </paper-toast>
     </template>
 
 
@@ -4766,12 +4780,60 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-add" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            
+            app-header {
+                background-color: var(--app-primary-color);
+                color: #fff;
+            }
+
+            paper-button {
+                margin-top: 25px;
+            }
+
+            #container {
+                margin-top: 10px;
+                width: 280px;
+            }
+
+            #spinner {
+                --paper-spinner-layer-1-color: var(--app-primary-color);
+                --paper-spinner-layer-3-color: var(--app-primary-color);
+                --paper-spinner-layer-2-color: #3498db;
+                --paper-spinner-layer-4-color: #3498db;
+                margin-top: -35px;
+            }
+
+            #toolbarTitle {
+                margin-left: 10px;
+            }
         </style>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/register-device" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/register-device" method="POST" body="uid={{uid}}&amp;type={{choosenType}}&amp;deviceID={{deviceID}}&amp;deviceCode={{deviceCode}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
         
+        <app-header shadow="">
+            <app-toolbar>
+                <paper-icon-button id="btnBack" on-tap="_tapBack" icon="arrow-back"></paper-icon-button>
+                <div id="toolbarTitle" main-title="">Register new device</div>
+            </app-toolbar>
+        </app-header>
+
+        <div id="container" class="vertical layout">
+            <paper-dropdown-menu id="dropdownType" label="Device type">
+                <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenType}}" on-selected-changed="_changedType">
+                    <paper-item name="POCI Remote">POCI Remote</paper-item> 
+                </paper-listbox>
+            </paper-dropdown-menu>
+
+            <paper-input id="inputID" label="Device ID" value="{{deviceID}}" maxlength="4"></paper-input>
+            <paper-input id="inputCode" label="Device activation code" value="{{deviceCode}}" maxlength="6"></paper-input>
+
+            <paper-button id="btnRegister" raised="" on-tap="_tapRegister">Register device</paper-button>
+            <div class="horizontal layout center-justified">
+                <paper-spinner id="spinner" active=""></paper-spinner>
+            </div>
+        </div>
+
+        <paper-toast id="toast"></paper-toast>
     </template>
 
 

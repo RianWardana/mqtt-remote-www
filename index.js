@@ -23578,11 +23578,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'devices-main',
                 properties: {
-                    device: {
-                        type: String,
-                        observer: '_changedDevice'
-                    },
-
                     devicesUnassigned: {
                         type: Array,
                         notify: true
@@ -23591,6 +23586,11 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     pageSelected: {
                         type: String,
                         value: 'list'
+                    },
+
+                    triggerSetup: {
+                        type: Number,
+                        observer: '_triggeredSetup'
                     }
                 },
 
@@ -23601,18 +23601,14 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 _changedDevice: function(device) {
                     if (device != '') {
                         setTimeout(() => {
-                            if (thisDevicesMain.intent == 'setup') {
-
-                            } else {
-
-                            }
+                            
                         }, 100);
                         thisDevicesMain.device = '';    
                     }
                 },
 
-                _tapMenu: function() {
-                    thisMainApp.$.appDrawer.open();
+                _triggeredSetup: function() {
+                    console.log('hehe')
                 }
 
             });
@@ -23623,11 +23619,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 properties: {
                     devicesUnassigned: {
                         type: Array,
-                        notify: true
-                    },
-
-                    intent: {
-                        type: String,
                         notify: true
                     },
 
@@ -23644,16 +23635,20 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     selectedVendor: {
                         type: String,
                         notify: true
+                    },
+
+                    triggerSetup: {
+                        type: Number,
+                        notify: true
                     }
                 },
 
                 ready: function() {
                     thisDevicesList = this;
-                },
-
-                isDeletable: function(room) {
-                    var deletable = (room == '' ? true : false);
-                    return deletable;
+                    thisDevicesList.setupPosition();
+                    window.addEventListener('resize', function(event){
+                        thisDevicesList.setupPosition();
+                    });
                 },
 
                 getRoom: function(roomID) {
@@ -23665,6 +23660,26 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         }
                     });
                     return name;
+                },
+
+                isDeletable: function(room) {
+                    var deletable = (room == '' ? true : false);
+                    return deletable;
+                },
+
+                setupPosition: function() {
+                    if (window.innerWidth > 640) {
+                        thisDevicesList.$.toast.style.marginLeft = 268 + 'px';
+                        thisDevicesList.$.toastDelete.style.marginLeft = 268 + 'px';
+                    } else {
+                        thisDevicesList.$.toast.style.marginLeft = 12 + 'px';
+                        thisDevicesList.$.toastDelete.style.marginLeft = 12 + 'px';
+                    }
+                },
+
+                _handleResponseDelete: function() {
+                    thisDevicesList.$.ajaxLoadList.generateRequest();
+                    thisDevicesList.$.toast.show({text: `Device deleted.`, duration: 3000});
                 },
 
                 _handleResponseLoadList: function() {
@@ -23685,9 +23700,15 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _tapDelete: function(e) {
-                    var deviceID = e.target.name;
-                    thisDevicesList.intent = 'delete';
-                    thisDevicesList.selectedDevice = deviceID;
+                    thisDevicesList.deviceID = e.target.name;
+                    thisDevicesList.$.toastDelete.show({text: `Delete device?`, duration: 3000});
+                },
+                _tapDeleteConfirm: function() {
+                    thisDevicesList.$.ajaxDelete.generateRequest();
+                },
+
+                _tapMenu: function() {
+                    thisMainApp.$.appDrawer.open();
                 },
 
                 _tapUnassign: function(e) {
@@ -23704,9 +23725,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     else if (deviceType.startsWith('Replus')) var vendor = 'Replus';
                     else var vendor = 'MQTT';
 
-                    thisDevicesList.intent = 'setup';
                     thisDevicesList.selectedDevice = deviceID;
                     thisDevicesList.selectedVendor = vendor;
+                    thisDevicesList.triggerSetup = Math.random();
                 }
 
             });
@@ -23715,15 +23736,102 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'devices-add',
                 properties: {
-
+                    pageSelected: {
+                        type: String,
+                        notify: true
+                    }
                 },
 
                 ready: function() {
                     thisDevicesAdd = this;
+                    thisDevicesAdd.setupPosition();
+                    thisDevicesAdd.stateInitial();
+                    window.addEventListener('resize', function(event){
+                        thisDevicesAdd.setupPosition();
+                    });
+                },
+
+                setupPosition: function() {
+                    if (window.innerWidth > 640) {
+                        thisDevicesAdd.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
+                        thisDevicesAdd.$.toast.style.marginLeft = 268 + 'px';
+                    } else {
+                        thisDevicesAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                        thisDevicesAdd.$.toast.style.marginLeft = 12 + 'px';
+                    }
+                },
+
+                setButtonState: function(state) {
+                    if (state == 'enabled') {
+                        thisDevicesAdd.$.spinner.style.display = 'none';
+                        thisDevicesAdd.$.btnRegister.style.visibility = 'visible';
+                        thisDevicesAdd.$.btnRegister.removeAttribute('disabled');
+                    } else if (state == 'disabled') {
+                        thisDevicesAdd.$.spinner.style.display = 'none';
+                        thisDevicesAdd.$.btnRegister.style.visibility = 'visible';
+                        thisDevicesAdd.$.btnRegister.setAttribute('disabled', 'true');
+                    } else if (state == 'spinner') {
+                        thisDevicesAdd.$.spinner.style.display = 'block';
+                        thisDevicesAdd.$.btnRegister.style.visibility = 'hidden';
+                        thisDevicesAdd.$.btnRegister.setAttribute('disabled', 'true');
+                    }
+                },
+                stateInitial: function() {
+                    thisDevicesAdd.choosenType = '';
+                    thisDevicesAdd.deviceID = '';
+                    thisDevicesAdd.deviceCode = '';
+                    thisDevicesAdd.$.dropdownType.removeAttribute('disabled');
+                    thisDevicesAdd.$.inputID.removeAttribute('disabled');
+                    thisDevicesAdd.$.inputCode.removeAttribute('disabled');
+                    thisDevicesAdd.setButtonState('disabled');
+                },
+                stateResponseError: function() {
+                    thisDevicesAdd.$.dropdownType.removeAttribute('disabled');
+                    thisDevicesAdd.$.inputID.removeAttribute('disabled');
+                    thisDevicesAdd.$.inputCode.removeAttribute('disabled');
+                    thisDevicesAdd.setButtonState('enabled');
+                },
+                stateWaitResponse: function() {
+                    thisDevicesAdd.$.dropdownType.setAttribute('disabled', true);
+                    thisDevicesAdd.$.inputID.setAttribute('disabled', true);
+                    thisDevicesAdd.$.inputCode.setAttribute('disabled', true);
+                    thisDevicesAdd.setButtonState('spinner');
+                },
+
+                _changedType: function() {
+                    thisDevicesAdd.setButtonState('enabled');
                 },
 
                 _handleResponse: function() {
-                    
+                    var response = thisDevicesAdd.response;
+                    if (response == 'OK') {
+                        thisDevicesAdd.$.toast.show({text: `${thisDevicesAdd.choosenType} registered.`, duration: 3000});
+                        thisDevicesAdd.stateInitial();
+                        thisDevicesList.$.ajaxLoadList.generateRequest();
+                    } else if (response == 'NO_CODE') {
+                        thisDevicesAdd.$.toast.show({text: "Device is not recognized.", duration: 3000});
+                        thisDevicesAdd.stateResponseError();
+                    } else if (response == 'EXIST') {
+                        thisDevicesAdd.$.toast.show({text: "Device is already registered.", duration: 3000});
+                        thisDevicesAdd.stateResponseError();
+                    } else {
+                        thisDevicesAdd.$.toast.show({text: "Unknown error occured.", duration: 3000});
+                        thisDevicesAdd.stateResponseError();
+                    }
+                },
+
+                _tapBack: function() {
+                    thisDevicesAdd.pageSelected = 'list';
+                    thisDevicesAdd.stateInitial();
+                },
+
+                _tapRegister: function() {
+                    if ((thisDevicesAdd.deviceID != '') && (thisDevicesAdd.deviceCode != '')) {
+                        thisDevicesAdd.$.ajax.generateRequest();
+                        thisDevicesAdd.stateWaitResponse();
+                    } else {
+                        thisDevicesAdd.$.toast.show({text: 'Device ID and Code can not be empty.'});
+                    }
                 }
 
 
@@ -24950,11 +25058,13 @@ Polymer({
                 console.log("SW Installed");
             },
 
-
-            _tapDevices: function() {
-                // thisDevicesList.$.ajaxLoadList.generateRequest();
+            _tapAddRoom: function() {
+            	// thisMainToolbar.set('Add room', true, false, false);
             },
 
+            _tapDevices: function() {
+                // thisMainToolbar.set('Devices', true, false, false);
+            },
 
             _tapLogOut: function() {
                 thisMainApp.triggerLogout = Math.random();

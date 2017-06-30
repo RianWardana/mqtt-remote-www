@@ -24308,6 +24308,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         else if (merk == "panasonic") thisRemoteTV.codeset = "2619";
                         else if (merk == "sony") thisRemoteTV.codeset = "1319";
                         else if (merk == "sharp") thisRemoteTV.codeset = "1429";
+                        else if (merk == "changhong") thisRemoteTV.codeset = "2903";
+                        else if (merk == "sanyo") thisRemoteTV.codeset = "1430";
+                        else if (merk == "toshiba") thisRemoteTV.codeset = "0339";
                     }
                 },
 
@@ -24402,7 +24405,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                     brandTV: {
                         type: Array,
-                        value: ["LG", "Panasonic", "Samsung", "Sharp", "Sony"]
+                        value: ["Changhong", "LG", "Panasonic", "Samsung", "Sanyo", "Sharp", "Sony", "Toshiba"]
                     }
                 },
 
@@ -24575,7 +24578,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     var response = thisRemoteAddDevice.response;
                     if (response == 'OK') {
                         thisDevicesList.$.ajaxLoadList.generateRequest();
-                        thisRemoteAddDevice.$.toast.show({text: `Device added to ${thisMainApp.choosenRoom}.`, duration: 3000});
+                        thisRemoteAddDevice.$.toast.show({text: `Device assigned to ${thisMainApp.choosenRoom}.`, duration: 3000});
                         thisRemoteAddDevice.stateInitial();
                     } else {
                         thisRemoteAddDevice.$.toast.show({text: "Unknown error occured.", duration: 3000});

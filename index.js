@@ -21530,6 +21530,1308 @@ Polymer({
       ]
     });
 Polymer({
+
+    is: 'iron-collapse',
+
+    behaviors: [
+      Polymer.IronResizableBehavior
+    ],
+
+    properties: {
+
+      /**
+       * If true, the orientation is horizontal; otherwise is vertical.
+       *
+       * @attribute horizontal
+       */
+      horizontal: {
+        type: Boolean,
+        value: false,
+        observer: '_horizontalChanged'
+      },
+
+      /**
+       * Set opened to true to show the collapse element and to false to hide it.
+       *
+       * @attribute opened
+       */
+      opened: {
+        type: Boolean,
+        value: false,
+        notify: true,
+        observer: '_openedChanged'
+      },
+
+      /**
+       * When true, the element is transitioning its opened state. When false,
+       * the element has finished opening/closing.
+       *
+       * @attribute transitioning
+       */
+      transitioning: {
+        type: Boolean,
+        notify: true,
+        readOnly: true
+      },
+
+      /**
+       * Set noAnimation to true to disable animations.
+       *
+       * @attribute noAnimation
+       */
+      noAnimation: {
+        type: Boolean
+      },
+
+      /**
+       * Stores the desired size of the collapse body.
+       * @private
+       */
+      _desiredSize: {
+        type: String,
+        value: ''
+      }
+    },
+
+    get dimension() {
+      return this.horizontal ? 'width' : 'height';
+    },
+
+    /**
+     * `maxWidth` or `maxHeight`.
+     * @private
+     */
+    get _dimensionMax() {
+      return this.horizontal ? 'maxWidth' : 'maxHeight';
+    },
+
+    /**
+     * `max-width` or `max-height`.
+     * @private
+     */
+    get _dimensionMaxCss() {
+      return this.horizontal ? 'max-width' : 'max-height';
+    },
+
+    hostAttributes: {
+      role: 'group',
+      'aria-hidden': 'true',
+      'aria-expanded': 'false'
+    },
+
+    listeners: {
+      transitionend: '_onTransitionEnd'
+    },
+
+    /**
+     * Toggle the opened state.
+     *
+     * @method toggle
+     */
+    toggle: function() {
+      this.opened = !this.opened;
+    },
+
+    show: function() {
+      this.opened = true;
+    },
+
+    hide: function() {
+      this.opened = false;
+    },
+
+    /**
+     * Updates the size of the element.
+     * @param {string} size The new value for `maxWidth`/`maxHeight` as css property value, usually `auto` or `0px`.
+     * @param {boolean=} animated if `true` updates the size with an animation, otherwise without.
+     */
+    updateSize: function(size, animated) {
+      // Consider 'auto' as '', to take full size.
+      size = size === 'auto' ? '' : size;
+
+      var willAnimate = animated && !this.noAnimation &&
+                        this.isAttached && this._desiredSize !== size;
+
+      this._desiredSize = size;
+
+      this._updateTransition(false);
+      // If we can animate, must do some prep work.
+      if (willAnimate) {
+        // Animation will start at the current size.
+        var startSize = this._calcSize();
+        // For `auto` we must calculate what is the final size for the animation.
+        // After the transition is done, _transitionEnd will set the size back to `auto`.
+        if (size === '') {
+          this.style[this._dimensionMax] = '';
+          size = this._calcSize();
+        }
+        // Go to startSize without animation.
+        this.style[this._dimensionMax] = startSize;
+        // Force layout to ensure transition will go. Set scrollTop to itself
+        // so that compilers won't remove it.
+        this.scrollTop = this.scrollTop;
+        // Enable animation.
+        this._updateTransition(true);
+        // If final size is the same as startSize it will not animate.
+        willAnimate = (size !== startSize);
+      }
+      // Set the final size.
+      this.style[this._dimensionMax] = size;
+      // If it won't animate, call transitionEnd to set correct classes.
+      if (!willAnimate) {
+        this._transitionEnd();
+      }
+    },
+
+    /**
+     * enableTransition() is deprecated, but left over so it doesn't break existing code.
+     * Please use `noAnimation` property instead.
+     *
+     * @method enableTransition
+     * @deprecated since version 1.0.4
+     */
+    enableTransition: function(enabled) {
+      Polymer.Base._warn('`enableTransition()` is deprecated, use `noAnimation` instead.');
+      this.noAnimation = !enabled;
+    },
+
+    _updateTransition: function(enabled) {
+      this.style.transitionDuration = (enabled && !this.noAnimation) ? '' : '0s';
+    },
+
+    _horizontalChanged: function() {
+      this.style.transitionProperty = this._dimensionMaxCss;
+      var otherDimension = this._dimensionMax === 'maxWidth' ? 'maxHeight' : 'maxWidth';
+      this.style[otherDimension] = '';
+      this.updateSize(this.opened ? 'auto' : '0px', false);
+    },
+
+    _openedChanged: function() {
+      this.setAttribute('aria-expanded', this.opened);
+      this.setAttribute('aria-hidden', !this.opened);
+
+      this._setTransitioning(true);
+      this.toggleClass('iron-collapse-closed', false);
+      this.toggleClass('iron-collapse-opened', false);
+      this.updateSize(this.opened ? 'auto' : '0px', true);
+
+      // Focus the current collapse.
+      if (this.opened) {
+        this.focus();
+      }
+    },
+
+    _transitionEnd: function() {
+      this.style[this._dimensionMax] = this._desiredSize;
+      this.toggleClass('iron-collapse-closed', !this.opened);
+      this.toggleClass('iron-collapse-opened', this.opened);
+      this._updateTransition(false);
+      this.notifyResize();
+      this._setTransitioning(false);
+    },
+
+    _onTransitionEnd: function(event) {
+      if (Polymer.dom(event).rootTarget === this) {
+        this._transitionEnd();
+      }
+    },
+
+    _calcSize: function() {
+      return this.getBoundingClientRect()[this.dimension] + 'px';
+    }
+
+  });
+Polymer({
+
+    is: 'fade-in-slide-from-right-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+
+      this._effect = new KeyframeEffect(node, [
+        {'transform': 'translateX(100%)', 'opacity': '0'},
+        {'transform': 'translateX(50%)', 'opacity': '0'},
+        {'transform': 'none', 'opacity': '1'}
+      ], this.timingFromConfig(config));
+
+      if (config.transformOrigin) {
+        this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
+      } else {
+        this.setPrefixedProperty(node, 'transformOrigin', '0 50%');
+      }
+
+      return this._effect;
+    }
+
+  });
+Polymer({
+
+    is: 'fade-out-slide-right-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+
+      this._effect = new KeyframeEffect(node, [
+        {'transform': 'none', 'opacity': '1'},
+        {'transform': 'translateX(50%)', 'opacity': '1'},
+        {'transform': 'translateX(100%)', 'opacity': '0'}
+      ], this.timingFromConfig(config));
+
+      if (config.transformOrigin) {
+        this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
+      } else {
+        this.setPrefixedProperty(node, 'transformOrigin', '0 50%');
+      }
+
+      return this._effect;
+    }
+
+  });
+Polymer({
+
+    is: 'fade-in-slide-from-left-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+
+      this._effect = new KeyframeEffect(node, [
+        {'transform': 'translateX(-100%)', 'opacity': '0'},
+        {'transform': 'translateX(-50%)', 'opacity': '0'},
+        {'transform': 'none', 'opacity': '1'}
+      ], this.timingFromConfig(config));
+
+      if (config.transformOrigin) {
+        this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
+      } else {
+        this.setPrefixedProperty(node, 'transformOrigin', '0 50%');
+      }
+
+      return this._effect;
+    }
+
+  });
+Polymer({
+
+    is: 'fade-out-slide-left-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+
+      this._effect = new KeyframeEffect(node, [
+        {'transform': 'none', 'opacity': '1'},
+        {'transform': 'translateX(-50%)', 'opacity': '0'},
+        {'transform': 'translateX(-100%)', 'opacity': '0'},
+      ], this.timingFromConfig(config));
+
+      if (config.transformOrigin) {
+        this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
+      } else {
+        this.setPrefixedProperty(node, 'transformOrigin', '0 50%');
+      }
+
+      return this._effect;
+    }
+
+  });
+window.Stepper = window.Stepper || {};
+  
+  /*
+  * @polymerBehavior Stepper.StepLabelBehavior
+  */
+  Stepper.StepLabelBehavior = {
+
+    properties: {
+      icon: {
+        type: String,
+        computed: '_computeIcon(saved, editable)'
+      },
+      opened: {
+        type: Boolean,
+        reflectToAttribute: true
+      },
+      selectable: {
+        type: Boolean,
+        reflectToAttribute: true
+      },
+      editable: {
+        type: Boolean,
+        reflectToAttribute: true,
+      },
+      label: {
+        type: String,
+        notify: true
+      },
+      optional: {
+        type: Boolean,
+        notify: true
+      },
+      saved: {
+        type: Boolean,
+        reflectToAttribute: true
+      },
+      index: {
+        type: Number
+      },
+      stepperData: {
+       type: Object
+      }
+    },
+
+    _computeIcon: function(saved, editable) {
+      return saved ? ( editable ? 'editor:mode-edit' : 'done' ) : '';
+    },
+
+    _computeIsIconBadge: function(icon) {
+      return icon.length > 0;
+    }
+
+  };
+Polymer({
+      is: 'step-horizontal-label',
+
+      behaviors: [
+        Stepper.StepLabelBehavior
+      ],
+
+      properties: {
+        alternativeLabel: {
+          type: Boolean,
+          value: false,
+          reflectToAttribute: true
+        }
+      },
+
+    });
+Polymer({
+      is: 'step-vertical',
+
+      properties: {
+        canSkip: {
+          type: Boolean
+        },
+        _attrForPrimaryButtonText: {
+          type: String,
+          value: false
+        },
+        hasBackStep: Boolean
+      },
+
+      behaviors: [
+        Stepper.StepLabelBehavior
+      ],
+
+      skip: function() {
+        this.fire('paper-step-vertical-skip-tapped');
+      },
+
+      back: function() {
+        this.fire('paper-step-vertical-back-tapped');
+      },
+
+      continue: function() {
+        this.fire('paper-step-vertical-continue-tapped');
+      },
+
+      choosePrimaryButtonText: function(_attrForPrimaryButtonText) {
+        return this.stepperData[_attrForPrimaryButtonText];
+      }
+    });
+Polymer({
+
+      is: 'paper-step',
+
+      behaviors: [
+        Polymer.IronValidatableBehavior,
+        Polymer.NeonAnimatableBehavior,
+        Polymer.PaperItemBehavior,
+        Polymer.PaperRippleBehavior
+      ],
+      
+      /**
+       * Fired when the step has been saved.
+       *
+       * @event paper-step-saved
+       */
+      /**
+       * Fired when the step has been updated
+       *
+       * @event paper-step-updated
+       */
+      properties: {
+        /**
+         * MISSING Doc
+         */
+        saved: {
+          type: Boolean,
+          value: false,
+          notify: true,
+          readOnly: true
+        },
+        /**
+         * Missing Doc
+         */
+        editable: {
+          type: Boolean,
+          value: false
+        },
+        /**
+         * Missing Doc
+         */
+        index: {
+          type: Number,
+          notify: true,
+          readOnly: true
+        },
+        /**
+         * Missing Doc
+         */
+        _previousSaved: {
+          type: Boolean,
+          readOnly: true
+        },
+        /**
+         * Missing Doc
+         */
+        optional: {
+          type: Boolean,
+          value: false
+        },
+        /**
+         * Missing Doc
+         */
+        selectable: {
+          type: Boolean,
+          computed: '_computeSelectable(_stepperData.linear, saved, editable, _previousSaved)',
+          reflectToAttribute: true,
+          notify: true
+        },
+        /**
+         * Missing Doc
+         */
+        disabled: {
+          computed: '_computeDisabled(selectable)'
+        },
+        /**
+         * Missing Doc
+         */
+        label: {
+          type: String,
+          value: ''
+        },
+        /**
+         * Missing Doc
+         */
+        opened: {
+          type: Boolean,
+          value: false
+        },
+        /**
+         * Missing Doc
+         */
+        animationConfig: {
+          readOnly: true
+        },
+        /**
+         * Missing Doc
+         */
+        entryAnimation: {
+          readOnly: true
+        },
+        /**
+         * Missing Doc
+         */
+        exitAnimation: {
+          readOnly: true
+        },
+        /**
+         * Missing Doc
+         */
+        vertical: {
+          type: Boolean,
+          readOnly: true,
+          reflectToAttribute: true
+        },
+        /**
+         * Missing Doc
+         */
+        horizontalHigherEntryAnimation: {
+          type: String
+        },
+        /**
+         * Missing Doc
+         */
+        horizontalHigherExitAnimation: {
+          type: String
+        },
+        /**
+         * Missing Doc
+         */
+        horizontalLowerEntryAnimation: {
+          type: String
+        },
+        /**
+         * Missing Doc
+         */
+        horizontalLowerExitAnimation: {
+          type: String
+        },
+        /**
+         * Missing Doc
+         */
+        _alternativeLabel: {
+          type: Boolean,
+          readOnly: true
+        },
+        /**
+         * Missing Doc
+         */
+        _optionalText: {
+          type: Boolean,
+          readOnly: true
+        },
+        /**
+         * Missing Doc
+         */
+        _attrForPrimaryButtonText: {
+          type: String,
+          readOnly: true
+        },
+        /**
+         * A reference to the parent stepper
+         */
+        _stepper: {
+          type: Object,
+          readOnly: true
+        },
+        _stepperData: {
+          type: Object,
+          readOnly: true
+        },
+        _canSkip: {
+          type: Boolean,
+          readOnly: true
+        },
+        _hasBackStep: {
+          type: Boolean,
+          readOnly: true
+        }
+      },
+
+      listeners: {
+        'paper-step-vertical-skip-tapped': 'skip',
+        'paper-step-vertical-back-tapped': 'back',
+        'paper-step-vertical-continue-tapped': 'continue',
+        'tap': '_tapHandler'
+      },
+
+      observers: [
+        '_toggleClassPosition(index, _stepperData.stepNumber, vertical)',
+        '_updateSlideshowViewportTop(optional, _alternativeLabel, vertical)',
+        '_verticalChange(vertical)',
+        '_focusedChanged(receivedFocusFromKeyboard)',
+        '_labelElementChanged(_labelElement)'
+      ],
+
+      _focusedChanged: function(receivedFocusFromKeyboard) {
+        if (receivedFocusFromKeyboard) {
+          this.ensureRipple();
+          // generate a ripple effect from the center of the badge
+          var badge = Polymer.dom(this._rippleContainer).querySelector('#badge');
+          var badgePos = badge.getBoundingClientRect();
+          var rippleX = badgePos.left + 12;
+          var rippleY = badgePos.top + 12;
+          this._ripple.downAction({detail: {x: rippleX, y: rippleY}});
+        }
+        if (this.hasRipple()) {
+          this._ripple.holdDown = receivedFocusFromKeyboard;
+        }
+      },
+
+      _tapHandler: function(e) {
+        var rootTarget = Polymer.dom(e).rootTarget;
+        if (rootTarget !== this && rootTarget !== this._rippleContainer) {
+          e.stopImmediatePropagation();
+        }
+      },
+
+      /**
+       * Missing Doc
+       */
+      skip: function() {
+        // would it be better to send an event?
+        this._stepper.progress();
+      },
+
+      /**
+       * Missing Doc
+       */
+      back: function() {
+        // would it be better to send an event?
+        this._stepper.back();
+      },
+
+      /**
+       * Mark the step as saved and fire `paper-step-saved` if it is valid.
+       * @return {Boolean} True if the step has been saved.
+       */
+      save: function() {
+        if ((!this.saved || this.editable) && this.validate()) {
+          if (this.saved) {
+            this.fire('paper-step-updated');
+          } else {
+            this._setSaved(true);
+            this.fire('paper-step-saved');
+          }
+          return true;
+        }
+        return false;
+      },
+
+      /**
+       * Atempte to save the step and select and to progress into the stepper.
+       * @return {Boolean} True if the step is valid for saving.
+       */
+      continue: function() {
+        if (this.save()) {
+          // would it be better to send an event?
+          this._stepper.progress();
+          return true;
+        }
+        return false;
+      },
+
+      _removeAnimatingClass: function() {
+        if (this._animationCanceled) {
+          this._set_animationCanceled(false);
+        } else {
+          this.toggleClass('neon-animating', false);
+        }
+      },
+
+      _cancelAnimation: function() {
+        this._set_animationCanceled(true);
+        this.toggleClass('neon-animating', false);
+      },
+
+      _updateSlideshowViewportTop: function(optional, _alternativeLabel, vertical) {
+        if (!vertical) {
+          this.async(function() {
+            this.$$('#slideshowViewport').style.top = this.clientHeight+'px';
+            this.fire('step-horizontal-label-resize');
+          })
+        }
+      },
+
+      _toggleClassPosition: function(index, stepNumber, vertical) {
+        this.async(function() {
+          var stepLabel = this.$$(vertical ? '#verticalStepLabel' : '#horizontalStepLabel');
+          this.toggleClass('first-step', (index == 1), stepLabel);
+          this.toggleClass('last-step', (index == stepNumber), stepLabel);
+        });
+      },
+
+      _updateAnimationConfig: function() {
+        /* TODO: call this method when horizontalHigher/LowerEntry/ExitAnimation change */
+        var animatedNode = this.$$('#contentWrapper');
+        this._setAnimationConfig({
+          'higher-step-entry': {
+            node: animatedNode,
+            name: this.horizontalHigherEntryAnimation
+          },
+          'higher-step-exit': {
+            node: animatedNode,
+            name: this.horizontalHigherExitAnimation
+          },
+          'lower-step-entry': {
+            node: animatedNode,
+            name: this.horizontalLowerEntryAnimation
+          },
+          'lower-step-exit': {
+            node: animatedNode,
+            name: this.horizontalLowerExitAnimation
+          }
+        });
+      },
+
+      _verticalChange: function(vertical) {
+        this.async(function() {
+          // move or create the content tag
+          Polymer.dom(this.$$(vertical ? '#verticalStepLabel' : '#contentWrapper')).appendChild(this.$$('content') || this.create('content'));
+          // reset the ripple
+          this._ripple = false;
+          this._rippleContainer = vertical ? this.$$('#verticalStepLabel').$.label : this.$$('#horizontalStepLabel').$.label;
+          if (!vertical) {
+            this._updateAnimationConfig();
+          }
+        }.bind(this));
+      },
+
+      _computeSelectable: function(linear, saved, editable, previousSaved) {
+        // TODO: factorize the expression
+        return (!linear || previousSaved) && (!saved || editable) || (editable && saved);
+      },
+
+      _computeDisabled: function(selectable) {
+        // disabled is used by IronMenuBehavior in paper-stepper
+        // TODO: remove selectable attribute and use disabled instead
+        return !selectable;
+      }
+
+    });
+'use strict';
+    Polymer({
+
+      is: 'paper-stepper',
+
+      behaviors: [
+        Polymer.IronMenuBehavior,
+        Polymer.NeonAnimationRunnerBehavior,
+        Polymer.IronResizableBehavior
+      ],
+
+      /**
+       * Fired when the stepper progress.
+       *
+       * @event paper-stepper-progressed
+       */
+      /**
+       * Fired when all the steps are saved.
+       *
+       * @event paper-stepper-completed
+       */
+      properties: {
+        opened: {
+          type: Boolean,
+          computed: '_computeOpened(_selectedIndex)',
+          observer: '_openedChanged',
+          notify: true,
+          reflectToAttribute: true
+        },
+        alternativeLabel: {
+          type: Boolean,
+          value: false
+        },
+        vertical: {
+          type: Boolean,
+          value: false,
+          reflectToAttribute: true
+        },
+        backText: {
+          type: String,
+          value: 'BACK'
+        },
+        finishText: {
+          type: String,
+          value: 'FINISH'
+        },
+        continueText: {
+          type: String,
+          value: 'CONTINUE'
+        },
+        skipText: {
+          type: String,
+          value: 'SKIP'
+        },
+        optionalText: {
+          type: String,
+          value: 'Optional'
+        },
+        updateText: {
+          type: String,
+          value: 'UPDATE'
+        },
+        linear: {
+          type: Boolean,
+          value: false
+        },
+        completed: {
+          type: Boolean,
+          value: false,
+          notify: true,
+          computed: '_computeCompleted(stepNumber, savedStepNumber)'
+        },
+        hasSkipButton: {
+          type: Boolean,
+          value: false
+        },
+        hasBackButton: {
+          type: Boolean,
+          value: false
+        },
+        stepNumber: {
+          type: Number,
+          notify: true,
+          computed: '_computeStepNumber(items.length)'
+        },
+        savedStepNumber: {
+          type: Number,
+          notify: true,
+          readOnly: true
+        },
+        selectedAttribute: {
+          value: 'opened',
+          readOnly: true
+        },
+        /**
+         * Note: if you decide to change this attribute, take care to only include `<paper-step>` elements in your `<paper-stepper>`
+         */
+        selectable: {
+          value: 'paper-step'
+        },
+        /**
+         * Multi mode is not allowed for now in paper-stepper.
+         */
+        mutli: {
+          value: false,
+          readOnly: true
+        },
+        responsiveCheckFrequence: {
+          type: Number,
+          value: 200
+        },
+        animateInitialSelection: {
+          type: Boolean,
+          value: false
+        },
+        horizontalHigherEntryAnimation: {
+          type: String,
+          value: 'fade-in-slide-from-right-animation'
+        },
+        horizontalHigherExitAnimation: {
+          type: String,
+          value: 'fade-out-slide-right-animation'
+        },
+        horizontalLowerEntryAnimation: {
+          type: String,
+          value: 'fade-in-slide-from-left-animation'
+        },
+        horizontalLowerExitAnimation: {
+          type: String,
+          value: 'fade-out-slide-left-animation'
+        },
+        _skipStepIndex: {
+          type: Number,
+          computed: '_compute_skipStepIndex(_selectedIndex)'
+        },
+        _canSkip: {
+          type: Boolean,
+          notify: true,
+          computed: '_isntNull(_skipStepIndex)'
+        },
+        _backStepIndex: {
+          type: Number,
+          computed: '_compute_backStepIndex(_selectedIndex)'
+        },
+        _hasBackStep: {
+          type: Boolean,
+          computed: '_isntNull(_backStepIndex)'
+        },
+        _selectedIndex: {
+          type: Number,
+          observer: '_selectedIndexChanged',
+          readOnly: true,
+          value: -1
+        },
+        _attrForSelectedStepPrimaryButtonText: {
+          type: String,
+          computed: '_compute__attrForSelectedStepPrimaryButtonText(_selectedIndex, stepNumber)'
+        },
+        _previousAnimatedStep: {
+          type: Object,
+          value: null,
+          readOnly: true
+        },
+        _previousSelected: {
+          type: Object,
+          readOnly: true
+        }
+      },
+
+      keyBindings: {
+        'left': '_onLeftKey',
+        'right': '_onRightKey'
+      },
+
+      listeners: {
+        'iron-items-changed': '_initializeSteps',
+        'paper-step-saved': '_stepSaved',
+        'transitionend': '_transitionEnd',
+        'step-horizontal-label-resize': '_updateStepperClosedMaxHeight',
+        'iron-resize': '_resizeHandler',
+        'neon-animation-finish': '_onNeonAnimationFinish'
+      },
+
+      observers: [
+        '_forwardCanSkip(_canSkip, selectedItem)',
+        '_forwardHasBackStep(_hasBackStep, selectedItem)',
+        '_forwardVertical(vertical)',
+        '_forwardAlternativeLabel(alternativeLabel)',
+        '_forwardStepperData(linear, backText, optionalText, finishText, continueText, skipText, updateText, hasSkipButton, hasBackButton)'
+      ],
+
+      attached: function() {
+        this._responsiveCheck();
+      },
+
+      /**
+       * Missing Doc
+       */
+      back: function() {
+        this.selectIndex(this._backStepIndex);
+      },
+
+      /**
+       * @return {Boolean} Try to continue the current step (if no step opened, use the first one).
+       */
+      continue: function() {
+        if (this.selectedItem) {
+          if (this.selectedItem.save()) {
+            this.progress();
+          }
+        }
+      },
+
+      /**
+       * Loops around the steps from the current (if no step opened, from the first one)
+       * in order to open the next selectable unsaved step. Returns true if a step has been opened.
+       */
+      progress: function() {
+        if (!this.stepNumber) {
+          return false;
+        }
+        if (this.completed) {
+          this.selected = null;
+          return true;
+        }
+        for (var i = (this._selectedIndex+1)%this.stepNumber; i != this._selectedIndex; i = (i+1)%this.stepNumber) {
+          if (this.items[i].selectable && !this.items[i].saved) {
+            this.selectIndex(i);
+            this.fire('paper-stepper-progressed');
+            return true;
+          }
+        }
+        return false;
+      },
+
+      /* Deselect and set the steps as unsaved*/
+      reset: function() {
+        this._setSavedStepNumber(0);
+        this.selected = null;
+        if (!this.items.length) {
+          return;
+        }
+        this.items.map(function(step) {
+          step._setSaved(false);
+          step._set_previousSaved(false);
+        });
+        this.items[0]._set_previousSaved(true);
+      },
+
+      get _isRTL() {
+        return window.getComputedStyle(this)['direction'] === 'rtl';
+      },
+
+      _onLeftKey: function(event) {
+        if (this._isRTL) {
+          this._focusNext();
+        } else {
+          this._focusPrevious();
+        }
+        event.detail.keyboardEvent.preventDefault();
+      },
+      
+      _onRightKey: function(event) {
+        if (this._isRTL) {
+          this._focusPrevious();
+        } else {
+          this._focusNext();
+        }
+        event.detail.keyboardEvent.preventDefault();
+      },
+
+      /**
+       * Work around: Override the method from IronSelectableBehavior to only allow the selection of selectable step. https://github.com/PolymerElements/iron-selector/issues/99
+       */
+      _selectSelected: function(selected) {
+        var item = this._valueToItem(this.selected);
+        if (item) {
+          var selectable = item.selectable;
+          if (selectable == undefined) {
+            // if selectable isn't define it means the step is not yet ready for selection
+            // and this method will be recalled by the initialization method.
+            return;
+          } else if (!selectable) {
+            //reset previous selected if non null and selectable or deselect
+            if (this._previousSelected && this._previousSelected.selectable) {
+              this.selected = this._valueForItem(this.previousSelected);
+            } else {
+              this.selected = null;
+            }
+            this._set_previousSelected(null);
+            return;
+          }
+        }
+        this._selection.select(item);
+        this._set_previousSelected(item);
+        this._set_selectedIndex(this.indexOf(item));
+        // Check for items, since this array is populated only when attached
+        // Since Number(0) is falsy, explicitly check for undefined
+        if (this.fallbackSelection && this.items.length && (this._selection.get() === undefined)) {
+          this.selected = this.fallbackSelection;
+        }
+      },
+
+      _updateStepperClosedMaxHeight: function() {
+        this.debounce('updateStepperClosedMaxHeight', function() {
+          this.customStyle['--label-wrapper-height'] = this.$$('#content-wrapper').clientHeight + 'px';
+          this.updateStyles('--label-wrapper-height');
+        });
+      },
+
+      _openedChanged: function(newValue, oldValue) {
+        if (!this.vertical && oldValue != undefined) {
+          this.toggleClass('collapsing', true);
+        }
+      },
+
+      _transitionEnd: function(e) {
+        // check to ignore event fired by paper-ripple
+        if (e.propertyName == 'max-height') {
+          this.toggleClass('collapsing', false);
+        }
+      },
+
+      _computeOpened: function(_selectedIndex) {
+        return _selectedIndex >= 0;
+      },
+
+      _stepSaved: function(e) {
+        var previousStep = this.items[this.indexOf(e.target)+1];
+        if (previousStep) {
+          previousStep._set_previousSaved(true);
+        }
+        this._setSavedStepNumber(this.savedStepNumber+1);
+      },
+
+      _forwardVertical: function(vertical) {
+        if (this.stepNumber) {
+          this.items.map(function(step) {
+            step._setVertical(vertical);
+          });
+        }
+        this.setAttribute('role', vertical ? 'menu': 'menubar');
+      },
+
+      _forwardStepperData: function(linear, backText, optionalText, finishText, continueText, skipText, updateText, hasSkipButton, hasBackButton) {
+        if (this.stepNumber) {
+          this.items.map(function(step) {
+            step._set_stepperData({
+              linear: linear,
+              backText: backText,
+              optionalText: optionalText,
+              finishText: finishText,
+              continueText: continueText,
+              skipText: skipText,
+              updateText: updateText,
+              hasSkipButton: hasSkipButton,
+              hasBackButton: hasBackButton,
+              stepNumber: this.stepNumber
+            });
+          }.bind(this));
+        }
+      },
+
+      _forwardAlternativeLabel: function(alternativeLabel) {
+        if (this.stepNumber) {
+          this.items.map(function(step) {
+            step._set_alternativeLabel(alternativeLabel);
+          });
+        }
+      },
+
+      _computeStepNumber: function(length) {
+        return length;
+      },
+
+      _selectedIndexChanged: function(newValue, oldValue) {
+        if (!this.vertical && newValue >=0 && oldValue >= 0) {
+          var oldStep = this.items[oldValue], newStep = this.items[newValue];
+          if (newStep.classList.contains('neon-animating')) {
+            this.cancelAnimation();
+          }
+          if (this._previousAnimatedStep && this._previousAnimatedStep.classList.contains('neon-animating')) {
+            this.cancelAnimation();
+            this.toggleClass('neon-animating', false, this._previousAnimatedStep);
+          }
+          var forward = newValue - oldValue > 0;
+
+          this.animationConfig = {
+            'new-step-entry': {
+              animatable: newStep,
+              type: forward ?
+                newStep.horizontalHigherEntryAnimation && 'higher-step-entry' :
+                newStep.horizontalLowerEntryAnimation && 'lower-step-entry'
+            },
+            'old-step-exit': {
+              animatable: oldStep,
+              type: forward ?
+                oldStep.horizontalLowerExitAnimation && 'lower-step-exit' :
+                oldStep.horizontalHigherExitAnimation && 'higher-step-exit'
+            }
+          };
+          if (this.animationConfig['new-step-entry'].type) {
+            this.playAnimation('new-step-entry', {step: newStep});
+            this.toggleClass('neon-animating', true, newStep);
+          }
+          if (this.animationConfig['old-step-exit'].type) {
+            this.playAnimation('old-step-exit', {step: oldStep});
+            this.toggleClass('neon-animating', true, oldStep);
+          }
+
+          this._set_previousAnimatedStep(oldStep);
+        }
+      },
+
+      _onNeonAnimationFinish: function(event) {
+        var step = event.detail.step;
+        if (step) {
+          this.toggleClass('neon-animating', false, step);
+        }
+      },
+
+      _forwardCanSkip: function(_canSkip, selectedItem) {
+        selectedItem._set_canSkip(_canSkip);
+      },
+
+      _forwardHasBackStep: function(_hasBackStep, selectedItem) {
+        selectedItem._set_hasBackStep(_hasBackStep);
+      },
+
+      _compute__attrForSelectedStepPrimaryButtonText: function(selectedIndex) {
+        /* TODO: compute from selectedItem when https://github.com/PolymerElements/iron-selector/issues/118 is fixed*/
+        if (selectedIndex < 0) {
+          return null;
+        }
+        var _attrForPrimaryButtonText = this.selectedItem.saved ? 'updateText' :
+          ( (this.stepNumber - this.savedStepNumber) == 1 ? 'finishText' : 'continueText' );
+        this.selectedItem._set_attrForPrimaryButtonText(_attrForPrimaryButtonText);
+        return _attrForPrimaryButtonText;
+      },
+
+      _initializeSteps: function() {
+        var savedStepNumber = 0;
+        var data = {
+          linear: this.linear,
+          backText: this.backText,
+          optionalText: this.optionalText,
+          finishText: this.finishText,
+          continueText: this.continueText,
+          skipText: this.skipText,
+          updateText: this.updateText,
+          hasSkipButton: this.hasSkipButton,
+          hasBackButton: this.hasBackButton,
+          stepNumber: this.stepNumber
+        };
+        this.items.map(function(step, i) {
+          if (this.horizontalHigherEntryAnimation && !step.horizontalHigherEntryAnimation) {
+            step.horizontalHigherEntryAnimation = this.horizontalHigherEntryAnimation;
+          }
+          if (this.horizontalHigherExitAnimation && !step.horizontalHigherExitAnimation) {
+            step.horizontalHigherExitAnimation = this.horizontalHigherExitAnimation;
+          }
+          if (this.horizontalLowerEntryAnimation && !step.horizontalLowerEntryAnimation) {
+            step.horizontalLowerEntryAnimation = this.horizontalLowerEntryAnimation;
+          }
+          if (this.horizontalLowerExitAnimation && !step.horizontalLowerExitAnimation) {
+            step.horizontalLowerExitAnimation = this.horizontalLowerExitAnimation;
+          }
+          step._setIndex(i + 1);
+          step._set_stepper(this);
+          step._setVertical(this.vertical);
+          step._set_alternativeLabel(this.alternativeLabel);
+          step._set_stepperData(data);
+          // true for index 0
+          step._set_previousSaved(!i);
+          if (step.saved) {
+            savedStepNumber++;
+          }
+        }.bind(this));
+         
+        this._setSavedStepNumber(savedStepNumber);
+        // method from IronSelectableBehavior
+        this._updateSelected();
+      },
+
+      _compute_skipStepIndex: function(_selectedIndex) {
+        if (_selectedIndex >= 0 && !this.completed) {
+          for (var i=(_selectedIndex+1)%this.stepNumber; i!=_selectedIndex; i=(i+1)%this.stepNumber) {
+            if (this.items[i].selectable && !this.items[i].saved) {
+              return i;
+            }
+          }
+        }
+        return null;
+      },
+
+      _compute_backStepIndex: function(_selectedIndex) {
+        if (_selectedIndex >= 0) {
+          for (var i=_selectedIndex - 1; i >= 0; i--) {
+            if (this.items[i].selectable) {
+              return i;
+            }
+          }
+        }
+        return null
+      },
+
+      _isntNull: function(n) {
+        return n != null;
+      },
+
+      _computeCompleted: function(savedStepNumber, stepNumber) {
+        var completed = stepNumber == savedStepNumber;
+        if (completed) {
+          this.fire('paper-stepper-completed');
+          return true;
+        }
+        return false;
+      },
+
+      _choosePrimaryButtonText: function(_attrForSelectedStepPrimaryButtonText) {
+        return this[_attrForSelectedStepPrimaryButtonText];
+      },
+
+      _resizeHandler: function() {
+        this.debounce('paper-stepper-responsive-check', function() {
+          this._responsiveCheck();
+        }, this.responsiveCheckFrequence);
+      },
+
+      _responsiveCheck: function() {
+        var verticalResponsiveWidth = this.$.verticalResponsiveWidth.clientWidth;
+        if (verticalResponsiveWidth) {
+          this.vertical = !(this.clientWidth > verticalResponsiveWidth);
+        }
+      }
+
+    });
+Polymer({
       is: 'paper-tab',
 
       behaviors: [
@@ -22377,6 +23679,32 @@ Polymer({
     });
 Polymer({
 
+    is: 'slide-left-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+
+      this._effect = new KeyframeEffect(node, [
+        {'transform': 'none'},
+        {'transform': 'translateX(-100%)'}
+      ], this.timingFromConfig(config));
+
+      if (config.transformOrigin) {
+        this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
+      } else {
+        this.setPrefixedProperty(node, 'transformOrigin', '0 50%');
+      }
+
+      return this._effect;
+    }
+
+  });
+Polymer({
+
     is: 'slide-from-bottom-animation',
 
     behaviors: [
@@ -22421,6 +23749,32 @@ Polymer({
         this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
       } else {
         this.setPrefixedProperty(node, 'transformOrigin', '50% 0');
+      }
+
+      return this._effect;
+    }
+
+  });
+Polymer({
+
+    is: 'slide-from-right-animation',
+
+    behaviors: [
+      Polymer.NeonAnimationBehavior
+    ],
+
+    configure: function(config) {
+      var node = config.node;
+
+      this._effect = new KeyframeEffect(node, [
+        {'transform': 'translateX(100%)'},
+        {'transform': 'none'}
+      ], this.timingFromConfig(config));
+
+      if (config.transformOrigin) {
+        this.setPrefixedProperty(node, 'transformOrigin', config.transformOrigin);
+      } else {
+        this.setPrefixedProperty(node, 'transformOrigin', '0 50%');
       }
 
       return this._effect;
@@ -23598,17 +24952,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisDevicesMain = this;
                 },
 
-                _changedDevice: function(device) {
-                    if (device != '') {
-                        setTimeout(() => {
-                            
-                        }, 100);
-                        thisDevicesMain.device = '';    
-                    }
-                },
-
                 _triggeredSetup: function() {
-                    console.log('hehe')
+                    // console.log(`${thisDevicesMain.vendor}_${thisDevicesMain.device}`);
+                    // thisDevicesMain.pageSelected = 'setup';
                 }
 
             });
@@ -23725,9 +25071,11 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     else if (deviceType.startsWith('Replus')) var vendor = 'Replus';
                     else var vendor = 'MQTT';
 
+                    thisDevicesList.pageSelected = 'setup';
                     thisDevicesList.selectedDevice = deviceID;
                     thisDevicesList.selectedVendor = vendor;
-                    thisDevicesList.triggerSetup = Math.random();
+                    thisDevicesSetup.$.stepper.progress();
+                    // thisDevicesList.triggerSetup = Math.random();
                 }
 
             });
@@ -23842,15 +25190,71 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'devices-setup',
                 properties: {
+                    pageSelected: {
+                        type: String,
+                        notify: true
+                    },
 
+                    stepSaved: {
+                        type: Number,
+                        observer: '_changedStepSaved'
+                    }
                 },
 
                 ready: function() {
                     thisDevicesSetup = this;
+                    thisDevicesSetup.stateInitial();
                 },
 
-                _handleResponse: function() {
-                    
+                check: function() {
+                    thisDevicesSetup.stateWaitResponse();
+                    thisDevicesSetup.$.ajaxCheck.generateRequest();
+                    thisDevicesSetup.timeout = setTimeout(() => {
+                        thisDevicesSetup.stateResponseError();
+                    }, 15000);
+                },
+
+                stateInitial: function() {
+                    thisDevicesSetup.$.stepper.reset();
+                    thisDevicesSetup.$.spinner.style.display = 'none';
+                    thisDevicesSetup.$.toastRetry.close();
+                },
+                stateWaitResponse: function() {
+                    thisDevicesSetup.$.spinner.style.display = 'block';
+                    thisDevicesSetup.$.toastRetry.close();
+                },
+                stateResponseError: function() {
+                    thisDevicesSetup.$.spinner.style.display = 'none';
+                    thisDevicesSetup.$.toastRetry.show({text: 'Fail to connect.', duration: 10000});
+                },
+
+                _changedStepSaved: function(stepSaved) {
+                    if (stepSaved == 2) {
+                        if (thisDevicesSetup.ssid == '') {
+                            thisDevicesSetup.stateInitial();
+                            thisDevicesSetup.$.toast.show({text: 'SSID can not be empty.', duration: 3000});
+                        }
+                    } else if (stepSaved == 3) {
+                        console.log('execute order 66!')
+                    } else if (stepSaved == 4) {
+                        thisDevicesSetup.check();
+                    }
+                },
+
+                _handleResponseCheck: function() {
+                    if (thisDevicesSetup.responseCheck == 'OK') {
+                        thisDevicesSetup.$.ajaxSave.generateRequest();
+                        clearTimeout(thisDevicesSetup.timeout);
+                    }
+                },
+
+                _handleResponseSave: function() {
+                    thisDevicesSetup.stateInitial();
+                },
+
+                _tapBack: function() {
+                    thisDevicesSetup.pageSelected = 'list';
+                    thisDevicesSetup.stateInitial();
                 }
 
 

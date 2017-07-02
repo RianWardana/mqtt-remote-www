@@ -25575,7 +25575,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'remote-ac',
                 properties: {
-                    brand: String,
+                    // brand: String,
 
                     fans: {
                         type: Array,
@@ -25589,26 +25589,31 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                     remote: {
                         type: String,
-                        observer: '_remoteChanged'
+                        observer: '_changeRemote'
                     },
 
-                    temp: {
-                        type: String,
-                        value: "18"
-                    }
+                    // temp: {
+                    //     type: String,
+                    //     value: "18"
+                    // },
+
+                    mode: { type: Number, observer: '_changeMode' },
+                    fan: { type: Number, observer: '_changeFan' }
                 },
+
+                observers: [
+                	'parseFans(mode)',
+                	'parseTemps(mode, fan)',
+                	'resetTimeout(mode, fan, temp)'
+                ],
 
                 ready: function() {
                     thisRemoteAC = this;
                     thisRemoteAC.setupPosition();
-                    thisRemoteAC.switchOn = true;
-                    thisRemoteAC.$.displayContainer.style.visibility = "hidden";
-
+                    thisRemoteAC.stateInitial();
                     window.addEventListener('resize', function(event){
                         thisRemoteAC.setupPosition();
                     });
-
-                    thisRemoteAC.parseManifest();
                 },
 
                 parseManifest: function() {
@@ -25619,13 +25624,63 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 			thisRemoteAC.push('manifestModes', parseInt(mode));
                 		}
                 	}
+                	thisRemoteAC.modeIndex = 0;
+                	thisRemoteAC.mode = thisRemoteAC.manifestModes[thisRemoteAC.modeIndex];
                 },
 
+                parseFans: function() {
+                	thisRemoteAC.manifestFans = [];
+                    var mode = thisRemoteAC.manifest[thisRemoteAC.mode];
+                    for (var fan in mode) {
+                    	if (mode.hasOwnProperty(fan)) {
+                    		thisRemoteAC.push('manifestFans', parseInt(fan));
+                    	}
+                    }
+                    thisRemoteAC.fanIndex = 0;
+                    thisRemoteAC.fan = thisRemoteAC.manifestFans[thisRemoteAC.fanIndex];
+                },
 
+                parseTemps: function() {
+                	thisRemoteAC.manifestTemps = thisRemoteAC.manifest[thisRemoteAC.mode][thisRemoteAC.fan];
+                    if (typeof thisRemoteAC.manifestTemps[thisRemoteAC.tempIndex] == 'undefined') {
+                    	thisRemoteAC.tempIndex = 0;
+                    	thisRemoteAC.temp = thisRemoteAC.manifestTemps[thisRemoteAC.tempIndex];
+                    }
+                },
+
+                resetTimeout: function() {
+                	clearTimeout(thisRemoteAC.timeout);
+                	thisRemoteAC.timeout = setTimeout(() => { thisRemoteAC.send(); }, 1000);
+                },
+
+                stateInitial: function() {
+                	thisRemoteAC.switchOn = true;
+                	thisRemoteAC.$.displayContainer.style.visibility = "hidden";
+                    thisRemoteAC.$.btnPower.setAttribute("icon", "power-settings-new");
+                    thisRemoteAC.$.btnMode.disabled = "true";
+                    thisRemoteAC.$.btnFan.disabled = "true";
+                    thisRemoteAC.$.btnTempUp.disabled = "true";
+                    thisRemoteAC.$.btnTempDown.disabled = "true";
+                },
+
+                stateEnabled: function() {
+                	thisRemoteAC.switchOn = false;
+                	thisRemoteAC.$.displayContainer.style.visibility = "visible";
+                    thisRemoteAC.$.btnPower.setAttribute("icon", "close");
+                    thisRemoteAC.$.btnMode.removeAttribute('disabled');
+                    thisRemoteAC.$.btnFan.removeAttribute('disabled');
+                    thisRemoteAC.$.btnTempUp.removeAttribute('disabled');
+                    thisRemoteAC.$.btnTempDown.removeAttribute('disabled');
+                },
+
+                send: function() {
+                    thisRemoteAC.command = thisRemoteAC.brand + "-" + thisRemoteAC.mode + thisRemoteAC.fan + thisRemoteAC.temp;
+                    thisRemoteAC.$.ajax.generateRequest();
+                },
 
                 setupPosition: function() {
-                	if (window.innerHeight > 570) thisRemoteAC.$.remoteContainer.style.marginTop = (window.innerHeight - 550) - 20 + 'px';
-                	else thisRemoteAC.$.remoteContainer.style.marginTop = '20px';
+                	if (window.innerHeight > 470) thisRemoteAC.$.remoteContainer.style.marginTop = window.innerHeight - (64+20+120+270) + 'px';
+                	else thisRemoteAC.$.remoteContainer.style.marginTop = '10px';
 
                     if (window.innerWidth > 350) {
                         thisRemoteAC.$.mainContainer.style.width = '330px';
@@ -25641,10 +25696,17 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
 
-                _remoteChanged: function() {
+                _changeMode: function() {
+                	thisRemoteAC.$.displayMode.innerHTML = thisRemoteAC.modes[thisRemoteAC.mode];
+                },
+
+                _changeFan: function() {
+                	thisRemoteAC.$.displayFan.innerHTML = thisRemoteAC.fans[thisRemoteAC.fan];
+                },
+
+                _changeRemote: function() {
                     var jenis = thisRemoteAC.remote.substring(0, 2);
                     thisRemoteAC.brand = thisRemoteAC.remote.substring(3).toLowerCase();
-
                     if (jenis == "AC") {
                         thisRemoteAC.$.ajaxManifest.generateRequest();
                     }
@@ -25654,100 +25716,44 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _tapPower: function() {
                     if (!thisRemoteAC.switchOn) {
-                        thisRemoteAC.mode = "0";
-                        thisRemoteAC.fan = "0";
-                        thisRemoteAC.temp = "00";
-                        thisRemoteAC.$.displayContainer.style.visibility = "hidden";
-                        thisRemoteAC.$.btnPower.setAttribute("icon", "power-settings-new");
-                        thisRemoteAC.$.btnMode.disabled = "true";
-                        thisRemoteAC.$.btnFan.disabled = "true";
-                        thisRemoteAC.$.btnTempUp.disabled = "true";
-                        thisRemoteAC.$.btnTempDown.disabled = "true";
-                        thisRemoteAC.$.btnSend.disabled = "true";
-                        thisRemoteAC._tapSend();
-                        setTimeout(() => {thisRemoteAC.temp = "18"; thisRemoteAC.modeIndex = -1;}, 100);
+                    	thisRemoteAC.stateInitial();
+                        thisRemoteAC._tapPowerOFF();
                     } else {
-                        thisRemoteAC._tapMode();
-                        thisRemoteAC.$.displayContainer.style.visibility = "visible";
-                        thisRemoteAC.$.btnPower.setAttribute("icon", "close");
-                        thisRemoteAC.$.displayMode.innerHTML = thisRemoteAC.modes[thisRemoteAC.mode];
-                        thisRemoteAC.$.displayFan.innerHTML = thisRemoteAC.fans[thisRemoteAC.fan];
-                        thisRemoteAC.$.btnMode.removeAttribute('disabled');
-                        thisRemoteAC.$.btnFan.removeAttribute('disabled');
-                        thisRemoteAC.$.btnTempUp.removeAttribute('disabled');
-                        thisRemoteAC.$.btnTempDown.removeAttribute('disabled');
-                        thisRemoteAC._tapSend();
+                        thisRemoteAC.stateEnabled();
+                        thisRemoteAC.send();
                     }
-                    thisRemoteAC.switchOn = !thisRemoteAC.switchOn;
                 },
 
-
+                _tapPowerOFF: function() {
+                	thisRemoteAC.command = thisRemoteAC.brand + "-0000";
+                	thisRemoteAC.$.ajax.generateRequest();
+                	thisRemoteAC.parseManifest();
+                    thisRemoteAC.temp = 20;
+                },
 
                 _tapMode: function() {
                 	if (thisRemoteAC.modeIndex < thisRemoteAC.manifestModes.length - 1) thisRemoteAC.modeIndex++;
                 	else thisRemoteAC.modeIndex = 0;
                 	thisRemoteAC.mode = thisRemoteAC.manifestModes[thisRemoteAC.modeIndex];
-
-                    thisRemoteAC.$.displayMode.innerHTML = thisRemoteAC.modes[thisRemoteAC.mode];
-                    thisRemoteAC.$.btnSend.removeAttribute('disabled');
-
-                    thisRemoteAC.manifestFans = [];
-                    var mode = thisRemoteAC.manifest[thisRemoteAC.mode];
-                    for (var fan in mode) {
-                    	if (mode.hasOwnProperty(fan)) {
-                    		thisRemoteAC.push('manifestFans', parseInt(fan));
-                    	}
-                    }
-                    thisRemoteAC._tapFan();
                 },
-
-
 
                 _tapFan: function() {
                 	if (thisRemoteAC.fanIndex < thisRemoteAC.manifestFans.length - 1) thisRemoteAC.fanIndex++;
                 	else thisRemoteAC.fanIndex = 0;
                 	thisRemoteAC.fan = thisRemoteAC.manifestFans[thisRemoteAC.fanIndex];
-
-                    thisRemoteAC.$.displayFan.innerHTML = thisRemoteAC.fans[thisRemoteAC.fan];
-                    thisRemoteAC.$.btnSend.removeAttribute('disabled');
-
-                    thisRemoteAC.manifestTemps = thisRemoteAC.manifest[thisRemoteAC.mode][thisRemoteAC.fan];
-
-                    if (typeof thisRemoteAC.manifestTemps[thisRemoteAC.tempIndex] == 'undefined') {
-                    	thisRemoteAC.tempIndex = 0;
-                    	thisRemoteAC._tapDown();
-                    }
                 },
-
-
 
                 _tapUp: function() {
                 	if (thisRemoteAC.tempIndex < thisRemoteAC.manifestTemps.length - 1) thisRemoteAC.tempIndex++;
-                	else thisRemoteAC.tempIndex = thisRemoteAC.manifestTemps.length - 1;
                 	thisRemoteAC.temp = thisRemoteAC.manifestTemps[thisRemoteAC.tempIndex];
-
-                    thisRemoteAC.$.btnSend.removeAttribute('disabled');
                 },
-
-
 
                 _tapDown: function() {
                 	if (thisRemoteAC.tempIndex > 0) thisRemoteAC.tempIndex--;
-                	else thisRemoteAC.tempIndex = 0;
                 	thisRemoteAC.temp = thisRemoteAC.manifestTemps[thisRemoteAC.tempIndex];
-
-                    thisRemoteAC.$.btnSend.removeAttribute('disabled');
                 },
 
-
-
-                _tapSend: function() {
-                    thisRemoteAC.uid = thisMainAuth.uid;
-                    thisRemoteAC.roomID = thisRemoteList.roomID;
-                    thisRemoteAC.command = thisRemoteAC.brand + "-" + thisRemoteAC.mode + thisRemoteAC.fan + thisRemoteAC.temp;
-                    thisRemoteAC.$.ajax.generateRequest();
-                    thisRemoteAC.$.btnSend.disabled = "true";
-                },
+                
 
 
 

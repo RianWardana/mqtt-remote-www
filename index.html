@@ -5678,7 +5678,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </app-header>
 
         <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
-            <remote-ac remote-view="AC" remote="{{pilihanRemote}}"></remote-ac>
+            <remote-ac remote-view="AC" uid="[[uid]]" room-key="[[roomID]]" remote="[[pilihanRemote]]"></remote-ac>
             <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
             <remote-add remote-view="add" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomID]]" devices-unassigned="[[devicesUnassigned]]"></remote-add>
 
@@ -5723,11 +5723,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
             paper-fab {
                 margin-bottom: 20px;
-            }
-
-            #btnSend {
-                margin-top: 20px;
-                width: 100vw;
             }
 
             #btnPower {
@@ -5776,10 +5771,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
 
-		<iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/{{brand}}/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
+		<iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/[[brand]]/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
         </iron-ajax>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/post/pociremote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;command={{command}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/post/pociremote" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;command=[[command]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="mainContainer">
@@ -5788,8 +5783,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                     <p id="displayTemp">{{temp}}<sup><sup>o</sup>C</sup></p>
                 </div>
                 <div class="horizontal layout justified">
-                    <p id="displayMode">OFF</p>
-                    <p id="displayFan">OFF</p>
+                    <p id="displayMode"></p>
+                    <p id="displayFan"></p>
                 </div>
             </div>
             
@@ -5808,9 +5803,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                     <paper-fab disabled="" id="btnTempDown" on-tap="_tapDown" icon="remove"></paper-fab>
                     <p id="textTemp">Temperature</p>
                     <paper-fab disabled="" id="btnTempUp" on-tap="_tapUp" icon="add"></paper-fab>
-                </div>
-                <div class="horizontal layout center-justified">
-                    <paper-button raised="" id="btnSend" on-tap="_tapSend" disabled="">Send</paper-button>
                 </div>
             </div>
         </div>

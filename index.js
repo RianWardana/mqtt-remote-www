@@ -25235,7 +25235,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                             thisDevicesSetup.$.toast.show({text: 'SSID can not be empty.', duration: 3000});
                         }
                     } else if (stepSaved == 3) {
-                        console.log('execute order 66!')
+                        console.log('execute order 66!');
+                        thisDevicesSetup.$.ajax66.generateRequest();
                     } else if (stepSaved == 4) {
                         thisDevicesSetup.check();
                     }
@@ -25409,7 +25410,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         value: 'list'
                     },
 
-                    remotes: Array
+                    // remotes: Array,
+
+                    isLoading: {
+                    	type: Boolean,
+                    	value: false
+                    }
                 },
 
 
@@ -25575,8 +25581,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'remote-ac',
                 properties: {
-                    // brand: String,
-
                     fans: {
                         type: Array,
                         value: ["Auto", "Low", "Medium", "High"]
@@ -25591,11 +25595,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         type: String,
                         observer: '_changeRemote'
                     },
-
-                    // temp: {
-                    //     type: String,
-                    //     value: "18"
-                    // },
 
                     mode: { type: Number, observer: '_changeMode' },
                     fan: { type: Number, observer: '_changeFan' }
@@ -25654,7 +25653,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 stateInitial: function() {
-                	thisRemoteAC.switchOn = true;
+                	thisRemoteAC.switchedON = false;
                 	thisRemoteAC.$.displayContainer.style.visibility = "hidden";
                     thisRemoteAC.$.btnPower.setAttribute("icon", "power-settings-new");
                     thisRemoteAC.$.btnMode.disabled = "true";
@@ -25664,7 +25663,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 stateEnabled: function() {
-                	thisRemoteAC.switchOn = false;
+                	thisRemoteAC.switchedON = true;
                 	thisRemoteAC.$.displayContainer.style.visibility = "visible";
                     thisRemoteAC.$.btnPower.setAttribute("icon", "close");
                     thisRemoteAC.$.btnMode.removeAttribute('disabled');
@@ -25675,7 +25674,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 send: function() {
                     thisRemoteAC.command = thisRemoteAC.brand + "-" + thisRemoteAC.mode + thisRemoteAC.fan + thisRemoteAC.temp;
-                    thisRemoteAC.$.ajax.generateRequest();
+                    if (thisRemoteAC.switchedON) thisRemoteAC.$.ajax.generateRequest();
                 },
 
                 setupPosition: function() {
@@ -25708,6 +25707,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     var jenis = thisRemoteAC.remote.substring(0, 2);
                     thisRemoteAC.brand = thisRemoteAC.remote.substring(3).toLowerCase();
                     if (jenis == "AC") {
+                    	thisRemoteAC.stateInitial();
                         thisRemoteAC.$.ajaxManifest.generateRequest();
                     }
                 },
@@ -25715,7 +25715,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
                 _tapPower: function() {
-                    if (!thisRemoteAC.switchOn) {
+                    if (thisRemoteAC.switchedON) {
                     	thisRemoteAC.stateInitial();
                         thisRemoteAC._tapPowerOFF();
                     } else {

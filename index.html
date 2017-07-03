@@ -5421,6 +5421,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
 
+        <iron-ajax id="ajax66" url="https://core.replus.co/post/66" method="POST" handle-as="text" last-response="{{response66}}" on-response="_handleResponse66">
+        </iron-ajax>
+
         <iron-ajax id="ajaxCheck" url="https://192.168.4.1/" method="GET" handle-as="text" last-response="{{responseCheck}}" on-response="_handleResponseCheck">
         </iron-ajax>
 
@@ -5453,11 +5456,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 <div class="stepContent">
                     Turn on your device. Blue LED light will flash several times during initialization.<br><br>
                     Tap "Continue" only when blue LED light is not flashing anymore.<br><br>
+                    After clicking "Continue", blue LED light will be turned on.<br><br>
                 </div>
             </paper-step>
             <paper-step labels="Step 4">
                 <div class="stepContent">
-                    Blue LED light on your device will be turned on.<br><br>
                     Connect your smartphone or PC to Wi-Fi "{{vendor}}_{{device}}". Disable any other internet connectivity.<br><br>
                     Tap "Finish" only when your smartphone or PC is successfully connected to Wi-Fi "{{vendor}}_{{device}}".
                 </div>

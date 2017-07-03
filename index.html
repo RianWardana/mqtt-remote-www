@@ -5193,6 +5193,38 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </iron-ajax>
     </template>
 
+    </dom-module><dom-module id="main-toolbar" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            app-header {
+                background-color: var(--app-primary-color);
+                color: #fff;
+            }
+
+            #toolbarTitle {
+                margin-left: 10px;
+            }
+
+            @media (max-width: 640px) {
+               #btnBack {
+                    margin-left: -40px;
+                }
+            }
+        </style>
+        
+        <app-header shadow="">
+            <app-toolbar>
+                <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
+                <paper-icon-button id="btnBack" on-tap="_tapBack" icon="arrow-back"></paper-icon-button>
+                <div id="toolbarTitle" main-title="">{{toolbarTitle}}</div>
+                <paper-icon-button id="btnEdit" on-tap="_tapEdit" icon="create"></paper-icon-button>
+                <paper-icon-button id="btnDelete" on-tap="_tapDelete" icon="delete-forever"></paper-icon-button>
+            </app-toolbar>
+        </app-header>
+    </template>
+
+
+
     </dom-module><dom-module id="devices-main" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
@@ -5213,10 +5245,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-list" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            app-header {
+            /*app-header {
                 background-color: var(--app-primary-color);
                 color: #fff;
-            }
+            }*/
 
             paper-button#btnDelete, paper-button#btnUnassign {
                 background: #fff;
@@ -5269,9 +5301,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 70px;
             }
 
-            #toolbarTitle {
+            /*#toolbarTitle {
                 margin-left: 10px;
-            }
+            }*/
         </style>
 
         <iron-ajax id="ajaxLoadList" url="https://core.replus.co/get/devices" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{devices}}" on-response="_handleResponseLoadList">
@@ -5283,12 +5315,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxDelete" url="https://core.replus.co/edit/deregister-device" method="POST" body="uid={{uid}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseDelete">
         </iron-ajax>
 
-        <app-header shadow="">
-            <app-toolbar>
-                <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
-                <div id="toolbarTitle" main-title="">Devices</div>
-            </app-toolbar>
-        </app-header>
+        
 
         <div class="vertical layout justified">
             <template is="dom-repeat" items="[[devices]]" as="device">
@@ -5325,10 +5352,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-add" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            app-header {
+            /*app-header {
                 background-color: var(--app-primary-color);
                 color: #fff;
-            }
+            }*/
 
             paper-button {
                 margin-top: 25px;
@@ -5347,20 +5374,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-top: -35px;
             }
 
-            #toolbarTitle {
+            /*#toolbarTitle {
                 margin-left: 10px;
-            }
+            }*/
         </style>
 
         <iron-ajax id="ajax" url="https://core.replus.co/edit/register-device" method="POST" body="uid={{uid}}&amp;type={{choosenType}}&amp;deviceID={{deviceID}}&amp;deviceCode={{deviceCode}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
         
-        <app-header shadow="">
-            <app-toolbar>
-                <paper-icon-button id="btnBack" on-tap="_tapBack" icon="arrow-back"></paper-icon-button>
-                <div id="toolbarTitle" main-title="">Register new device</div>
-            </app-toolbar>
-        </app-header>
+        
 
         <div id="container" class="vertical layout">
             <paper-dropdown-menu id="dropdownType" label="Device type">
@@ -5386,10 +5408,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-setup" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            app-header {
+            /*app-header {
                 background-color: var(--app-primary-color);
                 color: #fff;
-            }
+            }*/
 
             paper-stepper {
                --primary-color: white;
@@ -5416,9 +5438,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-top: 120px;
             }
 
-            #toolbarTitle {
+            /*#toolbarTitle {
                 margin-left: 10px;
-            }
+            }*/
         </style>
 
         <iron-ajax id="ajax66" url="https://core.replus.co/post/66" method="POST" handle-as="text" last-response="{{response66}}" on-response="_handleResponse66">
@@ -5430,12 +5452,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxSave" url="https://192.168.4.1/{{ssid}}/{{password}}" method="GET" handle-as="text" last-response="{{responseSave}}" on-response="_handleResponseSave">
         </iron-ajax>
 
-        <app-header shadow="">
-            <app-toolbar>
-                <paper-icon-button id="btnBack" on-tap="_tapBack" icon="arrow-back"></paper-icon-button>
-                <div id="toolbarTitle" main-title="">Setup Wi-Fi</div>
-            </app-toolbar>
-        </app-header>
+        
 
         <paper-stepper id="stepper" linear="" saved-step-number="{{stepSaved}}" horizontal-higher-entry-animation="slide-from-right-animation" horizontal-lower-exit-animation="slide-left-animation">
             <paper-step labels="Step 1">
@@ -5491,10 +5508,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 100%;
             }
 
-            app-header {
+            /*app-header {
                 background-color: var(--app-primary-color);
                 color: #fff;
-            }
+            }*/
 
             #btnAdd {
                 background: #2B5788;
@@ -5506,9 +5523,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 280px;
             }
 
-            #toolbarTitle {
+            /*#toolbarTitle {
                 margin-left: 10px;
-            }
+            }*/
 
             #spinner {
                 --paper-spinner-layer-1-color: var(--app-primary-color);
@@ -5522,12 +5539,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajax" url="https://core.replus.co/edit/new-room" method="POST" body="uid={{uid}}&amp;name={{roomName}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
-        <app-header shadow="">
-            <app-toolbar>
-                <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
-                <div id="toolbarTitle" main-title="">Add room</div>
-            </app-toolbar>
-        </app-header>
+        
 
         <div id="container" class="vertical layout">
             <paper-input id="inputName" label="Type a name for your room" value="{{roomName}}" maxlength="16"></paper-input>
@@ -5642,7 +5654,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 280px;
             }
 
-            #toolbarTitle {
+            /*#toolbarTitle {
                 margin-left: 10px;
             }
 
@@ -5654,7 +5666,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                #btnBack {
                     margin-left: -40px;
                 }
-            }
+            }*/
 
             @media (min-width: 640px) {
                 #toast, #toastDelete {
@@ -5669,16 +5681,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxDeleteRemote" url="https://core.replus.co/edit/delete-remote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remoteID={{remoteID}}" handle-as="text" last-response="{{responseDelteRemote}}" on-response="_handleResponseDeleteRemote">
         </iron-ajax>
 
-        <app-header shadow="">
-            <app-toolbar>
-                <paper-icon-button id="btnMenu" icon="menu" on-tap="_tapMenu" drawer-toggle=""></paper-icon-button>
-                <paper-icon-button id="btnBack" on-tap="_tapBack" icon="arrow-back"></paper-icon-button>
-                <div id="toolbarTitle" main-title="">{{toolbarTitle}}</div>
-                <span class="flex"></span>
-            	<paper-icon-button id="btnRename" on-tap="_tapRename" icon="create"></paper-icon-button>
-            	<paper-icon-button id="btnDelete" on-tap="_tapDelete" icon="delete-forever"></paper-icon-button>
-            </app-toolbar>
-        </app-header>
+        
 
         <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" uid="[[uid]]" room-key="[[roomID]]" remote="[[pilihanRemote]]"></remote-ac>
@@ -5692,7 +5695,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                             {{remote}}
                         </paper-item>
                     </template>
-                    <paper-fab remote-view="add" id="fab" icon="add" on-tap="_tapAdd"></paper-fab>
+                    <paper-fab remote-view="add" id="fab" icon="add"></paper-fab>
             </iron-selector>
         </iron-pages>
         
@@ -5967,7 +5970,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             </paper-tabs>
         </app-header>
 
-        <iron-swipeable-pages on-selected-changed="" selected="{{addSelected}}" no-cycle="" threshold="0.1">
+        <iron-swipeable-pages selected="{{addSelected}}" no-cycle="" threshold="0.1">
             <remote-add-remote class="page"></remote-add-remote>
             <remote-add-device class="page" devices-unassigned="[[devicesUnassigned]]" uid="[[uid]]" room-key="[[roomKey]]"></remote-add-device>
             <remote-add-schedule class="page" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomKey]]"></remote-add-schedule>
@@ -6390,10 +6393,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <neon-animated-pages selected="{{mainView}}" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
             <main-auth main-view="{{mainView}}" trigger="{{triggerLogout}}" uid="{{uid}}" display-name="{{displayName}}" email="{{email}}" photo-url="{{photoUrl}}"></main-auth>
 
-            <app-drawer-layout fullbleed="">
+            <app-drawer-layout fullbleed="" force-narrow="">
                 <main-data rooms-data="{{roomsData}}"></main-data>
 
-                <app-drawer id="appDrawer">
+                <app-drawer id="appDrawer" swipe-open="">
                     <div style="height: 100%; overflow: auto;">
                         <center id="userInfoContainer">
                             <iron-image style="width: 80px; height: 80px; border-radius: 50%;" sizing="cover" src="{{photoUrl}}"></iron-image>
@@ -6426,12 +6429,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 </app-drawer>
             
                 <app-header-layout>
+					<main-toolbar toolbar-title="{{roomView}}" trigger-btn-toolbar="{{triggerBtnToolbar}}"></main-toolbar>
                     <iron-pages attr-for-selected="name" selected="{{roomView}}">
-                        <div name="{{roomName}}">
-                            <remote-list uid="[[uid]]" toolbar-title="{{choosenRoom}}" devices-unassigned="[[devicesUnassigned]]"></remote-list> 
-                        </div>
-                        <room-add name="Add room"></room-add>
-                        <devices-main name="Devices" uid="[[uid]]" rooms="[[roomsData]]" devices-unassigned="{{devicesUnassigned}}"></devices-main>
+                       	<remote-list name="{{choosenRoom}}" uid="[[uid]]" toolbar-title="[[choosenRoom]]" devices-unassigned="[[devicesUnassigned]]" trigger-btn-toolbar="[[triggerBtnToolbar]]"></remote-list> 
+                        <room-add name="Add room" uid="[[uid]]"></room-add>
+                        <devices-main name="Devices" uid="[[uid]]" rooms="[[roomsData]]" devices-unassigned="{{devicesUnassigned}}" trigger-btn-toolbar="[[triggerBtnToolbar]]"></devices-main>
                     </iron-pages>
                 </app-header-layout>
             </app-drawer-layout>

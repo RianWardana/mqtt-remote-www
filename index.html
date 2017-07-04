@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><script src="index.js" defer=""></script><!--
+<!DOCTYPE html><html lang="en"><head><script src="index.js" defer=""></script><!--
 @license
 Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
 This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
@@ -23,16 +23,27 @@ The complete set of contributors may be found at http://polymer.github.io/CONTRI
 Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
-	<title>Please wait...</title>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#2B5788">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="manifest" href="manifest.json">
-    </head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-<body><div hidden="" by-vulcanize=""><style>
+        <title>Please wait...</title>
+        <meta name="description" content="Make your appliances smarter than ever">
+        <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+        <meta name="theme-color" content="#2B5788">
+        <meta name="mobile-web-app-capable" content="yes">
+        <link rel="manifest" href="manifest.json">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="Replus">
+
+        </head>
+
+
+
+    <body><div hidden="" by-vulcanize=""><style>
   /* IE 10 support for HTML5 hidden attr */
   [hidden] {
     display: none !important;
@@ -5205,11 +5216,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-left: 10px;
             }
 
-            @media (max-width: 640px) {
+            /*@media (max-width: 640px) {*/
                #btnBack {
                     margin-left: -40px;
                 }
-            }
+            /*}*/
         </style>
         
         <app-header shadow="">
@@ -5234,7 +5245,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </style>
         
         <iron-pages id="pages" attr-for-selected="page" selected="{{pageSelected}}">
-            <devices-list page="list" uid="[[uid]]" rooms="[[rooms]]" devices-unassigned="{{devicesUnassigned}}" page-selected="{{pageSelected}}" selected-device="{{device}}" selected-vendor="{{vendor}}" trigger-setup="{{triggerSetup}}"></devices-list>
+            <devices-list page="list" uid="[[uid]]" rooms="[[rooms]]" devices-unassigned="{{devicesUnassigned}}" page-selected="{{pageSelected}}" selected-device="{{device}}" selected-vendor="{{vendor}}"></devices-list>
             <devices-add page="add" uid="[[uid]]" page-selected="{{pageSelected}}"></devices-add>
             <devices-setup page="setup" device="[[device]]" vendor="[[vendor]]" page-selected="{{pageSelected}}"></devices-setup>
         </iron-pages>
@@ -5245,11 +5256,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-list" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            /*app-header {
-                background-color: var(--app-primary-color);
-                color: #fff;
-            }*/
-
             paper-button#btnDelete, paper-button#btnUnassign {
                 background: #fff;
                 color: #c0392b;
@@ -5300,10 +5306,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 text-align: center;
                 width: 70px;
             }
-
-            /*#toolbarTitle {
-                margin-left: 10px;
-            }*/
         </style>
 
         <iron-ajax id="ajaxLoadList" url="https://core.replus.co/get/devices" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{devices}}" on-response="_handleResponseLoadList">
@@ -5314,8 +5316,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <iron-ajax id="ajaxDelete" url="https://core.replus.co/edit/deregister-device" method="POST" body="uid={{uid}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseDelete">
         </iron-ajax>
-
-        
 
         <div class="vertical layout justified">
             <template is="dom-repeat" items="[[devices]]" as="device">
@@ -5352,11 +5352,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-add" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            /*app-header {
-                background-color: var(--app-primary-color);
-                color: #fff;
-            }*/
-
             paper-button {
                 margin-top: 25px;
             }
@@ -5373,16 +5368,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 --paper-spinner-layer-4-color: #3498db;
                 margin-top: -35px;
             }
-
-            /*#toolbarTitle {
-                margin-left: 10px;
-            }*/
         </style>
 
         <iron-ajax id="ajax" url="https://core.replus.co/edit/register-device" method="POST" body="uid={{uid}}&amp;type={{choosenType}}&amp;deviceID={{deviceID}}&amp;deviceCode={{deviceCode}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
-        
-        
 
         <div id="container" class="vertical layout">
             <paper-dropdown-menu id="dropdownType" label="Device type">
@@ -5408,11 +5397,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </dom-module><dom-module id="devices-setup" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
-            /*app-header {
-                background-color: var(--app-primary-color);
-                color: #fff;
-            }*/
-
             paper-stepper {
                --primary-color: white;
                --paper-stepper-horizontal-opened-height: 425px;
@@ -5437,10 +5421,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 --paper-spinner-layer-4-color: #3498db;
                 margin-top: 120px;
             }
-
-            /*#toolbarTitle {
-                margin-left: 10px;
-            }*/
         </style>
 
         <iron-ajax id="ajax66" url="https://core.replus.co/post/66" method="POST" handle-as="text" last-response="{{response66}}" on-response="_handleResponse66">
@@ -5451,8 +5431,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <iron-ajax id="ajaxSave" url="https://192.168.4.1/{{ssid}}/{{password}}" method="GET" handle-as="text" last-response="{{responseSave}}" on-response="_handleResponseSave">
         </iron-ajax>
-
-        
 
         <paper-stepper id="stepper" linear="" saved-step-number="{{stepSaved}}" horizontal-higher-entry-animation="slide-from-right-animation" horizontal-lower-exit-animation="slide-left-animation">
             <paper-step labels="Step 1">
@@ -5508,11 +5486,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 100%;
             }
 
-            /*app-header {
-                background-color: var(--app-primary-color);
-                color: #fff;
-            }*/
-
             #btnAdd {
                 background: #2B5788;
                 color: white;
@@ -5522,10 +5495,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             #container {
                 width: 280px;
             }
-
-            /*#toolbarTitle {
-                margin-left: 10px;
-            }*/
 
             #spinner {
                 --paper-spinner-layer-1-color: var(--app-primary-color);
@@ -5538,8 +5507,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <iron-ajax id="ajax" url="https://core.replus.co/edit/new-room" method="POST" body="uid={{uid}}&amp;name={{roomName}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
-
-        
 
         <div id="container" class="vertical layout">
             <paper-input id="inputName" label="Type a name for your room" value="{{roomName}}" maxlength="16"></paper-input>
@@ -5575,11 +5542,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-top: -60px;
             }
 
-            @media (min-width: 640px) {
+            /*@media (min-width: 640px) {
                 #toast {
                     margin-left: 268px;
                 }
-            }
+            }*/
         </style>
 
         <iron-ajax id="ajax" url="https://core.replus.co/edit/room" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
@@ -5654,25 +5621,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 width: 280px;
             }
 
-            /*#toolbarTitle {
-                margin-left: 10px;
-            }
-
-            #btnBack {
-                display: none;
-            }
-
-            @media (max-width: 640px) {
-               #btnBack {
-                    margin-left: -40px;
-                }
-            }*/
-
-            @media (min-width: 640px) {
+            /*@media (min-width: 640px) {
                 #toast, #toastDelete {
                 	margin-left: 268px;
                 }
-            }
+            }*/
         </style>
         
 		<iron-ajax id="ajaxDeleteRoom" url="https://core.replus.co/edit/delete-room" method="POST" body="uid={{uid}}&amp;room={{roomID}}" handle-as="text" last-response="{{responseDeleteRoom}}" on-response="_handleResponseDeleteRoom">
@@ -5680,8 +5633,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <iron-ajax id="ajaxDeleteRemote" url="https://core.replus.co/edit/delete-remote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remoteID={{remoteID}}" handle-as="text" last-response="{{responseDelteRemote}}" on-response="_handleResponseDeleteRemote">
         </iron-ajax>
-
-        
 
         <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
             <remote-ac remote-view="AC" uid="[[uid]]" room-key="[[roomID]]" remote="[[pilihanRemote]]"></remote-ac>
@@ -5770,11 +5721,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-top: 25px;
             }
 
-            @media (min-width: 640px) {
+            /*@media (min-width: 640px) {
                 #toast {
                 	margin-left: 268px;
                 }
-            }
+            }*/
         </style>
 
 		<iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/[[brand]]/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
@@ -5870,11 +5821,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-right: 35px;
             }
 
-            @media (min-width: 640px) {
+            /*@media (min-width: 640px) {
                 #toast {
                 	margin-left: 268px;
                 }
-            }
+            }*/
         </style>
         
         <iron-ajax id="ajax" url="https://core.replus.co/post/pociremote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;command={{command}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
@@ -5985,12 +5936,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             :host {
                 display: block;
             }
-
-            /*paper-button {
-                background: #2B5788;
-                margin: 0;
-                width: 100%;
-            }*/
 
             #btnAdd {
                 /*color: white;*/
@@ -6125,12 +6070,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 display: block;
                 overflow: auto;
             }
-
-            /*paper-button {
-                background: #2B5788;
-                margin: 0;
-                width: 100%;
-            }*/
 
             #btnAdd {
                 /*color: white;*/
@@ -6449,20 +6388,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     </dom-module>
 <style>
-        html {
-            -webkit-user-select: none;
-        }
+            html {
+                -webkit-user-select: none;
+            }
 
-        body {
-            margin: 0;
-            font-family: 'Roboto', 'Noto', sans-serif;
-            line-height: 1.5;
-            min-height: 100vh;
-            background-color: #f7f7f7;
-        }
-    </style></div>
-    <main-app></main-app>
-
-
+            body {
+                margin: 0;
+                font-family: 'Roboto', 'Noto', sans-serif;
+                line-height: 1.5;
+                min-height: 100vh;
+                background-color: #f7f7f7;
+            }
+        </style></div>
+        <main-app></main-app>
+        <noscript>Please enable JavaScript.</noscript>
+    
 
 </body></html>

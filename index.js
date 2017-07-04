@@ -26047,6 +26047,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     
                 },
 
+                observers: [
+                    '_changeDevicesUnassigned(devicesUnassigned)'
+                ],
+
                 ready: function() {
                     thisRemoteAddDevice = this;
                     thisRemoteAddDevice.stateInitial();
@@ -26097,7 +26101,18 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRemoteAddDevice.setButtonAddState('spinner');
                 },
 
-
+                _changeDevicesUnassigned: function(devices) {
+                    setTimeout(() => {
+                        if (devices.length == 0) {
+                            thisRemoteAddDevice.$.dropdownDevice.setAttribute('label', 'No available device');
+                            thisRemoteAddDevice.$.dropdownDevice.setAttribute('disabled', true);
+                        }
+                        else {
+                            thisRemoteAddDevice.$.dropdownDevice.setAttribute('label', 'Device to assign');
+                            thisRemoteAddDevice.$.dropdownDevice.removeAttribute('disabled');
+                        }
+                    }, 100);
+                },
 
                 _handleResponse: function() {
                     var response = thisRemoteAddDevice.response;

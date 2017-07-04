@@ -5216,11 +5216,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-left: 10px;
             }
 
-            /*@media (max-width: 640px) {*/
-               #btnBack {
-                    margin-left: -40px;
-                }
-            /*}*/
+            #btnBack {
+                margin-left: -40px;
+            }
         </style>
         
         <app-header shadow="">
@@ -5377,7 +5375,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             <paper-dropdown-menu id="dropdownType" label="Device type">
                 <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenType}}" on-selected-changed="_changedType">
                     <paper-item name="POCI Remote">POCI Remote</paper-item>
-                    <paper-item name="POCI Remote">Replus Vision</paper-item> 
+                    <paper-item name="Replus Vision">Replus Vision</paper-item> 
                 </paper-listbox>
             </paper-dropdown-menu>
 
@@ -5475,102 +5473,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 
 
-    </dom-module><dom-module id="room-add" assetpath="src/">
-    <template>
-        <style include="iron-flex iron-flex-alignment">
-            :host {
-                display: block;
-            }
-
-            paper-button {
-                margin: 0;
-                width: 100%;
-            }
-
-            #btnAdd {
-                background: #2B5788;
-                color: white;
-                margin-top: 25px;
-            }
-
-            #container {
-                width: 280px;
-            }
-
-            #spinner {
-                --paper-spinner-layer-1-color: var(--app-primary-color);
-                --paper-spinner-layer-3-color: var(--app-primary-color);
-                --paper-spinner-layer-2-color: #3498db;
-                --paper-spinner-layer-4-color: #3498db;
-                margin-top: -35px;
-            }
-        </style>
-
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-room" method="POST" body="uid={{uid}}&amp;name={{roomName}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
-        </iron-ajax>
-
-        <div id="container" class="vertical layout">
-            <paper-input id="inputName" label="Type a name for your room" value="{{roomName}}" maxlength="16"></paper-input>
-            <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add room</paper-button>
-            <div class="horizontal layout center-justified">
-                <paper-spinner id="spinner" active=""></paper-spinner>
-            </div>
-        </div>
-
-        <paper-toast id="toast"></paper-toast>
-    </template>
-
-
-
-    </dom-module><dom-module id="room-edit" assetpath="src/">
-    <template>
-        <style include="iron-flex iron-flex-alignment">
-            paper-button {
-                background: #fff;
-                color: var(--primary-color);
-                font-weight: normal;
-            }
-
-            paper-dialog {
-                width: 400px;
-            }
-
-            #spinner {
-                --paper-spinner-layer-1-color: var(--app-primary-color);
-                --paper-spinner-layer-3-color: var(--app-primary-color);
-                --paper-spinner-layer-2-color: #3498db;
-                --paper-spinner-layer-4-color: #3498db;
-                margin-top: -60px;
-            }
-
-            /*@media (min-width: 640px) {
-                #toast {
-                    margin-left: 268px;
-                }
-            }*/
-        </style>
-
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/room" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
-        </iron-ajax>
-
-        <paper-dialog id="dialog" entry-animation="slide-from-top-animation" exit-animation="fade-out-animation" on-iron-overlay-closed="_closedDialog">
-            <h2>Rename room</h2>
-            <paper-input id="inputRoomName" label="Type a name for your room" value="{{newRoomName}}" maxlength="16"></paper-input>
-            <div class="horizontal layout center-justified">
-                <paper-spinner id="spinner" active=""></paper-spinner>
-            </div>
-            <div class="buttons">
-                <paper-button dialog-dismiss="">Cancel</paper-button>
-                <paper-button id="btnSave" on-tap="_tapSave">Save</paper-button>
-            </div>
-        </paper-dialog>
-
-        <paper-toast id="toast"></paper-toast>
-    </template>
-
-
-
-    </dom-module><dom-module id="remote-list" assetpath="src/">
+    </dom-module><dom-module id="room-main" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
             :host {
@@ -5621,12 +5524,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             #container {
                 width: 280px;
             }
-
-            /*@media (min-width: 640px) {
-                #toast, #toastDelete {
-                	margin-left: 268px;
-                }
-            }*/
         </style>
         
 		<iron-ajax id="ajaxDeleteRoom" url="https://core.replus.co/edit/delete-room" method="POST" body="uid={{uid}}&amp;room={{roomID}}" handle-as="text" last-response="{{responseDeleteRoom}}" on-response="_handleResponseDeleteRoom">
@@ -5635,19 +5532,19 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxDeleteRemote" url="https://core.replus.co/edit/delete-remote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remoteID={{remoteID}}" handle-as="text" last-response="{{responseDelteRemote}}" on-response="_handleResponseDeleteRemote">
         </iron-ajax>
 
-        <iron-pages id="pageRemote" attr-for-selected="remote-view" selected="{{remoteView}}" style="margin-top: 20px;">
-            <remote-ac remote-view="AC" uid="[[uid]]" room-key="[[roomID]]" remote="[[pilihanRemote]]"></remote-ac>
-            <remote-tv remote-view="TV" remote="{{pilihanRemote}}"></remote-tv>
-            <remote-add remote-view="add" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomID]]" devices-unassigned="[[devicesUnassigned]]"></remote-add>
+        <iron-pages id="pageRemote" attr-for-selected="view" selected="{{roomView}}" style="margin-top: 20px;">
+            <remote-ac view="AC" uid="[[uid]]" room-key="[[roomID]]" remote="[[pilihanRemote]]"></remote-ac>
+            <remote-tv view="TV" uid="[[uid]]" room-key="[[roomID]]" remote="{{pilihanRemote}}"></remote-tv>
+            <room-add-main view="add" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomID]]" devices-unassigned="[[devicesUnassigned]]"></room-add-main>
 
-            <iron-selector id="selectorRemote" class="vertical layout" remote-view="list" attr-for-selected="remote-view" selected="{{remoteView}}">
+            <iron-selector id="selectorRemote" class="vertical layout" view="list" attr-for-selected="view" selected="{{roomView}}">
                     <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
-                        <paper-item remote-view="{{getType(remote)}}" on-tap="_tapRemote" title="{{remote}}">
+                        <paper-item view="{{getType(remote)}}" on-tap="_tapRemote" title="{{remote}}">
                             <iron-icon icon="{{getIcon(remote)}}"></iron-icon>
                             {{remote}}
                         </paper-item>
                     </template>
-                    <paper-fab remote-view="add" id="fab" icon="add"></paper-fab>
+                    <paper-fab view="add" id="fab" icon="add"></paper-fab>
             </iron-selector>
         </iron-pages>
         
@@ -5657,6 +5554,54 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </paper-toast>
 
         <room-edit uid="[[uid]]" room-key="[[roomID]]" roomname="[[toolbarTitle]]" trigger="[[triggerEdit]]"></room-edit>
+    </template>
+
+
+
+    </dom-module><dom-module id="room-edit" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            paper-button {
+                background: #fff;
+                color: var(--primary-color);
+                font-weight: normal;
+            }
+
+            paper-dialog {
+                width: 400px;
+            }
+
+            #spinner {
+                --paper-spinner-layer-1-color: var(--app-primary-color);
+                --paper-spinner-layer-3-color: var(--app-primary-color);
+                --paper-spinner-layer-2-color: #3498db;
+                --paper-spinner-layer-4-color: #3498db;
+                margin-top: -60px;
+            }
+
+            /*@media (min-width: 640px) {
+                #toast {
+                    margin-left: 268px;
+                }
+            }*/
+        </style>
+
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/room" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        </iron-ajax>
+
+        <paper-dialog id="dialog" entry-animation="slide-from-top-animation" exit-animation="fade-out-animation" on-iron-overlay-closed="_closedDialog">
+            <h2>Rename room</h2>
+            <paper-input id="inputRoomName" label="Type a name for your room" value="{{newRoomName}}" maxlength="16"></paper-input>
+            <div class="horizontal layout center-justified">
+                <paper-spinner id="spinner" active=""></paper-spinner>
+            </div>
+            <div class="buttons">
+                <paper-button dialog-dismiss="">Cancel</paper-button>
+                <paper-button id="btnSave" on-tap="_tapSave">Save</paper-button>
+            </div>
+        </paper-dialog>
+
+        <paper-toast id="toast"></paper-toast>
     </template>
 
 
@@ -5829,7 +5774,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }*/
         </style>
         
-        <iron-ajax id="ajax" url="https://core.replus.co/post/pociremote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;command={{command}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/post/pociremote" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;command={{command}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="remoteContainer">
@@ -5891,7 +5836,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <paper-toast id="toast"></paper-toast>
     </template>
 
-    </dom-module><dom-module id="remote-add" assetpath="src/">
+    </dom-module><dom-module id="room-add-main" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
             :host {
@@ -5923,15 +5868,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </app-header>
 
         <iron-swipeable-pages selected="{{addSelected}}" no-cycle="" threshold="0.1">
-            <remote-add-remote class="page"></remote-add-remote>
-            <remote-add-device class="page" devices-unassigned="[[devicesUnassigned]]" uid="[[uid]]" room-key="[[roomKey]]"></remote-add-device>
-            <remote-add-schedule class="page" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomKey]]"></remote-add-schedule>
+            <room-add-remote class="page" uid="[[uid]]" room-key="[[roomKey]]"></room-add-remote>
+            <room-add-device class="page" devices-unassigned="[[devicesUnassigned]]" uid="[[uid]]" room-key="[[roomKey]]"></room-add-device>
+            <room-add-schedule class="page" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomKey]]"></room-add-schedule>
         </iron-swipeable-pages>
     </template>
 
     
 
-    </dom-module><dom-module id="remote-add-remote" assetpath="src/">
+    </dom-module><dom-module id="room-add-remote" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
             :host {
@@ -5966,7 +5911,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-remote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-remote" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
@@ -5996,7 +5941,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     
 
-    </dom-module><dom-module id="remote-add-device" assetpath="src/">
+    </dom-module><dom-module id="room-add-device" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
             :host {
@@ -6064,7 +6009,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     
 
-    </dom-module><dom-module id="remote-add-schedule" assetpath="src/">
+    </dom-module><dom-module id="room-add-schedule" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
             :host {
@@ -6268,6 +6213,53 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     
 
+    </dom-module><dom-module id="room-add" assetpath="src/">
+    <template>
+        <style include="iron-flex iron-flex-alignment">
+            :host {
+                display: block;
+            }
+
+            paper-button {
+                margin: 0;
+                width: 100%;
+            }
+
+            #btnAdd {
+                background: #2B5788;
+                color: white;
+                margin-top: 25px;
+            }
+
+            #container {
+                width: 280px;
+            }
+
+            #spinner {
+                --paper-spinner-layer-1-color: var(--app-primary-color);
+                --paper-spinner-layer-3-color: var(--app-primary-color);
+                --paper-spinner-layer-2-color: #3498db;
+                --paper-spinner-layer-4-color: #3498db;
+                margin-top: -35px;
+            }
+        </style>
+
+        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-room" method="POST" body="uid={{uid}}&amp;name={{roomName}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        </iron-ajax>
+
+        <div id="container" class="vertical layout">
+            <paper-input id="inputName" label="Type a name for your room" value="{{roomName}}" maxlength="16"></paper-input>
+            <paper-button id="btnAdd" raised="" on-tap="_tapAdd">Add room</paper-button>
+            <div class="horizontal layout center-justified">
+                <paper-spinner id="spinner" active=""></paper-spinner>
+            </div>
+        </div>
+
+        <paper-toast id="toast"></paper-toast>
+    </template>
+
+
+
     </dom-module><dom-module id="main-app" assetpath="src/">
     <template>
         <style include="iron-flex iron-flex-alignment">
@@ -6330,12 +6322,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
-        <neon-animated-pages selected="{{mainView}}" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
-            <main-auth main-view="{{mainView}}" trigger="{{triggerLogout}}" uid="{{uid}}" display-name="{{displayName}}" email="{{email}}" photo-url="{{photoUrl}}"></main-auth>
+        <neon-animated-pages selected="{{isLoggedIn}}" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
+            <main-auth is-logged-in="{{isLoggedIn}}" trigger="{{triggerLogout}}" uid="{{uid}}" display-name="{{displayName}}" email="{{email}}" photo-url="{{photoUrl}}"></main-auth>
 
             <app-drawer-layout fullbleed="" force-narrow="">
                 <main-data rooms-data="{{roomsData}}"></main-data>
-
                 <app-drawer id="appDrawer" swipe-open="">
                     <div style="height: 100%; overflow: auto;">
                         <center id="userInfoContainer">
@@ -6343,7 +6334,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                             <p class="userInfoText">{{displayName}}</p>
                             <p class="userInfoText">{{email}}</p>
                         </center>
-                        <iron-selector attr-for-selected="name" selected="{{roomView}}" on-iron-select="onMenuSelect">
+                        <iron-selector attr-for-selected="name" selected="{{mainView}}" on-iron-select="onMenuSelect">
                             <template is="dom-repeat" items="{{roomsData}}" as="room" sort="_sort">
                                 <paper-item on-tap="_tapRoom" name="{{room.name}}" title="{{room.name}}">
                                     <iron-icon icon="apps"></iron-icon>
@@ -6369,9 +6360,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 </app-drawer>
             
                 <app-header-layout>
-					<main-toolbar toolbar-title="{{roomView}}" trigger-btn-toolbar="{{triggerBtnToolbar}}"></main-toolbar>
-                    <iron-pages attr-for-selected="name" selected="{{roomView}}">
-                       	<remote-list name="{{choosenRoom}}" uid="[[uid]]" toolbar-title="[[choosenRoom]]" devices-unassigned="[[devicesUnassigned]]" trigger-btn-toolbar="[[triggerBtnToolbar]]"></remote-list> 
+					<main-toolbar toolbar-title="{{mainView}}" trigger-btn-toolbar="{{triggerBtnToolbar}}"></main-toolbar>
+                    <iron-pages attr-for-selected="name" selected="{{mainView}}">
+                       	<room-main name="{{choosenRoom}}" uid="[[uid]]" toolbar-title="[[choosenRoom]]" devices-unassigned="[[devicesUnassigned]]" trigger-btn-toolbar="[[triggerBtnToolbar]]"></room-main> 
                         <room-add name="Add room" uid="[[uid]]"></room-add>
                         <devices-main name="Devices" uid="[[uid]]" rooms="[[roomsData]]" devices-unassigned="{{devicesUnassigned}}" trigger-btn-toolbar="[[triggerBtnToolbar]]"></devices-main>
                     </iron-pages>
@@ -6402,7 +6393,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style></div>
         <main-app></main-app>
-        <noscript>Please enable JavaScript.</noscript>
+        <noscript>Please enable JavaScript on your browser.</noscript>
     
 
 </body></html>

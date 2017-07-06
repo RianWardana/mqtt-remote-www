@@ -25254,11 +25254,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 check: function() {
-                    thisDevicesSetup.stateWaitResponse();
-                    thisDevicesSetup.$.ajaxCheck.generateRequest();
-                    thisDevicesSetup.timeout = setTimeout(() => {
-                        thisDevicesSetup.stateResponseError();
-                    }, 15000);
+                    // thisDevicesSetup.stateWaitResponse();
+                    // thisDevicesSetup.$.ajaxCheck.generateRequest();
+                    // thisDevicesSetup.timeout = setTimeout(() => {
+                    //     thisDevicesSetup.stateResponseError();
+                    // }, 15000);
+                    window.location = `http://192.168.4.1/${thisDevicesSetup.ssid}/${thisDevicesSetup.password}`;
                 },
 
                 stateInitial: function() {
@@ -25289,18 +25290,18 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     }
                 },
 
-                _handleResponseCheck: function() {
-                    if (thisDevicesSetup.responseCheck == 'OK') {
-                        console.log("Check: OK");
-                        thisDevicesSetup.$.ajaxSave.generateRequest();
-                        clearTimeout(thisDevicesSetup.timeout);
-                    }
-                },
+                // _handleResponseCheck: function() {
+                //     if (thisDevicesSetup.responseCheck == 'OK') {
+                //         console.log("Check: OK");
+                //         thisDevicesSetup.$.ajaxSave.generateRequest();
+                //         clearTimeout(thisDevicesSetup.timeout);
+                //     }
+                // },
 
-                _handleResponseSave: function() {
-                    console.log("Save: OK");
-                    thisDevicesSetup.stateInitial();
-                }
+                // _handleResponseSave: function() {
+                //     console.log("Save: OK");
+                //     thisDevicesSetup.stateInitial();
+                // }
 
             });
         })();

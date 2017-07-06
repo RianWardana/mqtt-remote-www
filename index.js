@@ -24932,9 +24932,11 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     if (showMenu) {
                         thisMainToolbar.$.btnMenu.style.visibility = 'visible';
                         thisMainToolbar.$.btnBack.style.display = 'none';
+                        if (typeof thisMainApp != 'undefined') thisMainApp.$.appDrawer.setAttribute('swipe-open', true);
                     } else {
                         thisMainToolbar.$.btnMenu.style.visibility = 'hidden';
                         thisMainToolbar.$.btnBack.style.display = 'block';
+                        if (typeof thisMainApp != 'undefined') thisMainApp.$.appDrawer.removeAttribute('swipe-open');
                     }
                     if (showEdit) thisMainToolbar.$.btnEdit.style.display = 'block';
                     else thisMainToolbar.$.btnEdit.style.display = 'none'
@@ -25289,12 +25291,14 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _handleResponseCheck: function() {
                     if (thisDevicesSetup.responseCheck == 'OK') {
+                        console.log("Check: OK");
                         thisDevicesSetup.$.ajaxSave.generateRequest();
                         clearTimeout(thisDevicesSetup.timeout);
                     }
                 },
 
                 _handleResponseSave: function() {
+                    console.log("Save: OK");
                     thisDevicesSetup.stateInitial();
                 }
 
@@ -25569,7 +25573,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 resetTimeout: function() {
                 	clearTimeout(thisRemoteAC.timeout);
-                	thisRemoteAC.timeout = setTimeout(() => { thisRemoteAC.send(); }, 1000);
+                	thisRemoteAC.timeout = setTimeout(() => { thisRemoteAC.send(); }, 2000);
                 },
 
                 stateInitial: function() {

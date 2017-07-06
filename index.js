@@ -25067,13 +25067,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 setupPosition: function() {
-                    // if (window.innerWidth > 640) {
-                    //     thisDevicesList.$.toast.style.marginLeft = 268 + 'px';
-                    //     thisDevicesList.$.toastDelete.style.marginLeft = 268 + 'px';
-                    // } else {
-                        thisDevicesList.$.toast.style.marginLeft = 12 + 'px';
-                    //     thisDevicesList.$.toastDelete.style.marginLeft = 12 + 'px';
-                    // }
+                    thisDevicesList.$.toast.style.marginLeft = 12 + 'px';
                 },
 
                 _handleResponseDelete: function() {
@@ -25283,7 +25277,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                             thisDevicesSetup.$.toast.show({text: 'SSID can not be empty.', duration: 3000});
                         }
                     } else if (stepSaved == 3) {
-                        console.log('execute order 66!');
                         thisDevicesSetup.$.ajax66.generateRequest();
                     } else if (stepSaved == 4) {
                         thisDevicesSetup.check();

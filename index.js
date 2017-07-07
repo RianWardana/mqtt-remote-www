@@ -25248,12 +25248,16 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 check: function() {
-                    // thisDevicesSetup.stateWaitResponse();
+                    thisDevicesSetup.stateWaitResponse();
                     // thisDevicesSetup.$.ajaxCheck.generateRequest();
                     // thisDevicesSetup.timeout = setTimeout(() => {
                     //     thisDevicesSetup.stateResponseError();
                     // }, 15000);
-                    window.location = `http://192.168.4.1/${thisDevicesSetup.ssid}/${thisDevicesSetup.password}`;
+                    window.location = `http://192.168.4.1/${window.location.href}~${thisDevicesSetup.ssid}~${thisDevicesSetup.password}`;
+                },
+
+                reload: function() {
+                    location.reload();
                 },
 
                 stateInitial: function() {
@@ -25264,9 +25268,13 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 stateWaitResponse: function() {
                     thisDevicesSetup.$.spinner.style.display = 'block';
                     thisDevicesSetup.$.toastRetry.close();
+                    setTimeout(() => {
+                        thisDevicesSetup.stateResponseError();
+                    }, 5000);
                 },
                 stateResponseError: function() {
                     thisDevicesSetup.$.spinner.style.display = 'none';
+                    thisDevicesSetup.$.failText.style.display = 'block';
                     thisDevicesSetup.$.toastRetry.show({text: 'Fail to connect.', duration: 10000});
                 },
 

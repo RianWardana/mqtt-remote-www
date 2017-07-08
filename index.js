@@ -25144,22 +25144,16 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 ready: function() {
                     thisDevicesAdd = this;
-                    thisDevicesAdd.setupPosition();
                     thisDevicesAdd.stateInitial();
-                    window.addEventListener('resize', function(event){
-                        thisDevicesAdd.setupPosition();
-                    });
+                    // thisDevicesAdd.setupPosition();
+                    // window.addEventListener('resize', function(event){
+                    //     thisDevicesAdd.setupPosition();
+                    // });
                 },
 
-                setupPosition: function() {
-                    // if (window.innerWidth > 640) {
-                    //     thisDevicesAdd.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
-                    //     thisDevicesAdd.$.toast.style.marginLeft = 268 + 'px';
-                    // } else {
-                        thisDevicesAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                    //     thisDevicesAdd.$.toast.style.marginLeft = 12 + 'px';
-                    // }
-                },
+                // setupPosition: function() {
+                //     thisDevicesAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                // },
 
                 setButtonState: function(state) {
                     if (state == 'enabled') {
@@ -25865,10 +25859,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisRoomAddRemote = this;
                     thisRoomAddRemote.stateInitial();
-                    thisRoomAddRemote.setupPosition();
-                    window.addEventListener('resize', function(event){
-                        thisRoomAddRemote.setupPosition();
-                    });
+                    // thisRoomAddRemote.setupPosition();
+                    // window.addEventListener('resize', function(event){
+                    //     thisRoomAddRemote.setupPosition();
+                    // });
                 },
 
 
@@ -25921,15 +25915,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
 
-                setupPosition: function() {
-                    // if (window.innerWidth > 640) {
-                    //     thisRoomAddRemote.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
-                    //     thisRoomAddRemote.$.toast.style.marginLeft = 268 + 'px';
-                    // } else {
-                        thisRoomAddRemote.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                        // thisRoomAddRemote.$.toast.style.marginLeft = 12 + 'px';
-                    // }
-                },
+                // setupPosition: function() {
+                //     thisRoomAddRemote.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                // },
 
 
 
@@ -25982,21 +25970,15 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisRoomAddDevice = this;
                     thisRoomAddDevice.stateInitial();
-                    thisRoomAddDevice.setupPosition();
-                    window.addEventListener('resize', function(event){
-                        thisRoomAddDevice.setupPosition();
-                    });
+                    // thisRoomAddDevice.setupPosition();
+                    // window.addEventListener('resize', function(event){
+                    //     thisRoomAddDevice.setupPosition();
+                    // });
                 },
 
-                setupPosition: function() {
-                    // if (window.innerWidth > 640) {
-                    //     thisRoomAddDevice.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
-                    //     thisRoomAddDevice.$.toast.style.marginLeft = 268 + 'px';
-                    // } else {
-                        thisRoomAddDevice.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                    //     thisRoomAddDevice.$.toast.style.marginLeft = 12 + 'px';
-                    // }
-                },
+                // setupPosition: function() {
+                //     thisRoomAddDevice.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                // },
 
 
 
@@ -26110,10 +26092,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisRoomAddSchedule = this;
                     thisRoomAddSchedule.stateInitial();
-                    thisRoomAddSchedule.setupPosition();
-                    window.addEventListener('resize', function(event){
-                        thisRoomAddSchedule.setupPosition();
-                    });
+                    // thisRoomAddSchedule.setupPosition();
+                    // window.addEventListener('resize', function(event){
+                    //     thisRoomAddSchedule.setupPosition();
+                    // });
                 },
 
                 calculateYear: function() {
@@ -26203,15 +26185,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
 
-                setupPosition: function() {
-                    // if (window.innerWidth > 640) {
-                    //     thisRoomAddSchedule.$.container.style.marginLeft = ((window.innerWidth - 280)/2 + 128) + 'px';
-                    //     thisRoomAddSchedule.$.toast.style.marginLeft = 268 + 'px';
-                    // } else {
-                        thisRoomAddSchedule.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                    //     thisRoomAddSchedule.$.toast.style.marginLeft = 12 + 'px';
-                    // }
-                },
+                // setupPosition: function() {
+                //     thisRoomAddSchedule.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                // },
 
 
 
@@ -26393,21 +26369,15 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisRoomAdd = this;
                     thisRoomAdd.stateInitial();
-                    thisRoomAdd.setupPosition();
-                    window.addEventListener('resize', function(event){
-                        thisRoomAdd.setupPosition();
-                    });
+                    // thisRoomAdd.setupPosition();
+                    // window.addEventListener('resize', function(event){
+                    //     thisRoomAdd.setupPosition();
+                    // });
                 },
 
-                setupPosition: function() {
-                    // if (window.innerWidth > 640) {
-                    //     thisRoomAdd.$.container.style.marginLeft = ((window.innerWidth - 280)/2 - 128) + 'px';
-                    //     thisRoomAdd.$.toast.style.marginLeft = 268 + 'px';
-                    // } else {
-                        thisRoomAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                    //     thisRoomAdd.$.toast.style.marginLeft = 12 + 'px';
-                    // }
-                },
+                // setupPosition: function() {
+                //     thisRoomAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
+                // },
 
                 setButtonAddState: function(state) {
                     if (state == 'enabled') {

@@ -5578,6 +5578,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxDeleteRemote" url="https://core.replus.co/api/remote-delete" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remoteID={{remoteID}}" handle-as="text" last-response="{{responseDelteRemote}}" on-response="_handleResponseDeleteRemote">
         </iron-ajax>
 
+        <app-location use-hash-as-path="" route="{{route}}"></app-location>
+        <app-route route="{{route}}" pattern="/devices/:page" data="{{routeData}}" active="{{routeActive}}">
+        </app-route>
+
         <iron-pages id="pageRemote" attr-for-selected="view" selected="{{roomView}}" style="margin-top: 20px;">
             <remote-ac view="AC" uid="[[uid]]" room-key="[[roomID]]" remote="[[pilihanRemote]]"></remote-ac>
             <remote-tv view="TV" uid="[[uid]]" room-key="[[roomID]]" remote="{{pilihanRemote}}"></remote-tv>
@@ -5624,12 +5628,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 --paper-spinner-layer-4-color: #3498db;
                 margin-top: -60px;
             }
-
-            /*@media (min-width: 640px) {
-                #toast {
-                    margin-left: 268px;
-                }
-            }*/
         </style>
 
         <iron-ajax id="ajax" url="https://core.replus.co/api/room-edit" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
@@ -5712,12 +5710,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             #textTemp {
                 margin-top: 25px;
             }
-
-            /*@media (min-width: 640px) {
-                #toast {
-                	margin-left: 268px;
-                }
-            }*/
         </style>
 
 		<iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/[[brand]]/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">

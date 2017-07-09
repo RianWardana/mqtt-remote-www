@@ -26069,29 +26069,28 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                             var page = thisDevicesMain.routeData.page;
                             if (page == 'list') {
                                 thisMainToolbar.set('Devices', true, false, false);
+                                thisDevicesAdd.stateInitial();
+                                thisDevicesSetup.stateInitial();
                             } else if (page == 'add') {
                                 thisMainToolbar.set('Register new device', false, false, false);
                             } else if (page == 'setup') {
                                 thisMainToolbar.set('Setup Wi-Fi', false, false, false);
                             } else {
-                                // thisDevicesMain.set('routeData.page', 'list');
+                                thisDevicesMain.set('routeData.page', 'list');
                             }
                             thisDevicesMain.pageSelected = page;
                         }
-                    }, 100);
+                    }, 50);
                 },
 
                 _triggerBtnToolbar: function(trigger) {
                     if (thisMainApp.mainView == 'devices') {
                         if (trigger.btn == 'back') {
-                            thisDevicesMain.pageSelected = 'list';
-                            thisDevicesMain.set('routeData.page', 'list');
-                            thisDevicesAdd.stateInitial();
-                            thisDevicesSetup.stateInitial();
-                        } else if (trigger.btn == 'edit') {
-                            
-                        } else if (trigger.btn == 'delete') {
-                            
+                            // thisDevicesMain.pageSelected = 'list';
+                            // thisDevicesMain.set('routeData.page', 'list');
+                            // thisDevicesAdd.stateInitial();
+                            // thisDevicesSetup.stateInitial();
+                            window.history.back();
                         }
                     }
                 }
@@ -26169,7 +26168,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _tapAdd: function() {
-                    thisDevicesList.pageSelected = 'add';
+                    // thisDevicesList.pageSelected = 'add';
                     thisDevicesMain.set('routeData.page', 'add');
                 },
 
@@ -26200,7 +26199,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     else var vendor = 'MQTT';
 
                     thisDevicesMain.set('routeData.page', 'setup');
-                    thisDevicesList.pageSelected = 'setup';
+                    // thisDevicesList.pageSelected = 'setup';
                     thisDevicesList.selectedDevice = deviceID;
                     thisDevicesList.selectedVendor = vendor;
                     thisDevicesSetup.$.stepper.progress();
@@ -26221,15 +26220,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisDevicesAdd = this;
                     thisDevicesAdd.stateInitial();
-                    // thisDevicesAdd.setupPosition();
-                    // window.addEventListener('resize', function(event){
-                    //     thisDevicesAdd.setupPosition();
-                    // });
                 },
-
-                // setupPosition: function() {
-                //     thisDevicesAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                // },
 
                 setButtonState: function(state) {
                     if (state == 'enabled') {
@@ -26333,6 +26324,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 reload: function() {
+                    thisDevicesMain.set('routeData.page', 'list');
                     location.reload();
                 },
 
@@ -26453,7 +26445,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 	if (typeof thisRoomMain != 'undefined') {
                 		if (view == 'list') thisMainToolbar.set(thisRoomMain.name, true, true, true);
 	                	else if (view == 'add') thisMainToolbar.set(`Add new in ${thisRoomMain.name}`, false, false, false);
-	                	else thisMainToolbar.set(`${thisMainApp.choosenRoom} ${thisRoomMain.pilihanRemote}`, false, false, true);	
+	                	else thisMainToolbar.set(`${thisMainApp.choosenRoom} ${thisRoomMain.pilihanRemote}`, false, false, true);
                 	}
                 },
 
@@ -26867,8 +26859,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRemoteTV.switchOn = !thisRemoteTV.switchOn;
                     }
 
-                    // thisRemoteTV.uid = thisMainAuth.uid;
-                    // thisRemoteTV.roomID = thisRemoteList.roomID;
                     thisRemoteTV.command = thisRemoteTV.codeset + command;
                     thisRemoteTV.$.ajax.generateRequest();
                 },
@@ -26928,10 +26918,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisRoomAddRemote = this;
                     thisRoomAddRemote.stateInitial();
-                    // thisRoomAddRemote.setupPosition();
-                    // window.addEventListener('resize', function(event){
-                    //     thisRoomAddRemote.setupPosition();
-                    // });
                 },
 
 
@@ -26982,14 +26968,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRoomAddRemote.setButtonAddState('enabled');
                 },
 
-
-
-                // setupPosition: function() {
-                //     thisRoomAddRemote.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                // },
-
-
-
                 _changeBrand: function() {
                     thisRoomAddRemote.stateChangedBrand();  
                 },
@@ -27039,17 +27017,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisRoomAddDevice = this;
                     thisRoomAddDevice.stateInitial();
-                    // thisRoomAddDevice.setupPosition();
-                    // window.addEventListener('resize', function(event){
-                    //     thisRoomAddDevice.setupPosition();
-                    // });
                 },
-
-                // setupPosition: function() {
-                //     thisRoomAddDevice.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                // },
-
-
 
                 setButtonAddState: function(state) {
                     if (state == 'enabled') {
@@ -27161,10 +27129,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisRoomAddSchedule = this;
                     thisRoomAddSchedule.stateInitial();
-                    // thisRoomAddSchedule.setupPosition();
-                    // window.addEventListener('resize', function(event){
-                    //     thisRoomAddSchedule.setupPosition();
-                    // });
                 },
 
                 calculateYear: function() {
@@ -27251,14 +27215,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRoomAddSchedule.$.toggleON.setAttribute('disabled', 'true'); 
                     }  
                 },
-
-
-
-                // setupPosition: function() {
-                //     thisRoomAddSchedule.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                // },
-
-
 
                 // declaring view states //
                 clearAll: function() {
@@ -27438,15 +27394,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisRoomAdd = this;
                     thisRoomAdd.stateInitial();
-                    // thisRoomAdd.setupPosition();
-                    // window.addEventListener('resize', function(event){
-                    //     thisRoomAdd.setupPosition();
-                    // });
                 },
-
-                // setupPosition: function() {
-                //     thisRoomAdd.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                // },
 
                 setButtonAddState: function(state) {
                     if (state == 'enabled') {
@@ -27528,7 +27476,7 @@ Polymer({
                     } else {
                         thisMainApp._tapRoom(thisMainApp.mainRoute.page);
                     }
-                }, 100);
+                }, 50);
             },
 
             _sort: function(a, b) {

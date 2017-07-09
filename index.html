@@ -5180,7 +5180,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/user" method="POST" body="uid={{uid}}&amp;name={{displayName}}&amp;email={{email}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/api/user-register" method="POST" body="uid={{uid}}&amp;name={{displayName}}&amp;email={{email}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="background">
@@ -5312,10 +5312,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxLoadList" url="https://core.replus.co/get/devices" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{devices}}" on-response="_handleResponseLoadList">
         </iron-ajax>
         
-        <iron-ajax id="ajaxUnassign" url="https://core.replus.co/edit/delete-device" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseUnassign">
+        <iron-ajax id="ajaxUnassign" url="https://core.replus.co/api/device-unassign" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseUnassign">
         </iron-ajax>
 
-        <iron-ajax id="ajaxDelete" url="https://core.replus.co/edit/deregister-device" method="POST" body="uid={{uid}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseDelete">
+        <iron-ajax id="ajaxDelete" url="https://core.replus.co/api/device-deregister" method="POST" body="uid={{uid}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseDelete">
         </iron-ajax>
 
         <div class="vertical layout justified">
@@ -5379,7 +5379,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/register-device" method="POST" body="uid={{uid}}&amp;type={{choosenType}}&amp;deviceID={{deviceID}}&amp;deviceCode={{deviceCode}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/api/device-register" method="POST" body="uid={{uid}}&amp;type={{choosenType}}&amp;deviceID={{deviceID}}&amp;deviceCode={{deviceCode}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
@@ -5549,10 +5549,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
-		<iron-ajax id="ajaxDeleteRoom" url="https://core.replus.co/edit/delete-room" method="POST" body="uid={{uid}}&amp;room={{roomID}}" handle-as="text" last-response="{{responseDeleteRoom}}" on-response="_handleResponseDeleteRoom">
+		<iron-ajax id="ajaxDeleteRoom" url="https://core.replus.co/api/room-delete" method="POST" body="uid={{uid}}&amp;room={{roomID}}" handle-as="text" last-response="{{responseDeleteRoom}}" on-response="_handleResponseDeleteRoom">
         </iron-ajax>
 
-        <iron-ajax id="ajaxDeleteRemote" url="https://core.replus.co/edit/delete-remote" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remoteID={{remoteID}}" handle-as="text" last-response="{{responseDelteRemote}}" on-response="_handleResponseDeleteRemote">
+        <iron-ajax id="ajaxDeleteRemote" url="https://core.replus.co/api/remote-delete" method="POST" body="uid={{uid}}&amp;room={{roomID}}&amp;remoteID={{remoteID}}" handle-as="text" last-response="{{responseDelteRemote}}" on-response="_handleResponseDeleteRemote">
         </iron-ajax>
 
         <iron-pages id="pageRemote" attr-for-selected="view" selected="{{roomView}}" style="margin-top: 20px;">
@@ -5609,7 +5609,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }*/
         </style>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/room" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/api/room-edit" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;name=[[newRoomName]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <paper-dialog id="dialog" entry-animation="slide-from-top-animation" exit-animation="fade-out-animation" on-iron-overlay-closed="_closedDialog">
@@ -5943,7 +5943,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-remote" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/api/remote-add" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
@@ -6023,7 +6023,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/add-device" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/api/device-assign" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
@@ -6301,7 +6301,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-room" method="POST" body="uid={{uid}}&amp;name={{roomName}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/api/room-add" method="POST" body="uid={{uid}}&amp;name={{roomName}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">

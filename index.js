@@ -26406,10 +26406,14 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _handleResponse: function() {
                     var response = thisRoomAdd.response;
-                    if (response == 'OK') setTimeout(() => {thisMainData.loadData();}, 500);
+                    if (response == 'OK') {
+                    	setTimeout(() => {thisRoomAdd.stateInitial();}, 800);
+                    	setTimeout(() => {thisMainData.loadData()}, 1000);
+                    	return;
+                    }
                 	else if (response == 'NO_NAME') thisRoomAdd.$.toast.show({text: 'Invalid name for a room.', duration: 3000});
                 	else thisRoomAdd.$.toast.show({text: 'Unknown error.', duration: 3000});
-                    thisRoomAdd.stateInitial();
+                	thisRoomAdd.stateInitial();
                 },
 
                 _tapAdd: function() {

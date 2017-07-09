@@ -5264,6 +5264,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
+        <app-location use-hash-as-path="" route="{{route}}"></app-location>
+        <app-route route="{{route}}" pattern="/devices/:page" data="{{routeData}}" active="{{routeActive}}">
+        </app-route>
+
         <iron-pages id="pages" attr-for-selected="page" selected="{{pageSelected}}">
             <devices-list page="list" uid="[[uid]]" rooms="[[rooms]]" devices-unassigned="{{devicesUnassigned}}" page-selected="{{pageSelected}}" selected-device="{{device}}" selected-vendor="{{vendor}}"></devices-list>
             <devices-add page="add" uid="[[uid]]" page-selected="{{pageSelected}}"></devices-add>
@@ -6419,8 +6423,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <app-location use-hash-as-path="" route="{{route}}"></app-location>
         <app-route route="{{route}}" pattern="/:page" data="{{mainRoute}}" tail="{{tail}}">
         </app-route>
-        <app-route route="{{tail}}" pattern="/:subpage" data="{{subRoute}}">
-        </app-route>
+        
 
         <neon-animated-pages selected="{{isLoggedIn}}" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
             <main-auth is-logged-in="{{isLoggedIn}}" trigger="{{triggerLogout}}" uid="{{uid}}" display-name="{{displayName}}" email="{{email}}" photo-url="{{photoUrl}}"></main-auth>
@@ -6447,7 +6450,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                             </a>
                             <hr>
                             
-                            <a href="#/devices" name="devices">
+                            <a href="#/devices/list" name="devices">
                                 <iron-icon icon="settings-remote"></iron-icon> Devices
                             </a>
                             <hr>

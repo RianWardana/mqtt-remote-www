@@ -25956,7 +25956,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _handleResponse: function() {
                     thisMainData.roomsData = [];
-                    if (typeof thisMainData.response["rooms"][0] != 'undefined') {
+                    if (typeof thisMainData.response != 'undefined') {
                         console.log("main-data: roomsData loaded");
                         var rooms = thisMainData.response["rooms"];
                         thisMainData.roomsData = rooms;
@@ -26044,28 +26044,48 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     pageSelected: {
                         type: String,
                         value: 'list',
-                        observer: '_changeDevicesView'
+                        // observer: '_changeDevicesView'
                     }
                 },
 
                 observers: [
-                    '_triggerBtnToolbar(triggerBtnToolbar)'
+                    '_triggerBtnToolbar(triggerBtnToolbar)',
+                    '_changeRoute(route.path)'
                 ],
 
                 ready: function() {
                     thisDevicesMain = this;
                 },
 
-                _changeDevicesView: function(view) {
-                    if (view == 'list') thisMainToolbar.set('Devices', true, false, false);
-                    else if (view == 'add') thisMainToolbar.set('Register new device', false, false, false);
-                    else if (view == 'setup') thisMainToolbar.set('Setup Wi-Fi', false, false, false);
+                // _changeDevicesView: function(view) {
+                //     if (view == 'list') thisMainToolbar.set('Devices', true, false, false);
+                //     else if (view == 'add') thisMainToolbar.set('Register new device', false, false, false);
+                //     else if (view == 'setup') thisMainToolbar.set('Setup Wi-Fi', false, false, false);
+                // },
+
+                _changeRoute: function(route) {
+                    setTimeout(() => {
+                        if (thisDevicesMain.routeActive) {
+                            var page = thisDevicesMain.routeData.page;
+                            if (page == 'list') {
+                                thisMainToolbar.set('Devices', true, false, false);
+                            } else if (page == 'add') {
+                                thisMainToolbar.set('Register new device', false, false, false);
+                            } else if (page == 'setup') {
+                                thisMainToolbar.set('Setup Wi-Fi', false, false, false);
+                            } else {
+                                // thisDevicesMain.set('routeData.page', 'list');
+                            }
+                            thisDevicesMain.pageSelected = page;
+                        }
+                    }, 100);
                 },
 
                 _triggerBtnToolbar: function(trigger) {
                     if (thisMainApp.mainView == 'devices') {
                         if (trigger.btn == 'back') {
                             thisDevicesMain.pageSelected = 'list';
+                            thisDevicesMain.set('routeData.page', 'list');
                             thisDevicesAdd.stateInitial();
                             thisDevicesSetup.stateInitial();
                         } else if (trigger.btn == 'edit') {
@@ -26149,8 +26169,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _tapAdd: function() {
-                    console.log('hehe')
                     thisDevicesList.pageSelected = 'add';
+                    thisDevicesMain.set('routeData.page', 'add');
                 },
 
                 _tapDelete: function(e) {
@@ -26179,6 +26199,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     else if (deviceType.startsWith('Replus')) var vendor = 'Replus';
                     else var vendor = 'MQTT';
 
+                    thisDevicesMain.set('routeData.page', 'setup');
                     thisDevicesList.pageSelected = 'setup';
                     thisDevicesList.selectedDevice = deviceID;
                     thisDevicesList.selectedVendor = vendor;
@@ -26895,7 +26916,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 properties: {
                     brandAC: {
                         type: Array,
-                        value: ["Dast", "LG", "Mitsubishi", "Samsung"]
+                        value: ["Dast", "LG", "Mitsubishi", "Panasonic", "Samsung"]
                     },
 
                     brandTV: {
@@ -27502,7 +27523,6 @@ Polymer({
 
             _changeRoute: function(route) {
                 setTimeout(() => {
-                    // console.log(thisMainApp.mainRoute.page); 
                     if ((thisMainApp.mainRoute.page == 'add-room') || (thisMainApp.mainRoute.page == 'devices')) {
                         thisMainApp.mainView = thisMainApp.mainRoute.page;
                     } else {

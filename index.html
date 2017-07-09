@@ -1,5 +1,15 @@
 <!DOCTYPE html><html lang="en"><head><script src="index.js" defer=""></script><!--
 @license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+
+@demo demo/iron-query-params.html
+--><!--
+@license
 Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
 This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
 The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
@@ -763,6 +773,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
   </dom-module>
 
+
+<dom-module id="app-location" assetpath="bower_components/app-route/">
+  <template>
+    <iron-location path="{{__path}}" query="{{__query}}" hash="{{__hash}}" url-space-regex="{{urlSpaceRegex}}">
+    </iron-location>
+    <iron-query-params params-string="{{__query}}" params-object="{{queryParams}}">
+    </iron-query-params>
+  </template>
+  </dom-module>
 
 
 <dom-module id="iron-flex" assetpath="bower_components/iron-flex-layout/">
@@ -6369,8 +6388,26 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 margin-right: 12px;
             }
 
-            iron-selector > .iron-selected {
+            iron-selector > a {
+                display: block;
                 color: var(--app-primary-color);
+                padding: 12px 16px;
+                font-size: inherit;
+                font-weight: 500;
+                text-decoration: none;
+                outline-style:none;
+                box-shadow:none;
+                border-color:transparent;
+            }
+
+            iron-selector > a.iron-selected {
+                background: #e3ecf6;
+                color: var(--app-primary-color);
+            }
+
+            iron-selector > paper-item {
+                color: #c0392b;
+                font-weight: 500;
             }
 
             p.userInfoText {
@@ -6379,6 +6416,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
         
+        <app-location use-hash-as-path="" route="{{route}}"></app-location>
+        <app-route route="{{route}}" pattern="/:page" data="{{mainRoute}}" tail="{{tail}}">
+        </app-route>
+        <app-route route="{{tail}}" pattern="/:subpage" data="{{subRoute}}">
+        </app-route>
+
         <neon-animated-pages selected="{{isLoggedIn}}" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
             <main-auth is-logged-in="{{isLoggedIn}}" trigger="{{triggerLogout}}" uid="{{uid}}" display-name="{{displayName}}" email="{{email}}" photo-url="{{photoUrl}}"></main-auth>
 
@@ -6393,20 +6436,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                         </center>
                         <iron-selector attr-for-selected="name" selected="{{mainView}}" on-iron-select="onMenuSelect">
                             <template is="dom-repeat" items="{{roomsData}}" as="room" sort="_sort">
-                                <paper-item on-tap="_tapRoom" name="{{room.name}}" title="{{room.name}}">
-                                    <iron-icon icon="apps"></iron-icon>
-                                    {{room.name}}
-                                </paper-item>
+                                
+                                <a href="#/{{room.name}}" on-tap="_tapRoom" name="{{room.name}}" title="{{room.name}}">
+                                    <iron-icon icon="apps"></iron-icon> {{room.name}}
+                                </a>
                             </template>
-                            <paper-item on-tap="_tapAddRoom" name="Add room">
-                                <iron-icon icon="add"></iron-icon>
-                                Add room
-                            </paper-item>
+                            
+                            <a href="#/add-room" name="add-room">
+                                <iron-icon icon="add"></iron-icon> Add room
+                            </a>
                             <hr>
-                            <paper-item on-tap="_tapDevices" name="Devices">
-                                <iron-icon icon="settings-remote"></iron-icon>
-                                Devices
-                            </paper-item>
+                            
+                            <a href="#/devices" name="devices">
+                                <iron-icon icon="settings-remote"></iron-icon> Devices
+                            </a>
                             <hr>
                             <paper-item on-tap="_tapLogOut">
                                 <iron-icon icon="exit-to-app"></iron-icon>
@@ -6420,8 +6463,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 					<main-toolbar toolbar-title="{{mainView}}" trigger-btn-toolbar="{{triggerBtnToolbar}}"></main-toolbar>
                     <iron-pages attr-for-selected="name" selected="{{mainView}}">
                        	<room-main name="{{choosenRoom}}" uid="[[uid]]" toolbar-title="[[choosenRoom]]" devices-unassigned="[[devicesUnassigned]]" trigger-btn-toolbar="[[triggerBtnToolbar]]"></room-main> 
-                        <room-add name="Add room" uid="[[uid]]"></room-add>
-                        <devices-main name="Devices" uid="[[uid]]" rooms="[[roomsData]]" devices-unassigned="{{devicesUnassigned}}" trigger-btn-toolbar="[[triggerBtnToolbar]]"></devices-main>
+                        <room-add name="add-room" uid="[[uid]]"></room-add>
+                        <devices-main name="devices" uid="[[uid]]" rooms="[[roomsData]]" devices-unassigned="{{devicesUnassigned}}" trigger-btn-toolbar="[[triggerBtnToolbar]]"></devices-main>
                     </iron-pages>
                 </app-header-layout>
             </app-drawer-layout>

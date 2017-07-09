@@ -794,7 +794,7 @@ default:
 return value != null ? value : undefined;
 }
 }
-});Polymer.version = "1.8.1";Polymer.Base._addFeature({
+});Polymer.version = "1.9.2";Polymer.Base._addFeature({
 _registerFeatures: function () {
 this._prepIs();
 this._prepBehaviors();
@@ -811,10 +811,83 @@ this._marshalHostAttributes();
 this._marshalBehaviors();
 }
 });
-Polymer.Base._addFeature({
+(function () {
+function resolveCss(cssText, ownerDocument) {
+return cssText.replace(CSS_URL_RX, function (m, pre, url, post) {
+return pre + '\'' + resolve(url.replace(/["']/g, ''), ownerDocument) + '\'' + post;
+});
+}
+function resolveAttrs(element, ownerDocument) {
+for (var name in URL_ATTRS) {
+var a$ = URL_ATTRS[name];
+for (var i = 0, l = a$.length, a, at, v; i < l && (a = a$[i]); i++) {
+if (name === '*' || element.localName === name) {
+at = element.attributes[a];
+v = at && at.value;
+if (v && v.search(BINDING_RX) < 0) {
+at.value = a === 'style' ? resolveCss(v, ownerDocument) : resolve(v, ownerDocument);
+}
+}
+}
+}
+}
+function resolve(url, ownerDocument) {
+if (url && ABS_URL.test(url)) {
+return url;
+}
+var resolver = getUrlResolver(ownerDocument);
+resolver.href = url;
+return resolver.href || url;
+}
+var tempDoc;
+var tempDocBase;
+function resolveUrl(url, baseUri) {
+if (!tempDoc) {
+tempDoc = document.implementation.createHTMLDocument('temp');
+tempDocBase = tempDoc.createElement('base');
+tempDoc.head.appendChild(tempDocBase);
+}
+tempDocBase.href = baseUri;
+return resolve(url, tempDoc);
+}
+function getUrlResolver(ownerDocument) {
+return ownerDocument.body.__urlResolver || (ownerDocument.body.__urlResolver = ownerDocument.createElement('a'));
+}
+function pathFromUrl(url) {
+return url.substring(0, url.lastIndexOf('/') + 1);
+}
+var CSS_URL_RX = /(url\()([^)]*)(\))/g;
+var URL_ATTRS = {
+'*': [
+'href',
+'src',
+'style',
+'url'
+],
+form: ['action']
+};
+var ABS_URL = /(^\/)|(^#)|(^[\w-\d]*:)/;
+var BINDING_RX = /\{\{|\[\[/;
+Polymer.ResolveUrl = {
+resolveCss: resolveCss,
+resolveAttrs: resolveAttrs,
+resolveUrl: resolveUrl,
+pathFromUrl: pathFromUrl
+};
+Polymer.rootPath = Polymer.Settings.rootPath || pathFromUrl(document.baseURI || window.location.href);
+}());Polymer.Base._addFeature({
 _prepTemplate: function () {
+var module;
 if (this._template === undefined) {
-this._template = Polymer.DomModule.import(this.is, 'template');
+module = Polymer.DomModule.import(this.is);
+this._template = module && module.querySelector('template');
+}
+if (module) {
+var assetPath = module.getAttribute('assetpath') || '';
+var importURL = Polymer.ResolveUrl.resolveUrl(assetPath, module.ownerDocument.baseURI);
+this._importPath = Polymer.ResolveUrl.pathFromUrl(importURL);
+} else {
+this._importPath = '';
 }
 if (this._template && this._template.hasAttribute('is')) {
 this._warn(this._logf('_prepTemplate', 'top-level Polymer template ' + 'must not be a type-extension, found', this._template, 'Move inside simple <template>.'));
@@ -834,6 +907,7 @@ return dom;
 }
 });(function () {
 var baseAttachedCallback = Polymer.Base.attachedCallback;
+var baseDetachedCallback = Polymer.Base.detachedCallback;
 Polymer.Base._addFeature({
 _hostStack: [],
 ready: function () {
@@ -913,6 +987,13 @@ this._beforeAttached();
 baseAttachedCallback.call(this);
 } else {
 this._attachedPending = true;
+}
+},
+detachedCallback: function () {
+if (this._readied) {
+baseDetachedCallback.call(this);
+} else {
+this._attachedPending = false;
 }
 }
 });
@@ -3205,65 +3286,6 @@ return root;
 }
 }
 };
-}());(function () {
-function resolveCss(cssText, ownerDocument) {
-return cssText.replace(CSS_URL_RX, function (m, pre, url, post) {
-return pre + '\'' + resolve(url.replace(/["']/g, ''), ownerDocument) + '\'' + post;
-});
-}
-function resolveAttrs(element, ownerDocument) {
-for (var name in URL_ATTRS) {
-var a$ = URL_ATTRS[name];
-for (var i = 0, l = a$.length, a, at, v; i < l && (a = a$[i]); i++) {
-if (name === '*' || element.localName === name) {
-at = element.attributes[a];
-v = at && at.value;
-if (v && v.search(BINDING_RX) < 0) {
-at.value = a === 'style' ? resolveCss(v, ownerDocument) : resolve(v, ownerDocument);
-}
-}
-}
-}
-}
-function resolve(url, ownerDocument) {
-if (url && ABS_URL.test(url)) {
-return url;
-}
-var resolver = getUrlResolver(ownerDocument);
-resolver.href = url;
-return resolver.href || url;
-}
-var tempDoc;
-var tempDocBase;
-function resolveUrl(url, baseUri) {
-if (!tempDoc) {
-tempDoc = document.implementation.createHTMLDocument('temp');
-tempDocBase = tempDoc.createElement('base');
-tempDoc.head.appendChild(tempDocBase);
-}
-tempDocBase.href = baseUri;
-return resolve(url, tempDoc);
-}
-function getUrlResolver(ownerDocument) {
-return ownerDocument.body.__urlResolver || (ownerDocument.body.__urlResolver = ownerDocument.createElement('a'));
-}
-var CSS_URL_RX = /(url\()([^)]*)(\))/g;
-var URL_ATTRS = {
-'*': [
-'href',
-'src',
-'style',
-'url'
-],
-form: ['action']
-};
-var ABS_URL = /(^\/)|(^#)|(^[\w-\d]*:)/;
-var BINDING_RX = /\{\{|\[\[/;
-Polymer.ResolveUrl = {
-resolveCss: resolveCss,
-resolveAttrs: resolveAttrs,
-resolveUrl: resolveUrl
-};
 }());Polymer.Path = {
 root: function (path) {
 var dotIndex = path.indexOf('.');
@@ -5049,6 +5071,8 @@ node._configValue(name, value);
 }
 },
 _afterClientsReady: function () {
+this.importPath = this._importPath;
+this.rootPath = Polymer.rootPath;
 this._executeStaticEffects();
 this._applyConfig(this._config, this._aboveConfig);
 this._flushHandlers();
@@ -5387,13 +5411,7 @@ _getPathParts: Polymer.Base._getPathParts
 });
 }());Polymer.Base._addFeature({
 resolveUrl: function (url) {
-var module = Polymer.DomModule.import(this.is);
-var root = '';
-if (module) {
-var assetPath = module.getAttribute('assetpath') || '';
-root = Polymer.ResolveUrl.resolveUrl(assetPath, module.ownerDocument.baseURI);
-}
-return Polymer.ResolveUrl.resolveUrl(url, root);
+return Polymer.ResolveUrl.resolveUrl(url, this._importPath);
 }
 });Polymer.CssParse = function () {
 return {
@@ -7718,9 +7736,17 @@ this._detachInstance(i);
 attached: function () {
 if (this.__isDetached) {
 this.__isDetached = false;
-var parent = Polymer.dom(Polymer.dom(this).parentNode);
+var refNode;
+var parentNode = Polymer.dom(this).parentNode;
+if (parentNode.localName == this.is) {
+refNode = parentNode;
+parentNode = Polymer.dom(parentNode).parentNode;
+} else {
+refNode = this;
+}
+var parent = Polymer.dom(parentNode);
 for (var i = 0; i < this._instances.length; i++) {
-this._attachInstance(i, parent);
+this._attachInstance(i, parent, refNode);
 }
 }
 },
@@ -8004,10 +8030,10 @@ Polymer.dom(inst.root).appendChild(el);
 return inst;
 }
 },
-_attachInstance: function (idx, parent) {
+_attachInstance: function (idx, parent, refNode) {
 var inst = this._instances[idx];
 if (!inst.isPlaceholder) {
-parent.insertBefore(inst.root, this);
+parent.insertBefore(inst.root, refNode);
 }
 },
 _detachAndRemoveInstance: function (idx) {
@@ -8040,6 +8066,12 @@ inst = this._stampInstance(idx, key);
 var beforeRow = this._instances[idx + 1];
 var beforeNode = beforeRow && !beforeRow.isPlaceholder ? beforeRow._children[0] : this;
 var parentNode = Polymer.dom(this).parentNode;
+if (parentNode.localName == this.is) {
+if (beforeNode == this) {
+beforeNode = parentNode;
+}
+parentNode = Polymer.dom(parentNode).parentNode;
+}
 Polymer.dom(parentNode).insertBefore(inst.root, beforeNode);
 this._instances[idx] = inst;
 return inst;
@@ -8235,7 +8267,11 @@ _queueRender: function () {
 this._debounceTemplate(this._render);
 },
 detached: function () {
-if (!this.parentNode || this.parentNode.nodeType == Node.DOCUMENT_FRAGMENT_NODE && (!Polymer.Settings.hasShadow || !(this.parentNode instanceof ShadowRoot))) {
+var parentNode = this.parentNode;
+if (parentNode && parentNode.localName == this.is) {
+parentNode = Polymer.dom(parentNode).parentNode;
+}
+if (!parentNode || parentNode.nodeType == Node.DOCUMENT_FRAGMENT_NODE && (!Polymer.Settings.hasShadow || !(parentNode instanceof ShadowRoot))) {
 this._teardownInstance();
 }
 },
@@ -8268,20 +8304,26 @@ this._lastIf = this.if;
 }
 },
 _ensureInstance: function () {
+var refNode;
 var parentNode = Polymer.dom(this).parentNode;
+if (parentNode && parentNode.localName == this.is) {
+refNode = parentNode;
+parentNode = Polymer.dom(parentNode).parentNode;
+} else {
+refNode = this;
+}
 if (parentNode) {
-var parent = Polymer.dom(parentNode);
 if (!this._instance) {
 this._instance = this.stamp();
 var root = this._instance.root;
-parent.insertBefore(root, this);
+Polymer.dom(parentNode).insertBefore(root, refNode);
 } else {
 var c$ = this._instance._children;
 if (c$ && c$.length) {
-var lastChild = Polymer.dom(this).previousSibling;
+var lastChild = Polymer.dom(refNode).previousSibling;
 if (lastChild !== c$[c$.length - 1]) {
 for (var i = 0, n; i < c$.length && (n = c$[i]); i++) {
-parent.insertBefore(n, this);
+Polymer.dom(parentNode).insertBefore(n, refNode);
 }
 }
 }
@@ -8346,8 +8388,15 @@ _registerFeatures: function () {
 this._prepConstructor();
 },
 _insertChildren: function () {
-var parentDom = Polymer.dom(Polymer.dom(this).parentNode);
-parentDom.insertBefore(this.root, this);
+var refNode;
+var parentNode = Polymer.dom(this).parentNode;
+if (parentNode.localName == this.is) {
+refNode = parentNode;
+parentNode = Polymer.dom(parentNode).parentNode;
+} else {
+refNode = this;
+}
+Polymer.dom(parentNode).insertBefore(this.root, refNode);
 },
 _removeChildren: function () {
 if (this._children) {
@@ -10540,6 +10589,1009 @@ Polymer({
 Polymer({
       is: 'app-toolbar'
     });
+(function() {
+    'use strict';
+
+    var workingURL;
+
+    var urlDoc, urlBase, anchor;
+
+    /**
+     * @param {string} path
+     * @param {string=} base
+     * @return {!URL|!HTMLAnchorElement}
+     */
+    function resolveURL(path, base) {
+      if (workingURL === undefined) {
+        workingURL = false;
+        try {
+          var u = new URL('b', 'http://a');
+          u.pathname = 'c%20d';
+          workingURL = (u.href === 'http://a/c%20d');
+          workingURL = workingURL && (new URL('http://www.google.com/?foo bar').href === 'http://www.google.com/?foo%20bar');
+        } catch (e) {}
+      }
+      if (workingURL) {
+        return new URL(path, base);
+      }
+      if (!urlDoc) {
+        urlDoc = document.implementation.createHTMLDocument('url');
+        urlBase = urlDoc.createElement('base');
+        urlDoc.head.appendChild(urlBase);
+        anchor = /** @type {HTMLAnchorElement}*/(urlDoc.createElement('a'));
+      }
+      urlBase.href = base;
+      anchor.href = path.replace(/ /g, '%20');
+      return anchor;
+    }
+
+    Polymer({
+      is: 'iron-location',
+
+      properties: {
+        /**
+         * The pathname component of the URL.
+         */
+        path: {
+          type: String,
+          notify: true,
+          value: function() {
+            return window.decodeURIComponent(window.location.pathname);
+          }
+        },
+
+        /**
+         * The query string portion of the URL.
+         */
+        query: {
+          type: String,
+          notify: true,
+          value: function() {
+            return window.location.search.slice(1);
+          }
+        },
+
+        /**
+         * The hash component of the URL.
+         */
+        hash: {
+          type: String,
+          notify: true,
+          value: function() {
+            return window.decodeURIComponent(window.location.hash.slice(1));
+          }
+        },
+
+        /**
+         * If the user was on a URL for less than `dwellTime` milliseconds, it
+         * won't be added to the browser's history, but instead will be replaced
+         * by the next entry.
+         *
+         * This is to prevent large numbers of entries from clogging up the user's
+         * browser history. Disable by setting to a negative number.
+         */
+        dwellTime: {
+          type: Number,
+          value: 2000
+        },
+
+        /**
+         * A regexp that defines the set of URLs that should be considered part
+         * of this web app.
+         *
+         * Clicking on a link that matches this regex won't result in a full page
+         * navigation, but will instead just update the URL state in place.
+         *
+         * This regexp is given everything after the origin in an absolute
+         * URL. So to match just URLs that start with /search/ do:
+         *     url-space-regex="^/search/"
+         *
+         * @type {string|RegExp}
+         */
+        urlSpaceRegex: {
+          type: String,
+          value: ''
+        },
+
+        /**
+         * urlSpaceRegex, but coerced into a regexp.
+         *
+         * @type {RegExp}
+         */
+        _urlSpaceRegExp: {
+          computed: '_makeRegExp(urlSpaceRegex)'
+        },
+
+        _lastChangedAt: {
+          type: Number
+        },
+
+        _initialized: {
+          type: Boolean,
+          value: false
+        }
+      },
+
+      hostAttributes: {
+        hidden: true
+      },
+
+      observers: [
+        '_updateUrl(path, query, hash)'
+      ],
+
+      attached: function() {
+        this.listen(window, 'hashchange', '_hashChanged');
+        this.listen(window, 'location-changed', '_urlChanged');
+        this.listen(window, 'popstate', '_urlChanged');
+        this.listen(/** @type {!HTMLBodyElement} */(document.body), 'click', '_globalOnClick');
+        // Give a 200ms grace period to make initial redirects without any
+        // additions to the user's history.
+        this._lastChangedAt = window.performance.now() - (this.dwellTime - 200);
+        this._initialized = true;
+
+        this._urlChanged();
+      },
+
+      detached: function() {
+        this.unlisten(window, 'hashchange', '_hashChanged');
+        this.unlisten(window, 'location-changed', '_urlChanged');
+        this.unlisten(window, 'popstate', '_urlChanged');
+        this.unlisten(/** @type {!HTMLBodyElement} */(document.body), 'click', '_globalOnClick');
+        this._initialized = false;
+      },
+
+      _hashChanged: function() {
+        this.hash = window.decodeURIComponent(window.location.hash.substring(1));
+      },
+
+      _urlChanged: function() {
+        // We want to extract all info out of the updated URL before we
+        // try to write anything back into it.
+        //
+        // i.e. without _dontUpdateUrl we'd overwrite the new path with the old
+        // one when we set this.hash. Likewise for query.
+        this._dontUpdateUrl = true;
+        this._hashChanged();
+        this.path = window.decodeURIComponent(window.location.pathname);
+        this.query = window.location.search.substring(1);
+        this._dontUpdateUrl = false;
+        this._updateUrl();
+      },
+
+      _getUrl: function() {
+        var partiallyEncodedPath = window.encodeURI(
+            this.path).replace(/\#/g, '%23').replace(/\?/g, '%3F');
+        var partiallyEncodedQuery = '';
+        if (this.query) {
+          partiallyEncodedQuery = '?' + this.query.replace(/\#/g, '%23');
+        }
+        var partiallyEncodedHash = '';
+        if (this.hash) {
+          partiallyEncodedHash = '#' + window.encodeURI(this.hash);
+        }
+        return (
+            partiallyEncodedPath + partiallyEncodedQuery + partiallyEncodedHash);
+      },
+
+      _updateUrl: function() {
+        if (this._dontUpdateUrl || !this._initialized) {
+          return;
+        }
+
+        if (this.path === window.decodeURIComponent(window.location.pathname) &&
+            this.query === window.location.search.substring(1) &&
+            this.hash === window.decodeURIComponent(
+                window.location.hash.substring(1))) {
+          // Nothing to do, the current URL is a representation of our properties.
+          return;
+        }
+
+        var newUrl = this._getUrl();
+        // Need to use a full URL in case the containing page has a base URI.
+        var fullNewUrl = resolveURL(newUrl, window.location.protocol + '//' + window.location.host).href;
+        var now = window.performance.now();
+        var shouldReplace = this._lastChangedAt + this.dwellTime > now;
+        this._lastChangedAt = now;
+
+        if (shouldReplace) {
+          window.history.replaceState({}, '', fullNewUrl);
+        } else {
+          window.history.pushState({}, '', fullNewUrl);
+        }
+
+        this.fire('location-changed', {}, {node: window});
+      },
+
+      /**
+       * A necessary evil so that links work as expected. Does its best to
+       * bail out early if possible.
+       *
+       * @param {MouseEvent} event .
+       */
+      _globalOnClick: function(event) {
+        // If another event handler has stopped this event then there's nothing
+        // for us to do. This can happen e.g. when there are multiple
+        // iron-location elements in a page.
+        if (event.defaultPrevented) {
+          return;
+        }
+
+        var href = this._getSameOriginLinkHref(event);
+
+        if (!href) {
+          return;
+        }
+
+        event.preventDefault();
+
+        // If the navigation is to the current page we shouldn't add a history
+        // entry or fire a change event.
+        if (href === window.location.href) {
+          return;
+        }
+
+        window.history.pushState({}, '', href);
+        this.fire('location-changed', {}, {node: window});
+      },
+
+      /**
+       * Returns the absolute URL of the link (if any) that this click event
+       * is clicking on, if we can and should override the resulting full
+       * page navigation. Returns null otherwise.
+       *
+       * @param {MouseEvent} event .
+       * @return {string?} .
+       */
+      _getSameOriginLinkHref: function(event) {
+        // We only care about left-clicks.
+        if (event.button !== 0) {
+          return null;
+        }
+
+        // We don't want modified clicks, where the intent is to open the page
+        // in a new tab.
+        if (event.metaKey || event.ctrlKey) {
+          return null;
+        }
+
+        var eventPath = Polymer.dom(event).path;
+        var anchor = null;
+
+        for (var i = 0; i < eventPath.length; i++) {
+          var element = eventPath[i];
+
+          if (element.tagName === 'A' && element.href) {
+            anchor = element;
+            break;
+          }
+        }
+
+        // If there's no link there's nothing to do.
+        if (!anchor) {
+          return null;
+        }
+
+        // Target blank is a new tab, don't intercept.
+        if (anchor.target === '_blank') {
+          return null;
+        }
+
+        // If the link is for an existing parent frame, don't intercept.
+        if ((anchor.target === '_top' ||
+            anchor.target === '_parent') &&
+            window.top !== window) {
+          return null;
+        }
+
+        var href = anchor.href;
+
+        // It only makes sense for us to intercept same-origin navigations.
+        // pushState/replaceState don't work with cross-origin links.
+        var url;
+
+        if (document.baseURI != null) {
+          url = resolveURL(href, /** @type {string} */(document.baseURI));
+        } else {
+          url = resolveURL(href);
+        }
+
+        var origin;
+
+        // IE Polyfill
+        if (window.location.origin) {
+          origin = window.location.origin;
+        } else {
+          origin = window.location.protocol + '//' + window.location.host;
+        }
+
+        var urlOrigin;
+
+        if (url.origin) {
+          urlOrigin = url.origin;
+        } else {
+          urlOrigin = url.protocol + '//' + url.host;
+        }
+
+        if (urlOrigin !== origin) {
+          return null;
+        }
+
+        var normalizedHref = url.pathname + url.search + url.hash;
+
+        // pathname should start with '/', but may not if `new URL` is not supported
+        if (normalizedHref[0] !== '/') {
+          normalizedHref = '/' + normalizedHref;
+        }
+
+        // If we've been configured not to handle this url... don't handle it!
+        if (this._urlSpaceRegExp &&
+            !this._urlSpaceRegExp.test(normalizedHref)) {
+          return null;
+        }
+
+        // Need to use a full URL in case the containing page has a base URI.
+        var fullNormalizedHref = resolveURL(
+            normalizedHref, window.location.href).href;
+        return fullNormalizedHref;
+      },
+
+      _makeRegExp: function(urlSpaceRegex) {
+        return RegExp(urlSpaceRegex);
+      }
+    });
+  })();
+'use strict';
+
+  Polymer({
+    is: 'iron-query-params',
+
+    properties: {
+      paramsString: {
+        type: String,
+        notify: true,
+        observer: 'paramsStringChanged',
+      },
+
+      paramsObject: {
+        type: Object,
+        notify: true,
+        value: function() {
+          return {};
+        }
+      },
+
+      _dontReact: {
+        type: Boolean,
+        value: false
+      }
+    },
+
+    hostAttributes: {
+      hidden: true
+    },
+
+    observers: [
+      'paramsObjectChanged(paramsObject.*)'
+    ],
+
+    paramsStringChanged: function() {
+      this._dontReact = true;
+      this.paramsObject = this._decodeParams(this.paramsString);
+      this._dontReact = false;
+    },
+
+    paramsObjectChanged: function() {
+      if (this._dontReact) {
+        return;
+      }
+      this.paramsString = this._encodeParams(this.paramsObject)
+          .replace(/%3F/g, '?').replace(/%2F/g, '/').replace(/'/g, '%27');
+    },
+
+    _encodeParams: function(params) {
+      var encodedParams = [];
+
+      for (var key in params) {
+        var value = params[key];
+
+        if (value === '') {
+          encodedParams.push(encodeURIComponent(key));
+
+        } else if (value) {
+          encodedParams.push(
+              encodeURIComponent(key) +
+              '=' +
+              encodeURIComponent(value.toString())
+          );
+        }
+      }
+      return encodedParams.join('&');
+    },
+
+    _decodeParams: function(paramString) {
+      var params = {};
+      // Work around a bug in decodeURIComponent where + is not
+      // converted to spaces:
+      paramString = (paramString || '').replace(/\+/g, '%20');
+      var paramList = paramString.split('&');
+      for (var i = 0; i < paramList.length; i++) {
+        var param = paramList[i].split('=');
+        if (param[0]) {
+          params[decodeURIComponent(param[0])] =
+              decodeURIComponent(param[1] || '');
+        }
+      }
+      return params;
+    }
+  });
+(function() {
+    'use strict';
+
+    /**
+     * Provides bidirectional mapping between `path` and `queryParams` and a
+     * app-route compatible `route` object.
+     *
+     * For more information, see the docs for `app-route-converter`.
+     *
+     * @polymerBehavior
+     */
+    Polymer.AppRouteConverterBehavior = {
+      properties: {
+        /**
+         * A model representing the deserialized path through the route tree, as
+         * well as the current queryParams.
+         *
+         * A route object is the kernel of the routing system. It is intended to
+         * be fed into consuming elements such as `app-route`.
+         *
+         * @type {?Object}
+         */
+        route: {
+          type: Object,
+          notify: true
+        },
+
+        /**
+         * A set of key/value pairs that are universally accessible to branches of
+         * the route tree.
+         *
+         * @type {?Object}
+         */
+        queryParams: {
+          type: Object,
+          notify: true
+        },
+
+        /**
+         * The serialized path through the route tree. This corresponds to the
+         * `window.location.pathname` value, and will update to reflect changes
+         * to that value.
+         */
+        path: {
+          type: String,
+          notify: true,
+        }
+      },
+
+      observers: [
+        '_locationChanged(path, queryParams)',
+        '_routeChanged(route.prefix, route.path)',
+        '_routeQueryParamsChanged(route.__queryParams)'
+      ],
+
+      created: function() {
+        this.linkPaths('route.__queryParams', 'queryParams');
+        this.linkPaths('queryParams', 'route.__queryParams');
+      },
+
+      /**
+       * Handler called when the path or queryParams change.
+       */
+      _locationChanged: function() {
+        if (this.route &&
+            this.route.path === this.path &&
+            this.queryParams === this.route.__queryParams) {
+          return;
+        }
+        this.route = {
+          prefix: '',
+          path: this.path,
+          __queryParams: this.queryParams
+        };
+      },
+
+      /**
+       * Handler called when the route prefix and route path change.
+       */
+      _routeChanged: function() {
+        if (!this.route) {
+          return;
+        }
+
+        this.path = this.route.prefix + this.route.path;
+      },
+
+      /**
+       * Handler called when the route queryParams change.
+       *
+       * @param  {Object} queryParams A set of key/value pairs that are
+       * universally accessible to branches of the route tree.
+       */
+      _routeQueryParamsChanged: function(queryParams) {
+        if (!this.route) {
+          return;
+        }
+        this.queryParams = queryParams;
+      }
+    };
+  })();
+(function() {
+      'use strict';
+
+      Polymer({
+        is: 'app-location',
+
+        properties: {
+          /**
+           * A model representing the deserialized path through the route tree, as
+           * well as the current queryParams.
+           */
+          route: {
+            type: Object,
+            notify: true
+          },
+
+          /**
+           * In many scenarios, it is convenient to treat the `hash` as a stand-in
+           * alternative to the `path`. For example, if deploying an app to a static
+           * web server (e.g., Github Pages) - where one does not have control over
+           * server-side routing - it is usually a better experience to use the hash
+           * to represent paths through one's app.
+           *
+           * When this property is set to true, the `hash` will be used in place of
+
+           * the `path` for generating a `route`.
+           */
+          useHashAsPath: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * A regexp that defines the set of URLs that should be considered part
+           * of this web app.
+           *
+           * Clicking on a link that matches this regex won't result in a full page
+           * navigation, but will instead just update the URL state in place.
+           *
+           * This regexp is given everything after the origin in an absolute
+           * URL. So to match just URLs that start with /search/ do:
+           *     url-space-regex="^/search/"
+           *
+           * @type {string|RegExp}
+           */
+          urlSpaceRegex: {
+            type: String,
+            notify: true
+          },
+
+          /**
+           * A set of key/value pairs that are universally accessible to branches
+           * of the route tree.
+           */
+          __queryParams: {
+            type: Object
+          },
+
+          /**
+           * The pathname component of the current URL.
+           */
+          __path: {
+            type: String
+          },
+
+          /**
+           * The query string portion of the current URL.
+           */
+          __query: {
+            type: String
+          },
+
+          /**
+           * The hash portion of the current URL.
+           */
+          __hash: {
+            type: String
+          },
+
+          /**
+           * The route path, which will be either the hash or the path, depending
+           * on useHashAsPath.
+           */
+          path: {
+            type: String,
+            observer: '__onPathChanged'
+          },
+
+          /**
+           * Whether or not the ready function has been called.
+           */
+          _isReady: {
+            type: Boolean
+          }
+        },
+
+        behaviors: [Polymer.AppRouteConverterBehavior],
+
+        observers: [
+          '__computeRoutePath(useHashAsPath, __hash, __path)'
+        ],
+
+        ready: function() {
+          this._isReady = true;
+        },
+
+        __computeRoutePath: function() {
+          this.path = this.useHashAsPath ? this.__hash : this.__path;
+        },
+
+        __onPathChanged: function() {
+          if (!this._isReady) {
+            return;
+          }
+
+          if (this.useHashAsPath) {
+            this.__hash = this.path;
+          } else {
+            this.__path = this.path;
+          }
+        }
+      });
+    })();
+(function() {
+    'use strict';
+
+    Polymer({
+      is: 'app-route',
+
+      properties: {
+        /**
+         * The URL component managed by this element.
+         */
+        route: {
+          type: Object,
+          notify: true
+        },
+
+        /**
+         * The pattern of slash-separated segments to match `route.path` against.
+         *
+         * For example the pattern "/foo" will match "/foo" or "/foo/bar"
+         * but not "/foobar".
+         *
+         * Path segments like `/:named` are mapped to properties on the `data` object.
+         */
+        pattern: {
+          type: String
+        },
+
+        /**
+         * The parameterized values that are extracted from the route as
+         * described by `pattern`.
+         */
+        data: {
+          type: Object,
+          value: function() {return {};},
+          notify: true
+        },
+
+        /**
+         * @type {?Object}
+         */
+        queryParams: {
+          type: Object,
+          value: function() {
+            return {};
+          },
+          notify: true
+        },
+
+        /**
+         * The part of `route.path` NOT consumed by `pattern`.
+         */
+        tail: {
+          type: Object,
+          value: function() {return {path: null, prefix: null, __queryParams: null};},
+          notify: true
+        },
+
+        /**
+         * Whether the current route is active. True if `route.path` matches the
+         * `pattern`, false otherwise.
+         */
+        active: {
+          type: Boolean,
+          notify: true,
+          readOnly: true
+        },
+
+        _queryParamsUpdating: {
+          type: Boolean,
+          value: false
+        },
+        /**
+         * @type {?string}
+         */
+        _matched: {
+          type: String,
+          value: ''
+        }
+      },
+
+      observers: [
+        '__tryToMatch(route.path, pattern)',
+        '__updatePathOnDataChange(data.*)',
+        '__tailPathChanged(tail.path)',
+        '__routeQueryParamsChanged(route.__queryParams)',
+        '__tailQueryParamsChanged(tail.__queryParams)',
+        '__queryParamsChanged(queryParams.*)'
+      ],
+
+      created: function() {
+        this.linkPaths('route.__queryParams', 'tail.__queryParams');
+        this.linkPaths('tail.__queryParams', 'route.__queryParams');
+      },
+
+      /**
+       * Deal with the query params object being assigned to wholesale.
+       * @export
+       */
+      __routeQueryParamsChanged: function(queryParams) {
+        if (queryParams && this.tail) {
+          if (this.tail.__queryParams !== queryParams) {
+            this.set('tail.__queryParams', queryParams);
+          }
+
+          if (!this.active || this._queryParamsUpdating) {
+            return;
+          }
+
+          // Copy queryParams and track whether there are any differences compared
+          // to the existing query params.
+          var copyOfQueryParams = {};
+          var anythingChanged = false;
+          for (var key in queryParams) {
+            copyOfQueryParams[key] = queryParams[key];
+            if (anythingChanged ||
+                !this.queryParams ||
+                queryParams[key] !== this.queryParams[key]) {
+              anythingChanged = true;
+            }
+          }
+          // Need to check whether any keys were deleted
+          for (var key in this.queryParams) {
+            if (anythingChanged || !(key in queryParams)) {
+              anythingChanged = true;
+              break;
+            }
+          }
+
+          if (!anythingChanged) {
+            return;
+          }
+          this._queryParamsUpdating = true;
+          this.set('queryParams', copyOfQueryParams);
+          this._queryParamsUpdating = false;
+        }
+      },
+
+      /**
+       * @export
+       */
+      __tailQueryParamsChanged: function(queryParams) {
+        if (queryParams && this.route && this.route.__queryParams != queryParams) {
+          this.set('route.__queryParams', queryParams);
+        }
+      },
+
+      /**
+       * @export
+       */
+      __queryParamsChanged: function(changes) {
+        if (!this.active || this._queryParamsUpdating) {
+          return;
+        }
+
+        this.set('route.__' + changes.path, changes.value);
+      },
+
+      __resetProperties: function() {
+        this._setActive(false);
+        this._matched = null;
+      },
+
+      /**
+       * @export
+       */
+      __tryToMatch: function() {
+        if (!this.route) {
+          return;
+        }
+
+        var path = this.route.path;
+        var pattern = this.pattern;
+
+        if (!pattern) {
+          return;
+        }
+
+        if (!path) {
+          this.__resetProperties();
+          return;
+        }
+
+        var remainingPieces = path.split('/');
+        var patternPieces = pattern.split('/');
+
+        var matched = [];
+        var namedMatches = {};
+
+        for (var i=0; i < patternPieces.length; i++) {
+          var patternPiece = patternPieces[i];
+          if (!patternPiece && patternPiece !== '') {
+            break;
+          }
+          var pathPiece = remainingPieces.shift();
+
+          // We don't match this path.
+          if (!pathPiece && pathPiece !== '') {
+            this.__resetProperties();
+            return;
+          }
+          matched.push(pathPiece);
+
+          if (patternPiece.charAt(0) == ':') {
+            namedMatches[patternPiece.slice(1)] = pathPiece;
+          } else if (patternPiece !== pathPiece) {
+            this.__resetProperties();
+            return;
+          }
+        }
+
+        this._matched = matched.join('/');
+
+        // Properties that must be updated atomically.
+        var propertyUpdates = {};
+
+        //this.active
+        if (!this.active) {
+          propertyUpdates.active = true;
+        }
+
+        // this.tail
+        var tailPrefix = this.route.prefix + this._matched;
+        var tailPath = remainingPieces.join('/');
+        if (remainingPieces.length > 0) {
+          tailPath = '/' + tailPath;
+        }
+        if (!this.tail ||
+            this.tail.prefix !== tailPrefix ||
+            this.tail.path !== tailPath) {
+          propertyUpdates.tail = {
+            prefix: tailPrefix,
+            path: tailPath,
+            __queryParams: this.route.__queryParams
+          };
+        }
+
+        // this.data
+        propertyUpdates.data = namedMatches;
+        this._dataInUrl = {};
+        for (var key in namedMatches) {
+          this._dataInUrl[key] = namedMatches[key];
+        }
+
+        if (this.setProperties) {
+          if (!this.active) {
+            this._setActive(true);
+          }
+          // atomic update
+          this.setProperties(propertyUpdates);
+        } else {
+          this.__setMulti(propertyUpdates);
+        }
+      },
+
+      /**
+       * @export
+       */
+      __tailPathChanged: function(path) {
+        if (!this.active) {
+          return;
+        }
+        var tailPath = path;
+        var newPath = this._matched;
+        if (tailPath) {
+          if (tailPath.charAt(0) !== '/') {
+            tailPath = '/' + tailPath;
+          }
+          newPath += tailPath;
+        }
+        this.set('route.path', newPath);
+      },
+
+      /**
+       * @export
+       */
+      __updatePathOnDataChange: function() {
+        if (!this.route || !this.active) {
+          return;
+        }
+        var newPath = this.__getLink({});
+        var oldPath = this.__getLink(this._dataInUrl);
+        if (newPath === oldPath) {
+          return;
+        }
+        this.set('route.path', newPath);
+      },
+
+      __getLink: function(overrideValues) {
+        var values = {tail: null};
+        for (var key in this.data) {
+          values[key] = this.data[key];
+        }
+        for (var key in overrideValues) {
+          values[key] = overrideValues[key];
+        }
+        var patternPieces = this.pattern.split('/');
+        var interp = patternPieces.map(function(value) {
+          if (value[0] == ':') {
+            value = values[value.slice(1)];
+          }
+          return value;
+        }, this);
+        if (values.tail && values.tail.path) {
+          if (interp.length > 0 && values.tail.path.charAt(0) === '/') {
+            interp.push(values.tail.path.slice(1));
+          } else {
+            interp.push(values.tail.path);
+          }
+        }
+        return interp.join('/');
+      },
+
+      __setMulti: function(setObj) {
+        // HACK(rictic): skirting around 1.0's lack of a setMulti by poking at
+        //     internal data structures. I would not advise that you copy this
+        //     example.
+        //
+        //     In the future this will be a feature of Polymer itself.
+        //     See: https://github.com/Polymer/polymer/issues/3640
+        //
+        //     Hacking around with private methods like this is juggling footguns,
+        //     and is likely to have unexpected and unsupported rough edges.
+        //
+        //     Be ye so warned.
+        for (var property in setObj) {
+          this._propertySetter(property, setObj[property]);
+        }
+        //notify in a specific order
+        if (setObj.data !== undefined) {
+          this._pathEffector('data', this.data);
+          this._notifyChange('data');
+        }
+        if (setObj.active !== undefined) {
+          this._pathEffector('active', this.active);
+          this._notifyChange('active');
+        }
+        if (setObj.tail !== undefined) {
+          this._pathEffector('tail', this.tail);
+          this._notifyChange('tail');
+        }
+      }
+    });
+  })();
 /**
 @license
 Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
@@ -24891,11 +25943,13 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
 
 
-                loadData: function(redirectToRoom = true) {
+                loadData: function(redirectToRoom = false) {
                     console.log("main-data: loadData");
+                    if (typeof thisMainApp.mainRoute.page == 'undefined') redirectToRoom = true;
                     thisMainData.redirect = redirectToRoom;
                     thisMainData.uid = thisMainAuth.uid;
                     thisMainData.$.ajax.generateRequest();
+                    thisDevicesList.$.ajaxLoadList.generateRequest();
                 },
 
 
@@ -24909,6 +25963,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         if (thisMainData.redirect) {
                             var lastRoomName = rooms[rooms.length-1]["name"];
                             thisMainApp._tapRoom(lastRoomName);
+                            setTimeout(() => {thisMainApp.set('mainRoute.page', lastRoomName);}, 100);
                         } else {
                         	thisRoomMain.getRoomRemotes();
                         }
@@ -25008,7 +26063,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _triggerBtnToolbar: function(trigger) {
-                    if (thisMainApp.mainView == 'Devices') {
+                    if (thisMainApp.mainView == 'devices') {
                         if (trigger.btn == 'back') {
                             thisDevicesMain.pageSelected = 'list';
                             thisDevicesAdd.stateInitial();
@@ -25326,35 +26381,39 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 ready: function() {
                     thisRoomMain = this;
-
-                    // thisRoomMain.setupPosition();
-                    // window.addEventListener('resize', function(event){
-                    //     thisRoomMain.setupPosition();
-                    // });
                 },
 
 
 
                 getRoomRemotes: function() {
                     var roomsData = thisMainApp.roomsData;
+                    thisRoomMain.roomID = "";
 
                     thisRoomMain.remotes = [];
-                    roomsData.forEach(room => {
-                        if (thisMainApp.choosenRoom == room.name) {
-                            thisRoomMain.roomID = room.id;
-                            var remotes = room.remotes;
-                            thisRoomMain.remotesID = remotes;
+                    if (typeof roomsData != 'undefined') {
+                        roomsData.forEach(room => {
+                            if (thisMainApp.choosenRoom == room.name) {
+                                thisRoomMain.roomID = room.id;
+                                var remotes = room.remotes;
+                                thisRoomMain.remotesID = remotes;
 
-                            if (room.remotes != null) {
-                                for (var remoteID in remotes) {
-                                    if (remotes.hasOwnProperty(remoteID)) {
-                                        var remote = remotes[remoteID];
-                                        thisRoomMain.push('remotes', remote);
+                                if (room.remotes != null) {
+                                    for (var remoteID in remotes) {
+                                        if (remotes.hasOwnProperty(remoteID)) {
+                                            var remote = remotes[remoteID];
+                                            thisRoomMain.push('remotes', remote);
+                                        }
                                     }
-                                }
+                                    return;
+                                } else return;
                             }
+                        });
+                    }
+                    setTimeout(() => {
+                        if ((thisMainApp.mainRoute.page != 'devices') && (thisMainApp.mainRoute.page != 'add-room')) {
+                            if (thisRoomMain.roomID == "") thisMainData.loadData(true);
                         }
-                    });
+                    }, 1000);
                 },
 
 
@@ -25367,14 +26426,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 getType: function(remote) {
                     return remote.substring(0, 2);
-                },
-
-                setupPosition: function() {
-                    // if (window.innerWidth > 640) {
-                    //     thisRoomMain.$.container.style.marginLeft = ((window.innerWidth - 280)/2 - 128) + 'px';
-                    // } else {
-                    //     thisRoomMain.$.container.style.marginLeft = (window.innerWidth - 280)/2 + 'px';
-                    // }
                 },
 
                 _changeRoomView: function(view) {
@@ -25405,7 +26456,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _handleResponseDeleteRoom: function() {
-                	setTimeout(() => {thisMainData.loadData();}, 500);
+                	setTimeout(() => {thisMainData.loadData(true);}, 500);
                 	thisRoomMain.$.toast.show({text: `Room deleted.`, duration: 3000});
                 },
 
@@ -25480,6 +26531,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRoomEdit.$.dialog.close();
                         setTimeout(() => {thisMainData.loadData(false);}, 500);
                         setTimeout(() => {thisMainApp._tapRoom(thisRoomEdit.newRoomName);}, 600);
+                        setTimeout(() => {thisMainApp.set('mainRoute.page', thisRoomEdit.newRoomName);}, 700);
                         thisRoomEdit.$.toast.show({text: 'Room renamed.', duration: 3000});
                     } else if (thisRoomEdit.response == 'NO_NAME') {
                         thisRoomEdit.$.toast.show({text: 'Invalid name for a room.', duration: 3000});  
@@ -25730,9 +26782,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     if (window.innerWidth > 375) {
                         thisRemoteTV.$.remoteContainer.style.width = '350px';
                         thisRemoteTV.$.remoteContainer.style.marginLeft = (window.innerWidth - 350)/2 + 'px';
-                        // if (window.innerWidth > 640) {
-                        //     thisRemoteTV.$.remoteContainer.style.marginLeft = ((window.innerWidth - 350)/2 - 128) + 'px';
-                        // }
                     } else {
                         thisRemoteTV.$.remoteContainer.style.width = '300px';
                         thisRemoteTV.$.remoteContainer.style.marginLeft = (window.innerWidth - 300)/2 + 'px';
@@ -25782,7 +26831,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     if (command == null) {
                         command = e.target.title
                         if (command == "") {
-                            thisRemoteTV.$.toast.show({text: 'Please try another button.', duration: 1000}); 
+                            // thisRemoteTV.$.toast.show({text: 'Please try another button.', duration: 1000}); 
                             return;
                         }
                     }
@@ -25800,7 +26849,6 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     // thisRemoteTV.uid = thisMainAuth.uid;
                     // thisRemoteTV.roomID = thisRemoteList.roomID;
                     thisRemoteTV.command = thisRemoteTV.codeset + command;
-
                     thisRemoteTV.$.ajax.generateRequest();
                 },
 
@@ -26408,7 +27456,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     var response = thisRoomAdd.response;
                     if (response == 'OK') {
                     	setTimeout(() => {thisRoomAdd.stateInitial();}, 800);
-                    	setTimeout(() => {thisMainData.loadData()}, 1000);
+                    	setTimeout(() => {thisMainData.loadData(true)}, 1000);
                     	return;
                     }
                 	else if (response == 'NO_NAME') thisRoomAdd.$.toast.show({text: 'Invalid name for a room.', duration: 3000});
@@ -26438,14 +27486,29 @@ Polymer({
                 }
             },
 
+            observers: [
+                '_changeRoute(route.path)'
+            ],
+
             ready: function() {
                 thisMainApp = this;
             },
 
             _changeMainView: function(view) {
-            	if (view == 'Add room') thisMainToolbar.set(view, true, false, false);
-            	else if (view == 'Devices') thisMainToolbar.set(view, true, false, false);
+            	if (view == 'add-room') thisMainToolbar.set('Add room', true, false, false);
+            	else if (view == 'devices') thisMainToolbar.set('Devices', true, false, false);
             	else thisMainToolbar.set(view, true, true, true);
+            },
+
+            _changeRoute: function(route) {
+                setTimeout(() => {
+                    // console.log(thisMainApp.mainRoute.page); 
+                    if ((thisMainApp.mainRoute.page == 'add-room') || (thisMainApp.mainRoute.page == 'devices')) {
+                        thisMainApp.mainView = thisMainApp.mainRoute.page;
+                    } else {
+                        thisMainApp._tapRoom(thisMainApp.mainRoute.page);
+                    }
+                }, 100);
             },
 
             _sort: function(a, b) {
@@ -26467,7 +27530,7 @@ Polymer({
             },
 
             _tapAddRoom: function() {
-            	
+
             },
 
             _tapDevices: function() {
@@ -26480,7 +27543,6 @@ Polymer({
 
 
             _tapRoom: function(e) {
-            	thisDevicesList.$.ajaxLoadList.generateRequest();
                 thisMainApp.choosenRoom = (e.target != null ? e.target.title : e);
                 thisMainApp.mainView = thisMainApp.choosenRoom;
                 thisRoomMain.getRoomRemotes();

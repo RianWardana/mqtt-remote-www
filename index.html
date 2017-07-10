@@ -5579,12 +5579,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </iron-ajax>
 
         <app-location use-hash-as-path="" route="{{route}}"></app-location>
-        <app-route route="{{route}}" pattern="/devices/:page" data="{{routeData}}" active="{{routeActive}}">
+        <app-route route="{{route}}" pattern="/{{name}}/:page" data="{{routeData}}" active="{{routeActive}}">
         </app-route>
 
         <iron-pages id="pageRemote" attr-for-selected="view" selected="{{roomView}}" style="margin-top: 20px;">
-            <remote-ac view="AC" uid="[[uid]]" room-key="[[roomID]]" remote="[[pilihanRemote]]"></remote-ac>
-            <remote-tv view="TV" uid="[[uid]]" room-key="[[roomID]]" remote="{{pilihanRemote}}"></remote-tv>
+            <remote-ac view="ac" uid="[[uid]]" room-key="[[roomID]]" remote="[[pilihanRemote]]"></remote-ac>
+            <remote-tv view="tv" uid="[[uid]]" room-key="[[roomID]]" remote="{{pilihanRemote}}"></remote-tv>
             <room-add-main view="add" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomID]]" devices-unassigned="[[devicesUnassigned]]"></room-add-main>
 
             <iron-selector id="selectorRemote" class="vertical layout" view="list" attr-for-selected="view" selected="{{roomView}}">
@@ -5594,7 +5594,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                             {{remote}}
                         </paper-item>
                     </template>
-                    <paper-fab view="add" id="fab" icon="add"></paper-fab>
+                    <paper-fab view="add" id="fab" icon="add" on-tap="_tapAdd"></paper-fab>
             </iron-selector>
         </iron-pages>
         
@@ -6413,9 +6413,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </style>
         
         <app-location use-hash-as-path="" route="{{route}}"></app-location>
-        <app-route route="{{route}}" pattern="/:page" data="{{mainRoute}}" tail="{{tail}}">
+        <app-route route="{{route}}" pattern="/:page" data="{{mainRoute}}">
         </app-route>
-        
 
         <neon-animated-pages selected="{{isLoggedIn}}" entry-animation="fade-in-animation" exit-animation="fade-out-animation">
             <main-auth is-logged-in="{{isLoggedIn}}" trigger="{{triggerLogout}}" uid="{{uid}}" display-name="{{displayName}}" email="{{email}}" photo-url="{{photoUrl}}"></main-auth>
@@ -6432,7 +6431,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                         <iron-selector attr-for-selected="name" selected="{{mainView}}" on-iron-select="onMenuSelect">
                             <template is="dom-repeat" items="{{roomsData}}" as="room" sort="_sort">
                                 
-                                <a href="#/{{room.name}}" on-tap="_tapRoom" name="{{room.name}}" title="{{room.name}}">
+                                <a href="#/{{room.name}}/list" on-tap="_tapRoom" name="{{room.name}}" title="{{room.name}}">
                                     <iron-icon icon="apps"></iron-icon> {{room.name}}
                                 </a>
                             </template>

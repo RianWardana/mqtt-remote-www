@@ -26389,7 +26389,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 observers: [
-                	'_triggerBtnToolbar(triggerBtnToolbar)'
+                	'_triggerBtnToolbar(triggerBtnToolbar)',
+                    '_changeRoute(route.path)'
                 ],
 
                 ready: function() {
@@ -26438,7 +26439,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 getType: function(remote) {
-                    return remote.substring(0, 2);
+                    return remote.substring(0, 2).toLowerCase();
                 },
 
                 _changeRoomView: function(view) {
@@ -26447,6 +26448,20 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 	                	else if (view == 'add') thisMainToolbar.set(`Add new in ${thisRoomMain.name}`, false, false, false);
 	                	else thisMainToolbar.set(`${thisMainApp.choosenRoom} ${thisRoomMain.pilihanRemote}`, false, false, true);
                 	}
+                },
+
+                _changeRoute: function(route) {
+                    setTimeout(() => {
+                        if (thisRoomMain.routeActive) {
+                            var page = thisRoomMain.routeData.page;
+                            if (page == 'list') {
+                                thisMainToolbar.set(thisRoomMain.name, true, true, true);
+                                thisRoomMain.roomView = 'list';
+                            } else if ((page == 'add') || (page == 'remote')) {} else {
+                                thisRoomMain.set('routeData.page', 'list');
+                            }
+                        }
+                    }, 50);
                 },
 
                 _sort: function(a, b) {
@@ -26473,6 +26488,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 	thisRoomMain.$.toast.show({text: `Room deleted.`, duration: 3000});
                 },
 
+                _tapAdd: function() {
+                    thisRoomMain.set('routeData.page', 'add');
+                },
+
                 _tapConfirmDelete: function() {
                 	if (thisRoomMain.roomView == 'list') {
                 		thisRoomMain.$.ajaxDeleteRoom.generateRequest();
@@ -26489,12 +26508,14 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _tapRemote: function(e) {
                     thisRoomMain.pilihanRemote = e.target.title;
+                    thisRoomMain.set('routeData.page', 'remote');
                 },
 
                 _triggerBtnToolbar: function(trigger) {
                 	if (thisMainApp.mainView == thisRoomMain.name) {
                 		if (trigger.btn == 'back') {
 	                		thisRoomMain.roomView = 'list';
+                            thisRoomMain.set('routeData.page', 'list');
 		                    thisRoomAddMain.stateInitial();
 		                    thisMainToolbar.set(thisMainApp.choosenRoom, true, true, true);
 	                	} else if (trigger.btn == 'edit') {
@@ -27471,10 +27492,15 @@ Polymer({
 
             _changeRoute: function(route) {
                 setTimeout(() => {
+                    var hash = window.location.hash;
                     if ((thisMainApp.mainRoute.page == 'add-room') || (thisMainApp.mainRoute.page == 'devices')) {
                         thisMainApp.mainView = thisMainApp.mainRoute.page;
+                        if (hash == '#/devices') window.location.hash = '#/devices/list';
                     } else {
                         thisMainApp._tapRoom(thisMainApp.mainRoute.page);
+                        if (!hash.includes('/list') && (!hash.includes('/add')) && (!hash.includes('/remote'))) {
+                            if ((hash.lastIndexOf('/') - hash.length + 1) != 0) window.location.hash = hash + '/list';
+                        }
                     }
                 }, 50);
             },

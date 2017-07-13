@@ -5221,7 +5221,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <script src="https://www.gstatic.com/firebasejs/3.6.4/firebase.js"></script>
     </dom-module><dom-module id="main-data" assetpath="src/">
     <template>
-        <iron-ajax id="ajax" url="https://core.replus.co/get/data" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/api/get-rooms" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
     </template>
 
@@ -5332,7 +5332,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }
         </style>
 
-        <iron-ajax id="ajaxLoadList" url="https://core.replus.co/get/devices" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{devices}}" on-response="_handleResponseLoadList">
+        <iron-ajax id="ajaxLoadList" url="https://core.replus.co/api/get-devices" method="POST" body="uid={{uid}}" handle-as="json" last-response="{{devices}}" on-response="_handleResponseLoadList">
         </iron-ajax>
         
         <iron-ajax id="ajaxUnassign" url="https://core.replus.co/api/device-unassign" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;deviceID={{deviceID}}" handle-as="text" last-response="{{response}}" on-response="_handleResponseUnassign">

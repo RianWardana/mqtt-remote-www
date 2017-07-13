@@ -25956,7 +25956,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _handleResponse: function() {
                     thisMainData.roomsData = [];
-                    if (typeof thisMainData.response != 'undefined') {
+                    if (typeof thisMainData.response["rooms"][0] != 'undefined') {
                         console.log("main-data: roomsData loaded");
                         var rooms = thisMainData.response["rooms"];
                         thisMainData.roomsData = rooms;
@@ -25969,7 +25969,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         }
                     } else {
                         console.log("main-data: roomsData empty");
-                        thisMainApp.mainView = "Add room";
+                        thisMainApp.mainView = "add-room";
+                        setTimeout(() => {thisMainApp.set('mainRoute.page', 'add-room');}, 100);
                     }
                 }
             });
@@ -27537,9 +27538,11 @@ Polymer({
 
 
             _tapRoom: function(e) {
-                thisMainApp.choosenRoom = (e.target != null ? e.target.title : e);
-                thisMainApp.mainView = thisMainApp.choosenRoom;
-                thisRoomMain.getRoomRemotes();
+                if (typeof e != 'undefined') {
+                    thisMainApp.choosenRoom = (e.target != null ? e.target.title : e);
+                    thisMainApp.mainView = thisMainApp.choosenRoom;
+                    thisRoomMain.getRoomRemotes(); 
+                }
             },
 
 

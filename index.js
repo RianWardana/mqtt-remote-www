@@ -26346,7 +26346,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisDevicesSetup.$.failText.style.display = 'block';
                     thisDevicesSetup.$.toastRetry.show({text: 'Fail to connect.', duration: 5000});
                     setTimeout(() => {
-                        // thisDevicesSetup.reload();
+                        thisDevicesSetup.reload();
                     }, 5000);
                 },
 

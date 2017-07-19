@@ -26321,7 +26321,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     // thisDevicesSetup.timeout = setTimeout(() => {
                     //     thisDevicesSetup.stateResponseError();
                     // }, 15000);
-                    window.location = `http://192.168.4.1/${window.location.href}~${thisDevicesSetup.ssid}~${thisDevicesSetup.password}`;
+                    window.location = `http://192.168.4.1/${thisDevicesSetup.ssid}~${thisDevicesSetup.password}`;
                 },
 
                 reload: function() {
@@ -26346,7 +26346,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisDevicesSetup.$.failText.style.display = 'block';
                     thisDevicesSetup.$.toastRetry.show({text: 'Fail to connect.', duration: 5000});
                     setTimeout(() => {
-                        thisDevicesSetup.reload();
+                        // thisDevicesSetup.reload();
                     }, 5000);
                 },
 

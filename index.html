@@ -6157,7 +6157,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/{{choosenBrand}}/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
         </iron-ajax>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/edit/new-schedule" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/schedule/schedule-create" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
@@ -6212,13 +6212,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 
             <div id="containerDay" class="horizontal layout justified">
-                <div class="vertical layout"><paper-checkbox id="checkbox2" name="2" on-active-changed="_changeDay"></paper-checkbox>Mon</div>
-                <div class="vertical layout"><paper-checkbox id="checkbox3" name="3" on-active-changed="_changeDay"></paper-checkbox>Tue</div>
-                <div class="vertical layout"><paper-checkbox id="checkbox4" name="4" on-active-changed="_changeDay"></paper-checkbox>Wed</div>
-                <div class="vertical layout"><paper-checkbox id="checkbox5" name="5" on-active-changed="_changeDay"></paper-checkbox>Thu</div>
-                <div class="vertical layout"><paper-checkbox id="checkbox6" name="6" on-active-changed="_changeDay"></paper-checkbox>Fri</div>
-                <div class="vertical layout"><paper-checkbox id="checkbox7" name="7" on-active-changed="_changeDay"></paper-checkbox>Sat</div>
-                <div class="vertical layout"><paper-checkbox id="checkbox1" name="1" on-active-changed="_changeDay"></paper-checkbox>Sun</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox1" name="1" on-active-changed="_changeDay"></paper-checkbox>Mon</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox2" name="2" on-active-changed="_changeDay"></paper-checkbox>Tue</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox3" name="3" on-active-changed="_changeDay"></paper-checkbox>Wed</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox4" name="4" on-active-changed="_changeDay"></paper-checkbox>Thu</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox5" name="5" on-active-changed="_changeDay"></paper-checkbox>Fri</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox6" name="6" on-active-changed="_changeDay"></paper-checkbox>Sat</div>
+                <div class="vertical layout"><paper-checkbox id="checkbox7" name="7" on-active-changed="_changeDay"></paper-checkbox>Sun</div>
             </div>
 
 

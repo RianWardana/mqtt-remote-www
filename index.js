@@ -27117,6 +27117,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         type: Array,
                         value: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "24", "25", "26", "27", "28", "29", "30", "31"]
                     },
+                    days: {
+                        type: Array,
+                        value: ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                    },
                     fans: {
                         type: Array,
                         value: ["Auto", "Low", "Medium", "High"]
@@ -27393,11 +27397,14 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 _tapAdd: function() {
                     if (thisRoomAddSchedule.isRepeated) {
                         var days = [];
+                        var daysName = [];
                         var choosenDay = thisRoomAddSchedule.choosenDay;
                         for (var key in choosenDay) if (choosenDay.hasOwnProperty(key)) if (choosenDay[key]) days.push(parseInt(key));
+                        for (var key in choosenDay) if (choosenDay.hasOwnProperty(key)) if (choosenDay[key]) daysName.push(thisRoomAddSchedule.days[parseInt(key)]);
                         var hour = parseInt(thisRoomAddSchedule.choosenHour) + (thisRoomAddSchedule.choosenPeriod == 'AM' ? 0 : 12);
-                        var cronExp = `0 ${thisRoomAddSchedule.choosenMinute} ${hour} ? * ${days.toString()} *`;
+                        var cronExp = `0 ${thisRoomAddSchedule.choosenMinute} ${hour} * * ${days.toString()}`;
                         console.log(cronExp);
+                        console.log(daysName.toString().replace(/,/g, ', '));
                     } else {
                         var schedule = `${thisRoomAddSchedule.choosenMonth} ${thisRoomAddSchedule.choosenDate} ${thisRoomAddSchedule.calculatedYear}, ${thisRoomAddSchedule.choosenHour}:${thisRoomAddSchedule.choosenMinute} ${thisRoomAddSchedule.choosenPeriod}`;
                         console.log(schedule);

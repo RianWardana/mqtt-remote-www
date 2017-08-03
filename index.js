@@ -27394,22 +27394,47 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRoomMain._sort(a, b);
                 },
 
+
+
                 _tapAdd: function() {
+                    var choosenDay = thisRoomAddSchedule.choosenDay;
+                    var choosenHour = parseInt(thisRoomAddSchedule.choosenHour);
+                    var choosenPeriod = thisRoomAddSchedule.choosenPeriod;
+
+                    // convert to 24h
+                    if (choosenHour == 12) choosenHour = 0;
+                    if (choosenPeriod == 'PM') choosenHour = choosenHour + 12;
+                    if (choosenHour < 10) choosenHour = '0' + choosenHour;
+
                     if (thisRoomAddSchedule.isRepeated) {
                         var days = [];
                         var daysName = [];
-                        var choosenDay = thisRoomAddSchedule.choosenDay;
-                        for (var key in choosenDay) if (choosenDay.hasOwnProperty(key)) if (choosenDay[key]) days.push(parseInt(key));
-                        for (var key in choosenDay) if (choosenDay.hasOwnProperty(key)) if (choosenDay[key]) daysName.push(thisRoomAddSchedule.days[parseInt(key)]);
-                        var hour = parseInt(thisRoomAddSchedule.choosenHour) + (thisRoomAddSchedule.choosenPeriod == 'AM' ? 0 : 12);
-                        var cronExp = `0 ${thisRoomAddSchedule.choosenMinute} ${hour} * * ${days.toString()}`;
+                        var daysCount = 0;
+                        
+                        for (var key in choosenDay) {
+                            if (choosenDay.hasOwnProperty(key)) {
+                                if (choosenDay[key]) {
+                                    days.push(parseInt(key));
+                                    daysName.push(thisRoomAddSchedule.days[parseInt(key)]);
+                                    daysCount++;
+                                }
+                            }
+                        }
+
+                        // Return 'Everyday' if every day is selected
+                        if (daysCount == 7) var titleDay = 'Everyday';
+                        else var titleDay = daysName.toString().replace(/,/g, ', ');
+
+                        var cronExp = `0 ${thisRoomAddSchedule.choosenMinute} ${choosenHour} * * ${days.toString()}`;
                         console.log(cronExp);
-                        console.log(daysName.toString().replace(/,/g, ', '));
                     } else {
-                        var schedule = `${thisRoomAddSchedule.choosenMonth} ${thisRoomAddSchedule.choosenDate} ${thisRoomAddSchedule.calculatedYear}, ${thisRoomAddSchedule.choosenHour}:${thisRoomAddSchedule.choosenMinute} ${thisRoomAddSchedule.choosenPeriod}`;
+                        var schedule = `${thisRoomAddSchedule.choosenMonth} ${thisRoomAddSchedule.choosenDate} ${thisRoomAddSchedule.calculatedYear}, ${choosenHour}:${thisRoomAddSchedule.choosenMinute}`;
                         console.log(schedule);
                     }
+
+                    // yang dikirim: uid, room, command
                 }
+
 
             });
         })();

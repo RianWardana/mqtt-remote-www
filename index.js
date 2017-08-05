@@ -26497,6 +26497,15 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 	thisRoomMain.$.toast.show({text: `Room deleted.`, duration: 3000});
                 },
 
+                _handleResponseDeleteSchedule: function() {
+                    var response = thisRoomMain.responseDeleteSchedule;
+                    if (response == 'OK') {
+                        thisRoomMain.$.toast.show({text: `Schedule deleted.`, duration: 3000});
+                        setTimeout(() => {thisMainData.loadData(false);}, 500);
+                        setTimeout(() => {thisRoomMain.getRoomRemotes();}, 600);
+                    }
+                },
+
                 _tapAdd: function() {
                     thisRoomMain.set('routeData.page', 'add');
                 },
@@ -26516,7 +26525,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _tapDeleteSchedule: function(e) {
-                    console.log(e.target.title);
+                    thisRoomMain.scheduleID = e.target.title;
+                    thisRoomMain.$.ajaxDeleteSchedule.generateRequest();
                 },
 
                 _tapRemote: function(e) {

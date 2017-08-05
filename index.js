@@ -27369,9 +27369,11 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         if (thisRoomAddSchedule.isRepeated) {
                             thisRoomAddSchedule.$.containerDate.style.visibility = 'hidden';
                             thisRoomAddSchedule.$.containerDay.style.visibility = 'visible';
+                            thisRoomAddSchedule.scheduleType = 'repeated';
                         } else {
                             thisRoomAddSchedule.$.containerDate.style.visibility = 'visible';
                             thisRoomAddSchedule.$.containerDay.style.visibility = 'hidden';
+                            thisRoomAddSchedule.scheduleType = 'once';
                         }
                     }, 100);
                 },
@@ -27408,6 +27410,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _handleResponse: function() {
                     var response = thisRoomAddSchedule.response;
+                    if (response == 'OK') {
+                        thisRoomAddSchedule.$.toast.show({text: `New schedule created.`, duration: 3000});
+                        thisRoomAddSchedule.stateInitial();
+                        setTimeout(() => {thisMainData.loadData(false);}, 500);
+                        setTimeout(() => {thisRoomMain.getRoomRemotes();}, 600);
+                    }
                 },
 
                 _sort: function(a, b) {
@@ -27463,13 +27471,29 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                         var cronExp = `0 ${thisRoomAddSchedule.choosenMinute} ${choosenHour} * * ${days.toString()}`;
                         thisRoomAddSchedule.schedule = cronExp;
-                        console.log(cronExp);
+                        // console.log(cronExp);
                     } else {
                         var schedule = `${thisRoomAddSchedule.choosenMonth} ${thisRoomAddSchedule.choosenDate} ${thisRoomAddSchedule.calculatedYear}, ${choosenHour}:${thisRoomAddSchedule.choosenMinute}`;
                         thisRoomAddSchedule.titleDay = schedule;
                         thisRoomAddSchedule.schedule = schedule;
-                        console.log(schedule);
+                        // console.log(schedule);
                     }
+
+                    // var data = {
+                    //     uid: thisRoomAddSchedule.uid,
+                    //     roomKey: thisRoomAddSchedule.roomKey,
+                    //     command: thisRoomAddSchedule.command,
+                    //     scheduleType: thisRoomAddSchedule.scheduleType,
+                    //     schedule: thisRoomAddSchedule.schedule,
+                    //     titleRemote: thisRoomAddSchedule.choosenAppliance,
+                    //     titleCommand: thisRoomAddSchedule.titleCommand,
+                    //     titleDay: thisRoomAddSchedule.titleDay,
+                    //     titleTime: thisRoomAddSchedule.titleTime
+                    // }
+                    // console.log(data);
+
+                    thisRoomAddSchedule.$.ajax.generateRequest();
+                    thisRoomAddSchedule.setButtonState('spinner');
                 }
 
 

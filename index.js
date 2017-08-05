@@ -27453,7 +27453,18 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRoomAddSchedule.titleCommand = `Set to ${thisRoomAddSchedule.choosenTemp}C, ${thisRoomAddSchedule.modes[thisRoomAddSchedule.choosenMode]}, fan ${thisRoomAddSchedule.fans[thisRoomAddSchedule.choosenFan]}`;
                         if (!thisRoomAddSchedule.isON) thisRoomAddSchedule.command = `${thisRoomAddSchedule.choosenBrand}-0000`;
                     } else {
-                        thisRoomAddSchedule.command = '197000';
+                        thisRoomAddSchedule.titleCommand = 'Turn ON';
+                        var merk = thisRoomAddSchedule.choosenBrand;
+                        if (merk == "lg") var codeset = "1970";
+                        else if (merk == "samsung") var codeset = "0595";
+                        else if (merk == "panasonic") var codeset = "2619";
+                        else if (merk == "sony") var codeset = "1319";
+                        else if (merk == "sharp") var codeset = "1429";
+                        else if (merk == "changhong") var codeset = "2903";
+                        else if (merk == "sanyo") var codeset = "1430";
+                        else if (merk == "toshiba") var codeset = "0339";
+                        if (thisRoomAddSchedule.isON) thisRoomAddSchedule.command = `${codeset}15`;
+                        else thisRoomAddSchedule.command = `${codeset}16`;
                     }
 
                     // get titleCommand based on ON/OFF
@@ -27481,12 +27492,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                         var cronExp = `0 ${thisRoomAddSchedule.choosenMinute} ${choosenHour} * * ${days.toString()}`;
                         thisRoomAddSchedule.schedule = cronExp;
-                        // console.log(cronExp);
                     } else {
                         var schedule = `${thisRoomAddSchedule.choosenMonth} ${thisRoomAddSchedule.choosenDate} ${thisRoomAddSchedule.calculatedYear}, ${choosenHour}:${thisRoomAddSchedule.choosenMinute}`;
                         thisRoomAddSchedule.titleDay = schedule;
                         thisRoomAddSchedule.schedule = schedule;
-                        // console.log(schedule);
                     }
 
                     // var data = {

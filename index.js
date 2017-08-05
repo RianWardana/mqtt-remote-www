@@ -26403,6 +26403,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 getRoomRemotes: function() {
                     var roomsData = thisMainApp.roomsData;
                     thisRoomMain.roomID = "";
+                    thisRoomMain.schedulesLoaded = false;
 
                     thisRoomMain.remotes = [];
                     if (typeof roomsData != 'undefined') {
@@ -26411,6 +26412,9 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                                 thisRoomMain.roomID = room.id;
                                 var remotes = room.remotes;
                                 thisRoomMain.remotesID = remotes;
+
+                                if (typeof room.schedules[0] != 'undefined') thisRoomMain.schedulesLoaded = true;
+                                thisRoomMain.schedules = room.schedules;
 
                                 if (room.remotes != null) {
                                     for (var remoteID in remotes) {
@@ -26429,6 +26433,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                             if (thisRoomMain.roomID == "") thisMainData.loadData(true);
                         }
                     }, 1000);
+                },
+
+                getRoomSchedules: function() {
+
                 },
 
 
@@ -26505,6 +26513,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 		}
                 		thisRoomMain.$.ajaxDeleteRemote.generateRequest();
                 	}
+                },
+
+                _tapDeleteSchedule: function(e) {
+                    console.log(e.target.title);
                 },
 
                 _tapRemote: function(e) {
@@ -27280,6 +27292,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRoomAddSchedule.OKappliance = true;
                     thisRoomAddSchedule.setToggleONState('enabled');
                     thisRoomAddSchedule.setButtonState('enabled');
+                    thisRoomAddSchedule.isON = false;
                     setTimeout(() => {
                         var type = thisRoomAddSchedule.choosenAppliance.substring(0, 2);
                         var brand = thisRoomAddSchedule.choosenAppliance.substring(3).toLowerCase();
@@ -27335,9 +27348,16 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 _changeIsON: function() {
                     setTimeout(() => {
                         if (thisRoomAddSchedule.isON) {
+                            thisRoomAddSchedule.$.containerCommand.style.display = 'block';
                             thisRoomAddSchedule.$.textON.innerHTML = 'Turn appliance ON';
-                            if (thisRoomAddSchedule.choosenType == 'AC') thisRoomAddSchedule.$.ajaxManifest.generateRequest();
+                            if (thisRoomAddSchedule.choosenType == 'AC') {
+                                thisRoomAddSchedule.$.containerAC.style.display = 'block';
+                                thisRoomAddSchedule.$.ajaxManifest.generateRequest();
+                            } else {
+                                thisRoomAddSchedule.$.containerAC.style.display = 'none'; 
+                            }
                         } else {
+                            thisRoomAddSchedule.$.containerCommand.style.display = 'none';
                             thisRoomAddSchedule.$.textON.innerHTML = 'Turn appliance OFF';
                         }
                     }, 100);
@@ -27401,10 +27421,25 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     var choosenHour = parseInt(thisRoomAddSchedule.choosenHour);
                     var choosenPeriod = thisRoomAddSchedule.choosenPeriod;
 
-                    // convert to 24h
+                    // convert to 24H format
                     if (choosenHour == 12) choosenHour = 0;
                     if (choosenPeriod == 'PM') choosenHour = choosenHour + 12;
                     if (choosenHour < 10) choosenHour = '0' + choosenHour;
+
+                    // get titleTime
+                    thisRoomAddSchedule.titleTime = `${choosenHour}:${thisRoomAddSchedule.choosenMinute}`;
+
+                    // vary command based on appliance type
+                    if (thisRoomAddSchedule.choosenType == 'AC') { 
+                        thisRoomAddSchedule.command = `${thisRoomAddSchedule.choosenBrand}-${thisRoomAddSchedule.choosenMode}${thisRoomAddSchedule.choosenFan}${thisRoomAddSchedule.choosenTemp}`;
+                        thisRoomAddSchedule.titleCommand = `Set to ${thisRoomAddSchedule.choosenTemp}C, ${thisRoomAddSchedule.modes[thisRoomAddSchedule.choosenMode]}, fan ${thisRoomAddSchedule.fans[thisRoomAddSchedule.choosenFan]}`;
+                        if (!thisRoomAddSchedule.isON) thisRoomAddSchedule.command = `${thisRoomAddSchedule.choosenBrand}-0000`;
+                    } else {
+                        thisRoomAddSchedule.command = '197000';
+                    }
+
+                    // get titleCommand based on ON/OFF
+                    if (!thisRoomAddSchedule.isON) thisRoomAddSchedule.titleCommand = 'Turn OFF';
 
                     if (thisRoomAddSchedule.isRepeated) {
                         var days = [];
@@ -27424,15 +27459,17 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         // Return 'Everyday' if every day is selected
                         if (daysCount == 7) var titleDay = 'Everyday';
                         else var titleDay = daysName.toString().replace(/,/g, ', ');
+                        thisRoomAddSchedule.titleDay = titleDay;
 
                         var cronExp = `0 ${thisRoomAddSchedule.choosenMinute} ${choosenHour} * * ${days.toString()}`;
+                        thisRoomAddSchedule.schedule = cronExp;
                         console.log(cronExp);
                     } else {
                         var schedule = `${thisRoomAddSchedule.choosenMonth} ${thisRoomAddSchedule.choosenDate} ${thisRoomAddSchedule.calculatedYear}, ${choosenHour}:${thisRoomAddSchedule.choosenMinute}`;
+                        thisRoomAddSchedule.titleDay = schedule;
+                        thisRoomAddSchedule.schedule = schedule;
                         console.log(schedule);
                     }
-
-                    // yang dikirim: uid, room, command
                 }
 
 

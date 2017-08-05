@@ -5540,6 +5540,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 text-align: left;
             }
 
+            paper-button#btnDeleteSchedule {
+                background: #fff;
+                color: #c0392b;
+                font-weight: normal;
+            }
+
+            paper-card {
+                display: block;
+                margin: 20px 20px 0;
+                z-index: 1;
+            }
+
             paper-fab {
                 --paper-fab-background: var(--app-primary-color);
                 --paper-fab-keyboard-focus-background: var(--app-primary-color);
@@ -5554,6 +5566,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 position: fixed;
                 bottom: 20px;
                 right: 20px;
+                z-index: 999;
             }
 
             paper-item {
@@ -5567,8 +5580,28 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             	font-weight: bold;
             }
 
+            .card-heading {
+                @apply(--paper-font-headline);
+                color: #777;
+            }
+            .card-time {
+                background: var(--paper-grey-400);
+                border-radius: 10px;
+                color: #fff;
+                padding: 5px;
+                text-align: center;
+                width: 70px;
+            }
+
             #container {
                 width: 280px;
+            }
+
+            #schedulesText {
+                @apply(--paper-font-headline);
+                color: #777;
+                margin-top: 32px;
+                margin-bottom: -15px;  
             }
         </style>
         
@@ -5587,7 +5620,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             <remote-tv view="tv" uid="[[uid]]" room-key="[[roomID]]" remote="{{pilihanRemote}}"></remote-tv>
             <room-add-main view="add" remotes="{{remotes}}" uid="[[uid]]" room-key="[[roomID]]" devices-unassigned="[[devicesUnassigned]]"></room-add-main>
 
-            <iron-selector id="selectorRemote" class="vertical layout" view="list" attr-for-selected="view" selected="{{roomView}}">
+            <div view="list" style="padding-bottom: 100px">
+                <iron-selector id="selectorRemote" class="vertical layout" attr-for-selected="view" selected="{{roomView}}">
                     <template is="dom-repeat" items="{{remotes}}" as="remote" sort="_sort">
                         <paper-item view="{{getType(remote)}}" on-tap="_tapRemote" title="{{remote}}">
                             <iron-icon icon="{{getIcon(remote)}}"></iron-icon>
@@ -5595,7 +5629,26 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                         </paper-item>
                     </template>
                     <paper-fab view="add" id="fab" icon="add" on-tap="_tapAdd"></paper-fab>
-            </iron-selector>
+                </iron-selector>
+                <template is="dom-if" if="[[schedulesLoaded]]">
+                    <center><p id="schedulesText">Schedules</p></center>
+                </template>
+                <template is="dom-repeat" items="{{schedules}}" as="schedule">
+                    <paper-card>
+                        <div class="card-content">
+                            <div class="horizontal layout justified">
+                                <div class="card-heading">[[schedule.titleRemote]]</div>
+                                <div class="card-time">[[schedule.titleTime]]</div>
+                            </div>
+                            <div>[[schedule.titleCommand]]</div>
+                            <div>[[schedule.titleDay]]</div>
+                        </div>
+                        <div class="card-actions horizontal layout end-justified">
+                            <paper-button title="[[schedule.id]]" id="btnDeleteSchedule" on-tap="_tapDeleteSchedule">Delete</paper-button>
+                        </div>
+                    </paper-card>
+                </template>
+            </div>
         </iron-pages>
         
         <paper-toast id="toast"></paper-toast>
@@ -6096,7 +6149,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
             #dropdownFan {
                 margin-right: 5px;
-                width: 40%;
+                width: 30%;
             }
 
             #dropdownMinute {
@@ -6157,7 +6210,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/{{choosenBrand}}/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
         </iron-ajax>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/schedule/schedule-create" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;remote={{choosenRemote}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/schedule/schedule-create" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;command={{command}}&amp;schedule=[[schedule]]&amp;titleRemote=[[choosenAppliance]]&amp;titleCommand=[[titleCommand]]&amp;titleDay=[[titleDay]]&amp;titleTime=[[titleTime]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="container" class="vertical layout">
@@ -6238,28 +6291,30 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 
 
-            <div id="containerAC" class="horizontal layout justified">
-                <paper-dropdown-menu id="dropdownMode" label="Mode">
-                    <paper-listbox class="dropdown-content" attr-for-selected="mode" selected="{{choosenMode}}" on-selected-changed="_changeMode">
-                        <template is="dom-repeat" items="{{manifestModes}}" as="mode">
-                            <paper-item mode="{{mode}}">{{getMode(mode)}}</paper-item>
-                        </template>
-                    </paper-listbox>
-                </paper-dropdown-menu>
-                <paper-dropdown-menu id="dropdownFan" label="Fan speed">
-                    <paper-listbox class="dropdown-content" attr-for-selected="fan" selected="{{choosenFan}}" on-selected-changed="">
-                        <template is="dom-repeat" items="{{manifestFans}}" as="fan">
-                            <paper-item fan="{{fan}}">{{getFan(fan)}}</paper-item>
-                        </template>
-                    </paper-listbox>
-                </paper-dropdown-menu>
-                <paper-dropdown-menu id="dropdownTemp" label="Temperature">
-                    <paper-listbox class="dropdown-content" attr-for-selected="temp" selected="{{choosenTemp}}" on-selected-changed="">
-                        <template is="dom-repeat" items="{{temps}}" as="temp">
-                            <paper-item temp="{{temp}}">{{temp}}</paper-item>
-                        </template>
-                    </paper-listbox>
-                </paper-dropdown-menu>
+            <div id="containerCommand">
+                <div id="containerAC" class="horizontal layout justified">
+                    <paper-dropdown-menu id="dropdownMode" label="Mode">
+                        <paper-listbox class="dropdown-content" attr-for-selected="mode" selected="{{choosenMode}}" on-selected-changed="_changeMode">
+                            <template is="dom-repeat" items="{{manifestModes}}" as="mode">
+                                <paper-item mode="{{mode}}">{{getMode(mode)}}</paper-item>
+                            </template>
+                        </paper-listbox>
+                    </paper-dropdown-menu>
+                    <paper-dropdown-menu id="dropdownFan" label="Fan speed">
+                        <paper-listbox class="dropdown-content" attr-for-selected="fan" selected="{{choosenFan}}" on-selected-changed="">
+                            <template is="dom-repeat" items="{{manifestFans}}" as="fan">
+                                <paper-item fan="{{fan}}">{{getFan(fan)}}</paper-item>
+                            </template>
+                        </paper-listbox>
+                    </paper-dropdown-menu>
+                    <paper-dropdown-menu id="dropdownTemp" label="Temperature">
+                        <paper-listbox class="dropdown-content" attr-for-selected="temp" selected="{{choosenTemp}}" on-selected-changed="">
+                            <template is="dom-repeat" items="{{temps}}" as="temp">
+                                <paper-item temp="{{temp}}">{{temp}}</paper-item>
+                            </template>
+                        </paper-listbox>
+                    </paper-dropdown-menu>
+                </div>
             </div>
 
             <paper-material id="materialNote">

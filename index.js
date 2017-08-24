@@ -26166,6 +26166,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 _handleResponseUnassign: function() {
                     thisDevicesList.$.ajaxLoadList.generateRequest();
+                    thisDevicesList.$.toast.show({text: `Device unassigned.`, duration: 3000});
                 },
 
                 _tapAdd: function() {
@@ -26189,6 +26190,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisDevicesList.deviceID = e.target.name;
                     thisDevicesList.roomKey = e.target.title;
                     thisDevicesList.$.ajaxUnassign.generateRequest();
+                    thisDevicesList.$.toast.show({text: `Unassigning...`, duration: 3000});
                 },
 
                 _tapWifi: function(e) {

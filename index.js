@@ -26952,7 +26952,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 properties: {
                     brandAC: {
                         type: Array,
-                        value: ["Dast", "LG", "Mitsubishi", "Panasonic", "Samsung"]
+                        value: ["Daikin", "Dast", "LG", "Mitsubishi Heavy Industries", "Panasonic", "Samsung"]
                     },
 
                     brandTV: {
@@ -27014,8 +27014,11 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                     thisRoomAddRemote.setButtonAddState('enabled');
                 },
 
-                _changeBrand: function() {
-                    thisRoomAddRemote.stateChangedBrand();  
+                _changeBrand: function(e) {
+                    thisRoomAddRemote.stateChangedBrand();
+                    // if (e.detail.value == "Mitsubishi Heavy Industries") {
+                    // 	thisRoomAddRemote.choosenBrand = "Mitsubishi";
+                    // }
                 },
 
                 _changeType: function() {
@@ -27040,8 +27043,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 },
 
                 _tapAdd: function() {
-                    // thisRoomAddRemote.uid = thisMainAuth.uid;
-                    // thisRoomAddRemote.roomID = thisRoomMain.roomID;
+                    if (thisRoomAddRemote.choosenBrand == 'Mitsubishi Heavy Industries') thisRoomAddRemote.choosenBrand = 'Mitsubishi';
                     thisRoomAddRemote.choosenRemote = `${thisRoomAddRemote.choosenType} ${thisRoomAddRemote.choosenBrand}`;
                     thisRoomAddRemote.$.ajax.generateRequest();
                     thisRoomAddRemote.stateWaitResponse();

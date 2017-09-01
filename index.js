@@ -26952,7 +26952,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 properties: {
                     brandAC: {
                         type: Array,
-                        value: ["Daikin", "Dast", "LG", "Mitsubishi Heavy Industries", "Panasonic", "Samsung"]
+                        value: ["Daikin", "Dast", "LG", "Mitsubishi Heavy Industries", "Panasonic", "Samsung", "Toshiba"]
                     },
 
                     brandTV: {

@@ -2884,8 +2884,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </dom-module>
 
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,300italic,400italic,500,500italic,700,700italic" defer>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700" defer>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,300italic,400italic,500,500italic,700,700italic">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700">
 <style is="custom-style">
 
   :root {
@@ -5408,8 +5408,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <div id="container" class="vertical layout">
             <paper-dropdown-menu id="dropdownType" label="Device type">
                 <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenType}}" on-selected-changed="_changedType">
-                    <paper-item name="POCI Remote">POCI Remote</paper-item>
-                    <paper-item name="Replus Vision">Replus Vision</paper-item> 
+                    <paper-item name="Replus">Replus</paper-item> 
+                    <template is="dom-if" if="[[!fromAppReplusCo]]">
+						<paper-item name="POCI Remote">POCI Remote</paper-item>
+                    </template>
                 </paper-listbox>
             </paper-dropdown-menu>
 

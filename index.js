@@ -26214,6 +26214,10 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
             Polymer({
                 is: 'devices-add',
                 properties: {
+                	fromAppReplusCo: {
+                		type: Boolean,
+                		value: true
+                	},
                     pageSelected: {
                         type: String,
                         notify: true
@@ -26223,6 +26227,12 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                 ready: function() {
                     thisDevicesAdd = this;
                     thisDevicesAdd.stateInitial();
+                    setTimeout(function() {thisDevicesAdd.getHost()}, 10);
+                },
+
+                getHost: function() {
+                	if (host == "app.replus.co") thisDevicesAdd.fromAppReplusCo = true;
+                    else thisDevicesAdd.fromAppReplusCo = false;
                 },
 
                 setButtonState: function(state) {

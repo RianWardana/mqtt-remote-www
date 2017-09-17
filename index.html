@@ -1,15 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><script src="index.js" defer=""></script><!--
 @license
-Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
-This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
-The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
-The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
-Code distributed by Google as part of the polymer project is also
-subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
-
-@demo demo/iron-query-params.html
---><!--
-@license
 Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
 This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
 The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
@@ -112,7 +102,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       -webkit-flex-wrap: wrap;
       flex-wrap: wrap;
     };
-    
+
     --layout-no-wrap: {
       -ms-flex-wrap: nowrap;
       -webkit-flex-wrap: nowrap;
@@ -776,10 +766,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 <dom-module id="app-location" assetpath="bower_components/app-route/">
   <template>
-    <iron-location path="{{__path}}" query="{{__query}}" hash="{{__hash}}" url-space-regex="{{urlSpaceRegex}}">
-    </iron-location>
     <iron-query-params params-string="{{__query}}" params-object="{{queryParams}}">
     </iron-query-params>
+    <iron-location path="{{__path}}" query="{{__query}}" hash="{{__hash}}" url-space-regex="{{urlSpaceRegex}}">
+    </iron-location>
   </template>
   </dom-module>
 
@@ -2165,6 +2155,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       :host([animated]) {
         @apply(--shadow-transition);
       }
+      :host {
+        @apply(--paper-material);
+      }
     </style>
 
     <content></content>
@@ -2884,8 +2877,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </dom-module>
 
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,300italic,400italic,500,500italic,700,700italic" defer>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700" defer>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700|Roboto:400,300,300italic,400italic,500,500italic,700,700italic" crossorigin="anonymous">
 <style is="custom-style">
 
   :root {
@@ -3314,6 +3306,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         @apply(--paper-input-container-input);
       }
 
+      .input-content.focused ::content input,
+      .input-content.focused ::content textarea,
+      .input-content.focused ::content iron-autogrow-textarea,
+      .input-content.focused ::content .paper-input-input {
+        @apply(--paper-input-container-input-focus);
+      }
+
+      .input-content.is-invalid ::content input,
+      .input-content.is-invalid ::content textarea,
+      .input-content.is-invalid ::content iron-autogrow-textarea,
+      .input-content.is-invalid ::content .paper-input-input {
+        @apply(--paper-input-container-input-invalid);
+      }
+
       .input-content ::content input::-webkit-outer-spin-button,
       .input-content ::content input::-webkit-inner-spin-button {
         @apply(--paper-input-container-input-webkit-spinner);
@@ -3420,6 +3426,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         display: none !important;
       }
 
+      input::-webkit-outer-spin-button,                                                                                                     
+      input::-webkit-inner-spin-button {                                                                                                    
+        @apply(--paper-input-container-input-webkit-spinner);                                                                                                                                                                                      
+      }
+      
+      input::-webkit-clear-button {
+        @apply(--paper-input-container-input-webkit-clear);  
+      }
+
       input::-webkit-input-placeholder {
         color: var(--paper-input-container-color, --secondary-text-color);
       }
@@ -3430,6 +3445,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       input::-moz-placeholder {
         color: var(--paper-input-container-color, --secondary-text-color);
+      }
+
+      input::-ms-clear {
+        @apply(--paper-input-container-ms-clear);
       }
 
       input:-ms-input-placeholder {
@@ -5408,8 +5427,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <div id="container" class="vertical layout">
             <paper-dropdown-menu id="dropdownType" label="Device type">
                 <paper-listbox class="dropdown-content" attr-for-selected="name" selected="{{choosenType}}" on-selected-changed="_changedType">
-                    <paper-item name="POCI Remote">POCI Remote</paper-item>
-                    <paper-item name="Replus Vision">Replus Vision</paper-item> 
+                    <paper-item name="Replus">Replus</paper-item> 
+                    <template is="dom-if" if="[[!fromAppReplusCo]]">
+						<paper-item name="POCI Remote">POCI Remote</paper-item>
+                    </template>
                 </paper-listbox>
             </paper-dropdown-menu>
 

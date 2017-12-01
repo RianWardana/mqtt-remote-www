@@ -26872,7 +26872,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         else if (merk == "samsung") thisRemoteTV.codeset = "0595";
                         else if (merk == "panasonic") thisRemoteTV.codeset = "2619";
                         else if (merk == "sony") thisRemoteTV.codeset = "1319";
-                        else if (merk == "sharp") thisRemoteTV.codeset = "4605"; //1429
+                        else if (merk == "sharp") thisRemoteTV.codeset = "T001"; //1429
                         else if (merk == "changhong") thisRemoteTV.codeset = "2903";
                         else if (merk == "sanyo") thisRemoteTV.codeset = "1430";
                         else if (merk == "toshiba") thisRemoteTV.codeset = "0339";

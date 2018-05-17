@@ -5773,7 +5773,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 		<iron-ajax id="ajaxManifest" url="https://core.replus.co/ir/[[brand]]/manifest.json" method="GET" handle-as="json" last-response="{{manifest}}" on-response="parseManifest">
         </iron-ajax>
 
-        <iron-ajax id="ajax" url="https://core.replus.co/post/pociremote" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;command=[[command]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/post/remote" method="POST" body="uid=[[uid]]&amp;room=[[roomKey]]&amp;command=[[command]]" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="mainContainer">
@@ -5870,7 +5870,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             }*/
         </style>
         
-        <iron-ajax id="ajax" url="https://core.replus.co/post/pociremote" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;command={{command}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
+        <iron-ajax id="ajax" url="https://core.replus.co/post/remote" method="POST" body="uid={{uid}}&amp;room={{roomKey}}&amp;command={{command}}" handle-as="text" last-response="{{response}}" on-response="_handleResponse">
         </iron-ajax>
 
         <div id="remoteContainer">

@@ -26813,6 +26813,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         thisRemoteAC.$.toast.show({text: 'Command sent.', duration: 500});
                     } else if (response == 'NO_DEVICE') {
                         thisRemoteAC.$.toast.show({text: 'No device is assigned for this room.', duration: 3000}); 
+                    } else if (response == 'NO_RESPONSE') {
+                        thisRemoteAC.$.toast.show({text: 'Device is offline.', duration: 1000});  
                     } else {
                         thisRemoteAC.$.toast.show({text: 'Unknown error.', duration: 1000});  
                     }

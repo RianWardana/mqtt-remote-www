@@ -26699,7 +26699,7 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
 
                 resetTimeout: function() {
                 	clearTimeout(thisRemoteAC.timeout);
-                	thisRemoteAC.timeout = setTimeout(() => { thisRemoteAC.send(); }, 2000);
+                	thisRemoteAC.timeout = setTimeout(() => { thisRemoteAC.send(); }, 1000);
                 },
 
                 stateInitial: function() {

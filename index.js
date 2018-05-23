@@ -26929,6 +26929,8 @@ xj.prototype.zb);ma("firebaseui.auth.AuthUI.prototype.signIn",xj.prototype.wd);m
                         console.log(`Sending command ${thisRemoteTV.command}: ${thisRemoteTV.response}`);
                     } else if (response == 'NO_DEVICE') {
                         thisRemoteTV.$.toast.show({text: 'No device is assigned for this room.', duration: 3000}); 
+                    } else if (response == 'NO_RESPONSE') {
+                        thisRemoteAC.$.toast.show({text: 'Device is offline.', duration: 1000});  
                     } else {
                         thisRemoteTV.$.toast.show({text: 'Unknown error.', duration: 1000});  
                     }
